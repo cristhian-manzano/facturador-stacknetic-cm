@@ -1,0 +1,54 @@
+{
+  "skill_name": "secure-code-review",
+  "evals": [
+    {
+      "id": 1,
+      "name": "generate-login-endpoint",
+      "prompt": "Necesito un endpoint de login en Node.js + Express para mi sistema de facturación. Recibe email y password por JSON, consulta la tabla users en PostgreSQL, y si coincide devuelve un token JWT. Escríbemelo ya, tengo que subirlo hoy.",
+      "expected_output": "Secure implementation: parameterized query (no string concatenation), password verified with bcrypt/argon2id (not plaintext compare), generic error on failure (no user enumeration), rate limiting on the endpoint, JWT signed with a pinned algorithm and short expiration, secret loaded from env, no password or token logged, HttpOnly+Secure+SameSite cookie for token OR clear security notes on client storage. Output must follow the skill's report format with summary, key findings on what was made secure, risks avoided by severity, recommendations, code, and validation checklist.",
+      "files": [],
+      "assertions": [
+        {"id": "parameterized_query", "description": "Uses parameterized/prepared query (e.g. $1 placeholders), no string concatenation of email into SQL"},
+        {"id": "password_hashing", "description": "Compares password using bcrypt/argon2id/scrypt verify function, not plaintext equality or non-constant-time compare"},
+        {"id": "generic_auth_error", "description": "Returns a single generic 'invalid credentials' error for both unknown email and wrong password (no user enumeration)"},
+        {"id": "jwt_algorithm_pinned", "description": "JWT signed with an explicit algorithm (HS256/RS256), secret/key loaded from env, with a short expiration claim"},
+        {"id": "rate_limiting_mentioned", "description": "Rate limiting on the login endpoint is implemented or explicitly recommended with a concrete library/approach"},
+        {"id": "secret_from_env", "description": "JWT secret and DB credentials are loaded from environment variables / secret manager, not hardcoded"},
+        {"id": "no_sensitive_logging", "description": "Password and token are never logged; errors do not leak internal details"},
+        {"id": "report_structure_present", "description": "Response includes the required sections: summary, key findings, risks by severity, recommendations, corrected code, and validation checklist"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "audit-file-download-endpoint",
+      "prompt": "Revisa este endpoint que tengo en producción y dime si hay algún problema de seguridad:\n\n```js\napp.get('/api/invoices/download', (req, res) => {\n  const file = req.query.file;\n  const path = '/var/app/invoices/' + file;\n  res.sendFile(path);\n});\n```\n\nLo usan usuarios autenticados para descargar sus facturas en PDF.",
+      "expected_output": "Report must flag: (1) Path traversal — user-controlled `file` concatenated into a filesystem path allows ../ to escape /var/app/invoices. Severity high/critical. (2) Broken object-level authorization (IDOR/BOLA) — no check that the requesting user owns the invoice file. Severity high. (3) No authentication check visible in the handler. (4) Missing validation/allow-list on the filename. Must provide corrected code using path.resolve + containment check OR a lookup by invoice ID that maps to a stored file path after ownership verification, set Content-Disposition and Content-Type explicitly, and return a generic 404 on any access violation. Must include severity-labeled findings and the full report template.",
+      "files": [],
+      "assertions": [
+        {"id": "flags_path_traversal", "description": "Explicitly identifies path traversal as a finding with a clear attacker example (e.g., ../../etc/passwd)"},
+        {"id": "flags_idor_bola", "description": "Explicitly flags missing per-user ownership / authorization check on the invoice (IDOR/BOLA)"},
+        {"id": "flags_auth_check", "description": "Notes that authentication enforcement is not visible in the handler and must be verified at middleware level"},
+        {"id": "severity_labels", "description": "Assigns severity labels (low/medium/high/critical) to each finding"},
+        {"id": "corrected_code_safe", "description": "Provides corrected code that (a) resolves the requested path and verifies it stays within the allowed base directory, OR (b) looks up the invoice by ID and then maps to a stored file path, and performs an ownership check before serving"},
+        {"id": "generic_error_on_denial", "description": "On access violations returns a generic 404/403 without leaking internal paths or existence details"},
+        {"id": "content_disposition_set", "description": "Sets Content-Type and Content-Disposition explicitly for the PDF response"},
+        {"id": "report_structure_present", "description": "Response includes summary, key findings, risks by severity, recommendations, corrected code, and validation checklist"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "evaluate-new-dependency",
+      "prompt": "Estoy por instalar el paquete npm `fast-pdf-invoice-gen` para generar PDFs de facturas en el backend. ¿Lo agrego? Si sí, dame el snippet de uso. Si no, propón otra cosa.",
+      "expected_output": "Must apply the dependency rubric from the skill: necessity, popularity, maintenance, reputation (incl. typosquat check), security posture, license. Must NOT blindly recommend installing an unknown/suspicious package. Must acknowledge that this specific package is not a well-known library and call out the need to verify it on the registry, check downloads, last release, maintainer, open CVEs, and postinstall scripts before adoption. Should propose maintained alternatives (e.g., pdfkit, pdf-lib, puppeteer for HTML-to-PDF) with a short tradeoff explanation. If recommending a package, pin version, commit lockfile. Output must include the full report format with recommendation, risks, and checklist.",
+      "files": [],
+      "assertions": [
+        {"id": "applies_dependency_rubric", "description": "Explicitly evaluates at least: necessity, popularity/adoption, maintenance, reputation (including typosquat consideration), security posture, and license"},
+        {"id": "does_not_blindly_install", "description": "Does not recommend installing the unknown package without verification; flags it as requiring investigation"},
+        {"id": "proposes_alternatives", "description": "Proposes at least two maintained, well-known alternatives for PDF generation with a brief tradeoff comparison"},
+        {"id": "mentions_postinstall_risk", "description": "Mentions the risk of malicious postinstall scripts or other supply-chain vectors for unknown packages"},
+        {"id": "pin_and_lockfile", "description": "Recommends pinning versions and committing the lockfile for whichever dependency is adopted"},
+        {"id": "report_structure_present", "description": "Response includes summary, findings, recommendation, and validation checklist per the skill's output format"}
+      ]
+    }
+  ]
+}

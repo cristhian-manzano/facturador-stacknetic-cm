@@ -1,0 +1,26 @@
+{
+  "skill_name": "clean-code-architect",
+  "evals": [
+    {
+      "id": 1,
+      "name": "refactor-fat-controller",
+      "prompt": "Tengo este controller de Express que ya no me cabe en la cabeza. Mezcla validación, llamadas a la base de datos, cálculo del total con impuestos y el envío de un email de confirmación al cliente. Son como 180 líneas en `src/routes/orders.ts` y cada vez que agrego un caso (cupón, envío gratis, reembolso) toco el mismo archivo y rompo algo. ¿Lo puedes revisar y refactorizar para que sea mantenible? Usamos TypeScript + Express + Prisma, y el equipo ya somos 4 devs.",
+      "expected_output": "Skill should trigger. Response should: (1) flag the fat-controller / mixed-responsibilities smell, (2) propose splitting into validation, service/use-case, repository (Prisma), and notification adapter, (3) show a concrete before/after code sketch, (4) suggest a folder structure (feature-based: orders/{routes,service,repository,notifications}), (5) NOT over-engineer with DDD/CQRS given a 4-person team, (6) include the final checklist.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "generate-new-feature",
+      "prompt": "Necesito agregar la feature de 'guardar factura como borrador' en el facturador. El usuario hace click, se guarda en Postgres, aparece en su lista de borradores y después la puede editar y emitir. ¿Me puedes armar el código? Stack: Next.js (App Router) + Prisma + TypeScript. Ya tengo auth con next-auth.",
+      "expected_output": "Skill should trigger (this is code generation in a serious project). Response should: (1) propose a clear module layout, (2) separate UI, server action/route, domain (draft invoice), and data access, (3) use clear TypeScript types/contracts, (4) keep the solution simple — no DDD, no repositories abstracted over Prisma unless justified, (5) fail-fast validation with zod or similar at the boundary, (6) include the quality checklist and note any tradeoffs.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "review-messy-react-component",
+      "prompt": "Mirá este componente, siento que está para reescribirlo pero no quiero romperlo. Es `InvoiceForm.tsx`, 450 líneas, mezcla estado local, fetch, validación, formato de moneda, lógica de impuestos y rendering. ¿Me haces un review honesto y me decís qué mejorarías y cómo lo partirías? No necesito que lo reescribas entero, con la guía alcanza.",
+      "expected_output": "Skill should trigger on 'review' + 'mejorarías' + 'cómo lo partirías'. Response should: (1) give a quality summary, (2) list findings by severity, (3) propose extracting: custom hook for state+fetch, pure helpers for currency/tax, subcomponents for form sections, schema-based validation, (4) propose a file tree, (5) explicitly NOT rewrite it end-to-end since the user asked for guidance, (6) deliver the final checklist.",
+      "files": []
+    }
+  ]
+}
