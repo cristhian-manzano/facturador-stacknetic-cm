@@ -47,7 +47,7 @@ const day = 86_400_000;
  * not refuse.
  */
 function ensureMasterKeyHex(): string {
-  const key = process.env["SRI_CERT_MASTER_KEY_HEX"] ?? "0".repeat(64); // 32 bytes of zeros — test-only, never used at rest
+  const key = process.env.SRI_CERT_MASTER_KEY_HEX ?? "0".repeat(64); // 32 bytes of zeros — test-only, never used at rest
   // active.ts reads the env once at module load; we just need encryptP12
   // to use the same key here.
   return key;
@@ -129,7 +129,7 @@ async function seedPendingDocument(args: {
 }
 
 function captureSink(): { stream: Writable; read: () => string } {
-  let buffers: Buffer[] = [];
+  const buffers: Buffer[] = [];
   const stream = new Writable({
     write(chunk: Buffer, _enc, cb) {
       buffers.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as string));

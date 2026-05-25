@@ -68,7 +68,7 @@ describe("<CustomerCombobox>", () => {
       />,
     );
     await user.type(screen.getByRole("combobox"), "ac");
-    await waitFor(() => expect(searcher).toHaveBeenCalledWith("ac", expect.anything()));
+    await waitFor(() => { expect(searcher).toHaveBeenCalledWith("ac", expect.anything()); });
     expect(await screen.findByText("Acme 1")).toBeInTheDocument();
     expect(screen.getByText("Acme 2")).toBeInTheDocument();
   });
@@ -124,6 +124,6 @@ describe("<CustomerCombobox>", () => {
       />,
     );
     await user.type(screen.getByRole("combobox"), "abcdef");
-    await waitFor(() => expect(searcher).toHaveBeenCalledTimes(1));
+    await waitFor(() => { expect(searcher).toHaveBeenCalledTimes(1); });
   });
 });

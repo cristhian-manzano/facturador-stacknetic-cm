@@ -80,7 +80,7 @@ interface BuildDetailOpts {
     | "RECIBIDA";
   readonly invoiceEstado?: "BORRADOR" | "EMITIDO" | "ANULADO";
   readonly hasClaveAcceso?: boolean;
-  readonly events?: ReadonlyArray<Record<string, unknown>>;
+  readonly events?: readonly Record<string, unknown>[];
 }
 
 function buildDetail(opts: BuildDetailOpts = {}): Record<string, unknown> {

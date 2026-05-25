@@ -49,7 +49,7 @@ export function generateSyntheticP12(options: SyntheticCertOptions): SyntheticCe
   // Node's is materially faster.
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const privatePem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
-  const forgeKey = forge.pki.privateKeyFromPem(privatePem) as forge.pki.rsa.PrivateKey;
+  const forgeKey = forge.pki.privateKeyFromPem(privatePem);
   // Public key derived from the private key — forge exposes a helper.
   const forgePublicKey = forge.pki.rsa.setPublicKey(forgeKey.n, forgeKey.e);
 

@@ -57,7 +57,7 @@ function detailToFormValues(detail: InvoiceDetail): InvoiceFormValues {
 
 export function InvoicesEditPage(): ReactElement {
   const params = useParams();
-  const id = params["id"] ?? "";
+  const id = params.id ?? "";
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +80,8 @@ export function InvoicesEditPage(): ReactElement {
           setError(t("invoice.form.error.generic"));
         }
       })
-      .finally(() => setLoading(false));
-    return (): void => controller.abort();
+      .finally(() => { setLoading(false); });
+    return (): void => { controller.abort(); };
   }, [id]);
 
   const initial = useMemo<InvoiceFormValues | undefined>(

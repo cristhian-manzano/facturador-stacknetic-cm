@@ -88,7 +88,7 @@ function InvoicesListInner(): ReactElement {
 
   const queryKey = useMemo(() => buildListQueryKey(filters), [filters]);
 
-  const query = useInfiniteQuery<InvoiceListResponse, Error>({
+  const query = useInfiniteQuery<InvoiceListResponse>({
     queryKey,
     queryFn: async ({ pageParam, signal }) => {
       const cursor = typeof pageParam === "string" ? pageParam : undefined;

@@ -19,8 +19,8 @@ import { mswServer } from "./msw/server.js";
 expect.extend(matchers);
 
 beforeAll(() => {
-  if (process.env["NODE_ENV"] === undefined) {
-    process.env["NODE_ENV"] = "test";
+  if (process.env.NODE_ENV === undefined) {
+    process.env.NODE_ENV = "test";
   }
   mswServer.listen({ onUnhandledRequest: "error" });
 });

@@ -110,10 +110,10 @@ function selectNodes(doc: Node, expr: string): Node[] {
 }
 
 function selectFirstText(doc: Node, expr: string): string | undefined {
-  const nodes = xpath.select(`${expr}/text()`, doc as never) as Array<{
+  const nodes = xpath.select(`${expr}/text()`, doc as never) as {
     data?: string;
     toString: () => string;
-  }>;
+  }[];
   if (nodes.length === 0) return undefined;
   const first = nodes[0];
   if (first === undefined) return undefined;
@@ -143,7 +143,7 @@ function readMensaje(node: Node): SriMensaje {
   ).toUpperCase();
   const tipo =
     tipoRaw === "ERROR" || tipoRaw === "ADVERTENCIA" || tipoRaw === "INFORMATIVO"
-      ? (tipoRaw as SriMensaje["tipo"])
+      ? (tipoRaw)
       : ("INFORMATIVO" satisfies SriMensaje["tipo"]);
   return informacionAdicional === undefined
     ? { identificador, mensaje, tipo }

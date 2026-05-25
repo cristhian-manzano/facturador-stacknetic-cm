@@ -35,7 +35,7 @@ import { t } from "../../i18n/es.js";
  * exceeds the cap.
  */
 export async function runWithConcurrency<T>(
-  tasks: ReadonlyArray<() => Promise<T>>,
+  tasks: readonly (() => Promise<T>)[],
   concurrency: number,
   onError?: (err: unknown, index: number) => void,
 ): Promise<void> {
@@ -61,7 +61,7 @@ export async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
-export const PENDING_REFRESH_CONCURRENCY = 3 as const;
+export const PENDING_REFRESH_CONCURRENCY = 3;
 
 export interface PendingBannerProps {
   readonly items: readonly InvoiceListItem[];

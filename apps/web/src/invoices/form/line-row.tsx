@@ -44,7 +44,7 @@ export function LineRow({
   const { register, watch, formState } = useFormContext<InvoiceFormValues>();
   const errors: FieldErrors<InvoiceFormValues> = formState.errors;
   const linesErrors = errors.lines as
-    | Array<Record<string, { message?: string } | undefined> | undefined>
+    | (Record<string, { message?: string } | undefined> | undefined)[]
     | undefined;
   const lineErr = linesErrors?.[index];
 

@@ -36,32 +36,32 @@ describe("test-harness — useTestSchema (happy path)", () => {
     expect(schema).toMatch(/^test_[0-9a-z]{26}$/);
     // The client must be reachable — a SELECT 1 verifies the schema migration
     // ran and the connection is live.
-    const rows = (await prisma.$queryRawUnsafe("SELECT 1 AS ok")) as Array<{ ok: number }>;
+    const rows = (await prisma.$queryRawUnsafe("SELECT 1 AS ok"));
     expect(rows[0]?.ok).toBe(1);
   });
 });
 
 describe("test-harness — internals", () => {
   // Save the host's `DATABASE_URL` so we can restore it after the negative test.
-  const originalDbUrl = process.env["DATABASE_URL"];
-  const originalBaseUrl = process.env["BASE_DATABASE_URL"];
+  const originalDbUrl = process.env.DATABASE_URL;
+  const originalBaseUrl = process.env.BASE_DATABASE_URL;
 
   afterEach(() => {
     if (originalDbUrl === undefined) {
-      delete process.env["DATABASE_URL"];
+      delete process.env.DATABASE_URL;
     } else {
-      process.env["DATABASE_URL"] = originalDbUrl;
+      process.env.DATABASE_URL = originalDbUrl;
     }
     if (originalBaseUrl === undefined) {
-      delete process.env["BASE_DATABASE_URL"];
+      delete process.env.BASE_DATABASE_URL;
     } else {
-      process.env["BASE_DATABASE_URL"] = originalBaseUrl;
+      process.env.BASE_DATABASE_URL = originalBaseUrl;
     }
   });
 
   it("createTestSchema throws when neither DATABASE_URL nor BASE_DATABASE_URL is set", async () => {
-    delete process.env["DATABASE_URL"];
-    delete process.env["BASE_DATABASE_URL"];
+    delete process.env.DATABASE_URL;
+    delete process.env.BASE_DATABASE_URL;
     await expect(createTestSchema()).rejects.toThrow(/DATABASE_URL/);
   });
 
@@ -70,7 +70,7 @@ describe("test-harness — internals", () => {
     // helper must NOT throw — the `try/catch` guard in `dropTestSchema`
     // is the path under test.
     const orphan = new PrismaClient({
-      datasources: { db: { url: process.env["DATABASE_URL"]! } },
+      datasources: { db: { url: process.env.DATABASE_URL! } },
       log: ["warn", "error"],
     });
     const fakeSchema = newTestSchemaName();

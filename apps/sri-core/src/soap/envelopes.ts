@@ -52,7 +52,7 @@ export function buildRecepcionEnvelope(input: BuildRecepcionEnvelopeInput): stri
     throw new Error("buildRecepcionEnvelope: signedXmlBase64 contains non-base64 bytes");
   }
   return (
-    `${XML_DECLARATION}` +
+    XML_DECLARATION +
     `<soapenv:Envelope xmlns:soapenv="${SOAPENV_NAMESPACE}" xmlns:ec="${RECEPCION_NAMESPACE}">` +
     `<soapenv:Header/>` +
     `<soapenv:Body>` +
@@ -76,7 +76,7 @@ export function buildAutorizacionEnvelope(input: BuildAutorizacionEnvelopeInput)
     throw new Error("buildAutorizacionEnvelope: claveAcceso must be 49 digits");
   }
   return (
-    `${XML_DECLARATION}` +
+    XML_DECLARATION +
     `<soapenv:Envelope xmlns:soapenv="${SOAPENV_NAMESPACE}" xmlns:ec="${AUTORIZACION_NAMESPACE}">` +
     `<soapenv:Header/>` +
     `<soapenv:Body>` +

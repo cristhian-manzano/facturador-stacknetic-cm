@@ -62,7 +62,7 @@ describe("redactPayload", () => {
     const out = redactPayload([
       { password: "a", id: 1 },
       { password: "b", id: 2 },
-    ]) as Array<Record<string, unknown>>;
+    ]) as Record<string, unknown>[];
     expect(out[0]?.password).toBe("[REDACTED]");
     expect(out[1]?.password).toBe("[REDACTED]");
     expect(out[0]?.id).toBe(1);

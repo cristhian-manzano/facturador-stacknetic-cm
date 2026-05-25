@@ -62,7 +62,7 @@ function withSchema(baseUrl: string, schema: string): string {
  * (e.g. CI), but most workflows use the dev value loaded via `dotenv -e ../../.env`.
  */
 function resolveBaseUrl(): string {
-  const baseUrl = process.env["BASE_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+  const baseUrl = process.env.BASE_DATABASE_URL ?? process.env.DATABASE_URL;
   if (baseUrl === undefined || baseUrl.length === 0) {
     throw new Error(
       "[db/test-harness] DATABASE_URL (or BASE_DATABASE_URL) must be set. " +

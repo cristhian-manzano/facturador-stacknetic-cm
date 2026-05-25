@@ -78,7 +78,7 @@ describe("<FiltersBar /> URL state", () => {
 
   it("reads existing URL params into the inputs on first render", () => {
     mount("/invoices?estado=BORRADOR&q=zz");
-    expect((screen.getByTestId("filter-estado") as HTMLSelectElement).value).toBe("BORRADOR");
-    expect((screen.getByTestId("filter-q") as HTMLInputElement).value).toBe("zz");
+    expect((screen.getByTestId("filter-estado")).value).toBe("BORRADOR");
+    expect((screen.getByTestId("filter-q")).value).toBe("zz");
   });
 });

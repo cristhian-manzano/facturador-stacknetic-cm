@@ -9,7 +9,7 @@
 import { beforeAll } from "vitest";
 
 beforeAll(() => {
-  if (process.env["NODE_ENV"] === undefined) {
-    process.env["NODE_ENV"] = "test";
+  if (process.env.NODE_ENV === undefined) {
+    process.env.NODE_ENV = "test";
   }
 });

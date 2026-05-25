@@ -26,7 +26,7 @@ describe("ALLOWED matrix", () => {
 });
 
 describe("canTransition — table-driven", () => {
-  const tableEntries: Array<{ from: SriEstado; to: SriEstado; expected: boolean }> = [];
+  const tableEntries: { from: SriEstado; to: SriEstado; expected: boolean }[] = [];
   for (const from of ESTADOS) {
     for (const to of ESTADOS) {
       tableEntries.push({

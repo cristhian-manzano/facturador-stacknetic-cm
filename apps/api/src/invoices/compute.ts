@@ -76,7 +76,7 @@ export interface ComputeLineInput {
   /** `descuento` — defaults to 0. */
   readonly descuento?: string | number | Decimal;
   /** At least one impuesto per line. */
-  readonly impuestos: ReadonlyArray<ComputeImpuestoInput>;
+  readonly impuestos: readonly ComputeImpuestoInput[];
 }
 
 /** One payment (forma de pago + monto). */
@@ -95,8 +95,8 @@ export interface ComputeInvoiceInput {
    * versions could auto-select if no impuesto is present on a line.
    */
   readonly fechaEmision: Date;
-  readonly lines: ReadonlyArray<ComputeLineInput>;
-  readonly payments: ReadonlyArray<ComputePaymentInput>;
+  readonly lines: readonly ComputeLineInput[];
+  readonly payments: readonly ComputePaymentInput[];
   /** Invoice-level discount. Default 0. */
   readonly totalDescuento?: string | number | Decimal;
   /** Invoice-level propina (10% servicio). Default 0. */
@@ -120,21 +120,21 @@ export interface TaxBucket {
 export interface ComputeLineResult {
   readonly orden: number;
   readonly precioTotalSinImpuesto: number;
-  readonly impuestos: ReadonlyArray<{
+  readonly impuestos: readonly {
     readonly codigo: string;
     readonly codigoPorcentaje: string;
     readonly tarifa: number;
     readonly baseImponible: number;
     readonly valor: number;
-  }>;
+  }[];
 }
 
 /** Full computeInvoice output. */
 export interface ComputeInvoiceResult {
-  readonly lineComputations: ReadonlyArray<ComputeLineResult>;
+  readonly lineComputations: readonly ComputeLineResult[];
   readonly totalSinImpuestos: number;
   readonly totalDescuento: number;
-  readonly totalImpuestos: ReadonlyArray<TaxBucket>;
+  readonly totalImpuestos: readonly TaxBucket[];
   readonly propina: number;
   readonly importeTotal: number;
   readonly paymentsBalanced: boolean;
@@ -177,9 +177,11 @@ function bucketKey(codigo: string, codigoPorcentaje: string): string {
  *   4. For each impuesto, `valor = round2(precioTotalSinImpuesto * tarifa / 100)`.
  */
 function computeLine(line: ComputeLineInput): ComputeLineResult {
-  const cantidad = new Decimal(line.cantidad as Decimal | string | number);
-  const precioUnit = new Decimal(line.precioUnitario as Decimal | string | number);
-  const descuento = new Decimal((line.descuento as Decimal | string | number | undefined) ?? 0);
+  const cantidad = new Decimal(line.cantidad);
+  const precioUnit = new Decimal(line.precioUnitario);
+  const descuento = new Decimal(
+    (line.descuento) ?? 0,
+  );
   const rawSubtotal = cantidad.mul(precioUnit).minus(descuento);
   const precioTotalSinImpuesto = round2(rawSubtotal);
 
@@ -212,7 +214,9 @@ export function computeInvoice(input: ComputeInvoiceInput): ComputeInvoiceResult
   const lineComputations = input.lines.map(computeLine);
 
   // 2. Σ line.precioTotalSinImpuesto.
-  const totalSinImpuestos = round2(sum(lineComputations.map((l) => l.precioTotalSinImpuesto)));
+  const totalSinImpuestos = round2(
+    sum(lineComputations.map((l) => l.precioTotalSinImpuesto)),
+  );
 
   // 3. Aggregate per (codigo, codigoPorcentaje). Round after each addition.
   const buckets = new Map<string, { tarifa: number; base: Decimal; valor: Decimal }>();
@@ -263,7 +267,7 @@ export function computeInvoice(input: ComputeInvoiceInput): ComputeInvoiceResult
   );
 
   // 5. Payments balance check (±0.01 tolerance — SPEC-0032 FR-5).
-  const paymentsSum = round2(sum(input.payments.map((p) => p.total as Decimal | string | number)));
+  const paymentsSum = round2(sum(input.payments.map((p) => p.total)));
   const paymentsDelta = paymentsSum.minus(importeTotal).abs();
   const paymentsBalanced = paymentsDelta.lessThanOrEqualTo("0.01");
 

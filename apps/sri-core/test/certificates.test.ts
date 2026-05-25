@@ -331,7 +331,7 @@ describe("GET /v1/certificates — list / get", () => {
       .get("/v1/certificates")
       .set("Authorization", `Bearer ${ownerToken}`);
     expect(res.status).toBe(200);
-    const items = res.body.items as Array<Record<string, unknown>>;
+    const items = res.body.items as Record<string, unknown>[];
     expect(items).toHaveLength(1);
     const first = items[0]!;
     expect(first.alias).toBe("owner-a");

@@ -36,7 +36,7 @@ export function formatFechaEs(iso: string): string {
   // The API contract is `YYYY-MM-DD` (IsoDateSchema), so a plain split
   // is safe.
   const datePart = iso.length >= 10 ? iso.slice(0, 10) : iso;
-  const m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(datePart);
   if (m === null) return iso;
   const [, y, mo, d] = m;
   return `${d ?? ""}/${mo ?? ""}/${y ?? ""}`;

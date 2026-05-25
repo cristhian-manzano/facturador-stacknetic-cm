@@ -26,7 +26,7 @@ const __dirname = path.dirname(__filename);
 function makeTestCert(): { certPem: string; keyPem: string } {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const privatePem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
-  const forgeKey = forge.pki.privateKeyFromPem(privatePem) as forge.pki.rsa.PrivateKey;
+  const forgeKey = forge.pki.privateKeyFromPem(privatePem);
   const forgePublicKey = forge.pki.rsa.setPublicKey(forgeKey.n, forgeKey.e);
   const cert = forge.pki.createCertificate();
   cert.publicKey = forgePublicKey;
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   const { xmlForSigning } = buildFacturaXml(input);
 
   const { certPem, keyPem } = makeTestCert();
-  const algoFromEnv = (process.env["SRI_SIGN_ALGO"] ?? "SHA1") as "SHA1" | "SHA256";
+  const algoFromEnv = (process.env.SRI_SIGN_ALGO ?? "SHA1") as "SHA1" | "SHA256";
 
   const { signedXml, algo } = await signFacturaXml({
     xmlForSigning,

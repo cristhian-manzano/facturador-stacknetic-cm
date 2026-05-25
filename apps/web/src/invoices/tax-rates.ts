@@ -11,7 +11,7 @@
  * SPEC-0032 and tested for parity in `tax-rates.test.ts`.
  */
 
-export const IVA_CODIGO = "2" as const;
+export const IVA_CODIGO = "2";
 
 export interface IvaCatalogRow {
   readonly codigo: typeof IVA_CODIGO;
@@ -24,7 +24,7 @@ export interface IvaCatalogRow {
  * Catalog rows the UI surfaces. Order matches the dropdown rendering
  * (default rate first, then the historical / exempt ones).
  */
-export const IVA_TABLE: ReadonlyArray<IvaCatalogRow> = [
+export const IVA_TABLE: readonly IvaCatalogRow[] = [
   { codigo: IVA_CODIGO, codigoPorcentaje: "4", tarifa: 15, label: "15%" },
   { codigo: IVA_CODIGO, codigoPorcentaje: "2", tarifa: 12, label: "12% (histórico)" },
   { codigo: IVA_CODIGO, codigoPorcentaje: "0", tarifa: 0, label: "0%" },
@@ -76,7 +76,7 @@ export interface FormaPagoRow {
   readonly label: string;
 }
 
-export const FORMA_PAGO_TABLE: ReadonlyArray<FormaPagoRow> = [
+export const FORMA_PAGO_TABLE: readonly FormaPagoRow[] = [
   { codigo: "01", label: "Sin utilización del sistema financiero" },
   { codigo: "15", label: "Compensación de deudas" },
   { codigo: "16", label: "Tarjeta de débito" },
@@ -96,7 +96,7 @@ export interface TipoIdentificacionRow {
   readonly label: string;
 }
 
-export const TIPO_IDENTIFICACION_TABLE: ReadonlyArray<TipoIdentificacionRow> = [
+export const TIPO_IDENTIFICACION_TABLE: readonly TipoIdentificacionRow[] = [
   { codigo: "05", label: "Cédula" },
   { codigo: "04", label: "RUC" },
   { codigo: "06", label: "Pasaporte" },

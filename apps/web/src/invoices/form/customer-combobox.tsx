@@ -77,7 +77,7 @@ export function CustomerCombobox({
       if (!rootRef.current.contains(ev.target)) setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
-    return (): void => document.removeEventListener("mousedown", onDocClick);
+    return (): void => { document.removeEventListener("mousedown", onDocClick); };
   }, []);
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export function CustomerCombobox({
             setQuery(ev.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => { setOpen(true); }}
           onKeyDown={onKeyDown}
           aria-invalid={value === "" ? "true" : "false"}
         />
@@ -228,7 +228,7 @@ export function CustomerCombobox({
                 role="option"
                 aria-selected={idx === highlighted}
                 data-testid={`customer-option-${item.id}`}
-                onMouseEnter={() => setHighlighted(idx)}
+                onMouseEnter={() => { setHighlighted(idx); }}
                 onMouseDown={(ev) => {
                   // mouseDown so blur doesn't fire first
                   ev.preventDefault();

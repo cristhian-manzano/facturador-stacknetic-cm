@@ -77,7 +77,7 @@ export const sriCoreEmitHandlers = [
 
   http.get(`${SRI_CORE_BASE}/v1/documents/:claveAcceso/status`, ({ params }) => {
     const payload = DocumentStatusResponseSchema.parse({
-      document: { ...stubDocument, claveAcceso: String(params["claveAcceso"]) },
+      document: { ...stubDocument, claveAcceso: String(params.claveAcceso) },
       events: [
         {
           id: ulid(),

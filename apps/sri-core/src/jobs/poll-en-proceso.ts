@@ -40,7 +40,6 @@
  * path as defence in depth.
  */
 import type { PrismaClient, SriDocument } from "@facturador/db";
-import type { SriMensaje } from "@facturador/contracts/sri";
 import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import { AutorizacionClient, type Ambiente } from "../soap/index.js";
@@ -161,13 +160,7 @@ export async function runPollBatch(
       ORDER BY COALESCE("nextPollAt", "updatedAt") ASC
       LIMIT ${batchSize}
       FOR UPDATE SKIP LOCKED
-    `) as Array<{
-      id: string;
-      companyId: string;
-      claveAcceso: string;
-      ambiente: string;
-      pollAttempts: number;
-    }>;
+    `);
     realBatchSize = rows.length;
 
     for (const row of rows) {
@@ -194,7 +187,7 @@ export async function runPollBatch(
           ambiente: row.ambiente as Ambiente,
         });
         const durationMs = Date.now() - t0;
-        const mensajes = result.mensajes as readonly SriMensaje[];
+        const mensajes = result.mensajes;
 
         if (result.estado === "AUTORIZADO") {
           let authBlobKey: string | undefined;

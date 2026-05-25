@@ -61,7 +61,6 @@
  * iteration possible without a real .p12 + sandbox SRI endpoint.
  */
 import type { PrismaClient, SriDocument } from "@facturador/db";
-import type { SriMensaje } from "@facturador/contracts/sri";
 import { ConflictError, NotFoundError } from "@facturador/utils/errors";
 import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
@@ -318,7 +317,7 @@ export async function emitFactura(
         claveAcceso: current.claveAcceso,
       });
       const durationMs = Date.now() - sendStart;
-      const mensajes = result.mensajes as readonly SriMensaje[];
+      const mensajes = result.mensajes;
 
       // Walk the legal transition chain in order: FIRMADO → ENVIADO →
       // (RECIBIDA | DEVUELTA). We always go through ENVIADO so the
@@ -491,7 +490,7 @@ export async function emitFactura(
         ambiente: current.ambiente as Ambiente,
       });
       const durationMs = Date.now() - authStart;
-      const mensajes = result.mensajes as readonly SriMensaje[];
+      const mensajes = result.mensajes;
 
       if (result.estado === "AUTORIZADO") {
         // Persist authorized XML when present.

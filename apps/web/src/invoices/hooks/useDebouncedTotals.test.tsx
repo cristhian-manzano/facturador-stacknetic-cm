@@ -133,7 +133,7 @@ describe("useDebouncedTotals", () => {
             err.name = "AbortError";
             reject(err);
           });
-          setTimeout(() => resolve(fakeResp()), 1000);
+          setTimeout(() => { resolve(fakeResp()); }, 1000);
         }),
     );
     const { rerender } = renderHook(

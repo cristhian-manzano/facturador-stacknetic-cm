@@ -22,8 +22,8 @@ beforeAll(() => {
   // Pin NODE_ENV before any module that branches on it loads further code.
   // Setting it inside `beforeAll` (not at module top level) keeps imports
   // pure for IDE tooling but still runs before the first test.
-  if (process.env["NODE_ENV"] === undefined) {
-    process.env["NODE_ENV"] = "test";
+  if (process.env.NODE_ENV === undefined) {
+    process.env.NODE_ENV = "test";
   }
   // Start the MSW server with no handlers by default; each test registers
   // its own via `mswServer.use(...)`.

@@ -51,13 +51,13 @@ describe("AppError base class", () => {
   });
 });
 
-const subclassMatrix: ReadonlyArray<{
+const subclassMatrix: readonly {
   name: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ctor: new (...args: any[]) => AppError;
   status: number;
   code: string;
-}> = [
+}[] = [
   { name: "ValidationError", ctor: ValidationError, status: 400, code: "validation.failed" },
   { name: "AuthError", ctor: AuthError, status: 401, code: "auth.unauthenticated" },
   { name: "ForbiddenError", ctor: ForbiddenError, status: 403, code: "tenant.forbidden" },

@@ -49,13 +49,13 @@ export interface PersistableLine {
   readonly precioUnitario: string | number;
   readonly descuento: string | number;
   readonly precioTotalSinImpuesto: number;
-  readonly impuestos: ReadonlyArray<{
+  readonly impuestos: readonly {
     readonly codigo: string;
     readonly codigoPorcentaje: string;
     readonly tarifa: number;
     readonly baseImponible: number;
     readonly valor: number;
-  }>;
+  }[];
 }
 
 export interface PersistablePayment {
@@ -85,9 +85,9 @@ export interface CreateInvoiceArgs {
   readonly obligadoContabilidad: boolean;
   readonly contribuyenteEspecial: string | null;
   readonly totals: ComputeInvoiceResult;
-  readonly lines: ReadonlyArray<PersistableLine>;
-  readonly payments: ReadonlyArray<PersistablePayment>;
-  readonly adicionales: ReadonlyArray<PersistableAdicional>;
+  readonly lines: readonly PersistableLine[];
+  readonly payments: readonly PersistablePayment[];
+  readonly adicionales: readonly PersistableAdicional[];
 }
 
 export interface UpdateInvoiceArgs {
@@ -97,9 +97,9 @@ export interface UpdateInvoiceArgs {
   readonly fechaEmision?: Date;
   readonly fechaEmisionLocal?: string;
   readonly totals: ComputeInvoiceResult;
-  readonly lines: ReadonlyArray<PersistableLine>;
-  readonly payments: ReadonlyArray<PersistablePayment>;
-  readonly adicionales: ReadonlyArray<PersistableAdicional>;
+  readonly lines: readonly PersistableLine[];
+  readonly payments: readonly PersistablePayment[];
+  readonly adicionales: readonly PersistableAdicional[];
 }
 
 /**
@@ -194,7 +194,13 @@ export async function replaceInvoiceDraft(
     }
 
     await tx.invoice.update({ where: { id: args.id }, data: updateData });
-    await insertChildren(tx, args.id, args.lines, args.payments, args.adicionales);
+    await insertChildren(
+      tx,
+      args.id,
+      args.lines,
+      args.payments,
+      args.adicionales,
+    );
 
     const row = await tx.invoice.findUniqueOrThrow({
       where: { id: args.id },
@@ -233,7 +239,7 @@ export async function findInvoiceById(
 
 export interface ListInvoicesArgs {
   readonly companyId: string;
-  readonly estado?: ReadonlyArray<InvoiceEstado>;
+  readonly estado?: readonly InvoiceEstado[];
   readonly from?: Date;
   readonly to?: Date;
   readonly q?: string;
@@ -302,7 +308,9 @@ export async function listInvoices(
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: args.limit + 1,
-    ...(args.cursor === undefined ? {} : { cursor: { id: args.cursor }, skip: 1 }),
+    ...(args.cursor === undefined
+      ? {}
+      : { cursor: { id: args.cursor }, skip: 1 }),
     select: {
       id: true,
       estado: true,
@@ -346,7 +354,8 @@ export async function listInvoices(
     importeTotal: r.importeTotal,
     createdAt: r.createdAt,
   }));
-  const nextCursor = hasMore && items.length > 0 ? slice[slice.length - 1]!.id : null;
+  const nextCursor =
+    hasMore && items.length > 0 ? slice[slice.length - 1]!.id : null;
   return { items, nextCursor };
 }
 
@@ -361,9 +370,9 @@ export async function listInvoices(
 async function insertChildren(
   tx: Prisma.TransactionClient,
   invoiceId: string,
-  lines: ReadonlyArray<PersistableLine>,
-  payments: ReadonlyArray<PersistablePayment>,
-  adicionales: ReadonlyArray<PersistableAdicional>,
+  lines: readonly PersistableLine[],
+  payments: readonly PersistablePayment[],
+  adicionales: readonly PersistableAdicional[],
 ): Promise<void> {
   if (lines.length > 0) {
     await tx.invoiceLine.createMany({
@@ -397,7 +406,9 @@ async function insertChildren(
         orden: p.orden,
         formaPago: p.formaPago,
         total: new Prisma.Decimal(p.total),
-        plazo: p.plazo === undefined || p.plazo === null ? null : new Prisma.Decimal(p.plazo),
+        plazo: p.plazo === undefined || p.plazo === null
+          ? null
+          : new Prisma.Decimal(p.plazo),
         unidadTiempo: p.unidadTiempo ?? null,
       })),
     });
@@ -415,7 +426,9 @@ async function insertChildren(
   }
 }
 
-function cloneTotalImpuestos(buckets: ReadonlyArray<TaxBucket>): Prisma.InputJsonValue {
+function cloneTotalImpuestos(
+  buckets: readonly TaxBucket[],
+): Prisma.InputJsonValue {
   return buckets.map((b) => ({
     codigo: b.codigo,
     codigoPorcentaje: b.codigoPorcentaje,

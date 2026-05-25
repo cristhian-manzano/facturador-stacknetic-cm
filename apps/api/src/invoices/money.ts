@@ -102,7 +102,7 @@ export function decimalToMoneyString(value: Decimal): string {
  * accumulator's precision implicitly; this loop is easier to reason about
  * in tests and produces identical results.
  */
-export function sum(values: ReadonlyArray<Decimal | number | string>): Decimal {
+export function sum(values: readonly (Decimal | number | string)[]): Decimal {
   let total = new Decimal(0);
   for (const v of values) total = total.plus(v);
   return total;

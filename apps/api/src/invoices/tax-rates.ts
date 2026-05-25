@@ -28,13 +28,13 @@
  */
 
 /** SRI impuesto `codigo` for IVA. Stable across all IVA percentages. */
-export const IVA_CODIGO = "2" as const;
+export const IVA_CODIGO = "2";
 
 /** SRI impuesto `codigo` for ICE — not selected here but referenced. */
-export const ICE_CODIGO = "3" as const;
+export const ICE_CODIGO = "3";
 
 /** SRI impuesto `codigo` for IRBPNR — plastic bottles. */
-export const IRBPNR_CODIGO = "5" as const;
+export const IRBPNR_CODIGO = "5";
 
 /**
  * One row of the IVA catalog. `validFrom` is the FIRST day the rate
@@ -62,7 +62,7 @@ export interface IvaCatalogRow {
  * 2 vs 4) split — every other code is "applies depending on the line's
  * nature" (0%, exempt, no objeto, construcción 5%, diferenciado).
  */
-export const IVA_TABLE: ReadonlyArray<IvaCatalogRow> = [
+export const IVA_TABLE: readonly IvaCatalogRow[] = [
   {
     codigo: IVA_CODIGO,
     codigoPorcentaje: "0",
@@ -198,8 +198,13 @@ export function pickIvaCode(fechaEmision: Date): PickIvaCodeResult {
  * Used by the validation layer to reject "user picked 12% for a 2025
  * invoice" before we hand off to compute.
  */
-export function isIvaCodeValidFor(codigoPorcentaje: string, fechaEmision: Date): boolean {
-  const row = IVA_TABLE.find((r) => r.codigoPorcentaje === codigoPorcentaje);
+export function isIvaCodeValidFor(
+  codigoPorcentaje: string,
+  fechaEmision: Date,
+): boolean {
+  const row = IVA_TABLE.find(
+    (r) => r.codigoPorcentaje === codigoPorcentaje,
+  );
   if (row === undefined) return false;
   const day = toCalendarDay(fechaEmision);
   if (row.validFrom !== null && cmpDays(day, row.validFrom) < 0) return false;

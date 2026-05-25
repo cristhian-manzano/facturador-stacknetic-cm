@@ -188,7 +188,7 @@ export function buildCertificatesRouter(deps: BuildCertificatesRouterDeps): Rout
 
       // 2) Validate file presence.
       const file = req.file;
-      if (file === undefined || file.buffer === undefined || file.size === 0) {
+      if (file?.buffer === undefined || file.size === 0) {
         throw new ValidationError("Missing certificate file", {
           errors: [
             {

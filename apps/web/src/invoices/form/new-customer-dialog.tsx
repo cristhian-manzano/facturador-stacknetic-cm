@@ -82,7 +82,7 @@ export function NewCustomerDialog({
       if (ev.key === "Escape" && !submitting) onClose();
     }
     window.addEventListener("keydown", onKey);
-    return (): void => window.removeEventListener("keydown", onKey);
+    return (): void => { window.removeEventListener("keydown", onKey); };
   }, [open, submitting, onClose]);
 
   if (!open) return null;
@@ -292,9 +292,9 @@ export function NewCustomerDialog({
  */
 function buildCreatePayload(values: DialogFormValues): Parameters<typeof createCustomer>[0] {
   const optionals: Record<string, unknown> = {};
-  if (values.email !== "") optionals["email"] = values.email;
-  if (values.telefono !== "") optionals["telefono"] = values.telefono;
-  if (values.direccion !== "") optionals["direccion"] = values.direccion;
+  if (values.email !== "") optionals.email = values.email;
+  if (values.telefono !== "") optionals.telefono = values.telefono;
+  if (values.direccion !== "") optionals.direccion = values.direccion;
 
   const base = {
     razonSocial: values.razonSocial,

@@ -165,32 +165,32 @@ function ModalHarness(props: {
   const onClose = props.onClose ?? noop;
   const onRetry = props.onRetry ?? noop;
   const onSuccessRedirect = props.onSuccessRedirect ?? noop;
-  const submit = useCallback(() => dispatch({ type: "submit" }), [dispatch]);
+  const submit = useCallback(() => { dispatch({ type: "submit" }); }, [dispatch]);
   const ok = useCallback(
     () =>
-      dispatch({
+      { dispatch({
         type: "success",
         response: {
           estado: "AUTORIZADO",
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           claveAcceso: "x" as any,
         },
-      }),
+      }); },
     [dispatch],
   );
   const biz = useCallback(
     () =>
-      dispatch({
+      { dispatch({
         type: "business_error",
         mensajes: Array.from({ length: 7 }, (_, i) => ({
           identificador: `E${(i + 1).toString()}`,
           mensaje: `msg ${(i + 1).toString()}`,
           tipo: "ERROR",
         })),
-      }),
+      }); },
     [dispatch],
   );
-  const net = useCallback(() => dispatch({ type: "network_error" }), [dispatch]);
+  const net = useCallback(() => { dispatch({ type: "network_error" }); }, [dispatch]);
   return (
     <>
       <button type="button" onClick={submit}>

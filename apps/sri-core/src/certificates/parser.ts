@@ -18,7 +18,11 @@
  */
 import { createHash } from "node:crypto";
 import forge from "node-forge";
-import { BadPassphraseError, ExpiredCertificateError, ParseError } from "./errors.js";
+import {
+  BadPassphraseError,
+  ExpiredCertificateError,
+  ParseError,
+} from "./errors.js";
 
 export interface ParsedCertificate {
   readonly subjectCN: string;
@@ -55,7 +59,9 @@ function bufferToForgeBinary(buf: Buffer): string {
 }
 
 function extractCommonName(attrs: forge.pki.CertificateField[]): string {
-  const cn = attrs.find((attr) => attr.shortName === "CN" || attr.type === "2.5.4.3");
+  const cn = attrs.find(
+    (attr) => attr.shortName === "CN" || attr.type === "2.5.4.3",
+  );
   if (cn === undefined) return "";
   const value = cn.value;
   return typeof value === "string" ? value : "";
@@ -92,8 +98,8 @@ export function parseP12(
     throw new ParseError(message.length === 0 ? "unknown parse error" : message);
   }
 
-  const certOid = forge.pki.oids["certBag"];
-  const keyOid = forge.pki.oids["pkcs8ShroudedKeyBag"];
+  const certOid = forge.pki.oids.certBag;
+  const keyOid = forge.pki.oids.pkcs8ShroudedKeyBag;
   if (certOid === undefined || keyOid === undefined) {
     throw new ParseError("forge oids missing — node-forge version mismatch");
   }
@@ -125,10 +131,14 @@ export function parseP12(
     rawSerial.length % 2 === 0 ? rawSerial.toLowerCase() : `0${rawSerial}`.toLowerCase();
 
   // Fingerprint over the DER-encoded cert.
-  const derString = forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes();
+  const derString = forge.asn1
+    .toDer(forge.pki.certificateToAsn1(cert))
+    .getBytes();
   // Convert the forge "binary string" to a Buffer for `createHash`.
   const derBytes = Buffer.from(derString, "binary");
-  const fingerprintSha256 = createHash("sha256").update(derBytes).digest("hex");
+  const fingerprintSha256 = createHash("sha256")
+    .update(derBytes)
+    .digest("hex");
 
   return {
     subjectCN,

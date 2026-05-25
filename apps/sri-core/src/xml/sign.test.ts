@@ -216,7 +216,7 @@ describe("verifySignedXml — wrong-key detection", () => {
     });
 
     const extractKeyInfo = (xml: string): string => {
-      const m = xml.match(/<ds:KeyInfo>([\s\S]*?)<\/ds:KeyInfo>/);
+      const m = /<ds:KeyInfo>([\s\S]*?)<\/ds:KeyInfo>/.exec(xml);
       if (m === null) throw new Error("KeyInfo not found in signed XML");
       return m[1]!;
     };

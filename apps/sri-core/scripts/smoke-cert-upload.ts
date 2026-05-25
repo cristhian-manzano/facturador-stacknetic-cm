@@ -27,16 +27,11 @@ import { env } from "../src/env.js";
 async function generateP12(passphrase: string): Promise<Buffer> {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
-  const forgeKey = forge.pki.privateKeyFromPem(pem) as forge.pki.rsa.PrivateKey;
+  const forgeKey = forge.pki.privateKeyFromPem(pem);
   const pub = forge.pki.rsa.setPublicKey(forgeKey.n, forgeKey.e);
   const cert = forge.pki.createCertificate();
   cert.publicKey = pub;
-  cert.serialNumber =
-    "01" +
-    ulid()
-      .slice(0, 12)
-      .toLowerCase()
-      .replace(/[^0-9a-f]/g, "0");
+  cert.serialNumber = "01" + ulid().slice(0, 12).toLowerCase().replace(/[^0-9a-f]/g, "0");
   cert.validity.notBefore = new Date(Date.now() - 86_400_000);
   cert.validity.notAfter = new Date(Date.now() + 365 * 86_400_000);
   const dn = [{ shortName: "CN", value: "SMOKE TEST CERT" }];
@@ -55,7 +50,7 @@ async function main(): Promise<void> {
   const logger = createLogger({
     service: "sri-core",
     env: "development",
-    destination: new Writable({ write: (_c, _e, cb) => cb() }),
+    destination: new Writable({ write: (_c, _e, cb) => { cb(); } }),
   });
   const app = createApp({ logger });
   // Bind to an ephemeral port so the smoke doesn't fight with anything
@@ -121,16 +116,15 @@ async function main(): Promise<void> {
     );
 
     // GET metadata.
-    const getRes = await fetch(`http://127.0.0.1:${port}/v1/certificates/${uploadBody.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const getRes = await fetch(
+      `http://127.0.0.1:${port}/v1/certificates/${uploadBody.id}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
     if (getRes.status !== 200) {
       throw new Error(`get failed: ${String(getRes.status)}`);
     }
     const getBody = (await getRes.json()) as Record<string, unknown>;
-    process.stdout.write(
-      `[smoke] get returned subjectCN=${String(getBody.subjectCN)} status=${String(getBody.status)}\n`,
-    );
+    process.stdout.write(`[smoke] get returned subjectCN=${String(getBody.subjectCN)} status=${String(getBody.status)}\n`);
     for (const forbidden of [
       "p12CiphertextB64",
       "p12NonceB64",

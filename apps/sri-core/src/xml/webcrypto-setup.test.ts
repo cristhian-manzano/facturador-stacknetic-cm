@@ -9,9 +9,9 @@ import { ensureXadesEngine, __resetWebcryptoSetupForTests } from "./webcrypto-se
 describe("ensureXadesEngine", () => {
   it("is callable multiple times without throwing", () => {
     __resetWebcryptoSetupForTests();
-    expect(() => ensureXadesEngine()).not.toThrow();
-    expect(() => ensureXadesEngine()).not.toThrow();
-    expect(() => ensureXadesEngine()).not.toThrow();
+    expect(() => { ensureXadesEngine(); }).not.toThrow();
+    expect(() => { ensureXadesEngine(); }).not.toThrow();
+    expect(() => { ensureXadesEngine(); }).not.toThrow();
   });
 
   it("after init, `new SignedXml()` constructs without throwing", () => {

@@ -45,15 +45,15 @@ const CIRCULAR = "[Circular]";
  * structure. Does NOT mutate the input.
  */
 export function redactPayload(value: unknown): unknown {
-  return redactInternal(value, new WeakSet<object>());
+  return redactInternal(value, new WeakSet());
 }
 
 function redactInternal(value: unknown, seen: WeakSet<object>): unknown {
   if (value === null || value === undefined) return value;
   if (typeof value !== "object") return value;
 
-  if (seen.has(value as object)) return CIRCULAR;
-  seen.add(value as object);
+  if (seen.has(value)) return CIRCULAR;
+  seen.add(value);
 
   if (Array.isArray(value)) {
     return value.map((item) => redactInternal(item, seen));

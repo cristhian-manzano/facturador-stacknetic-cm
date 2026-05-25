@@ -101,7 +101,7 @@ function InvoicesDetailInner({ id }: { readonly id: string }): ReactElement {
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    return () => { document.removeEventListener("visibilitychange", onVisibility); };
   }, [id, queryClient]);
 
   const isPolling = useMemo(() => {
@@ -197,7 +197,7 @@ function InvoicesDetailInner({ id }: { readonly id: string }): ReactElement {
 
 export function InvoicesDetailPage(): ReactElement {
   const params = useParams();
-  const id = params["id"] ?? "";
+  const id = params.id ?? "";
   return (
     <RequirePermission action="invoice.read">
       <InvoicesDetailInner id={id} />

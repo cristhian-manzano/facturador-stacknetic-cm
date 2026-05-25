@@ -288,15 +288,15 @@ describe("<InvoiceForm /> Emit", () => {
     await user.type(paymentInput, "115");
 
     // Wait for preview total to render.
-    await waitFor(() => expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/), {
+    await waitFor(() => { expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/); }, {
       timeout: 2000,
     });
     // Emit
-    await waitFor(() => expect(screen.getByTestId("emit-button")).toBeEnabled());
+    await waitFor(() => { expect(screen.getByTestId("emit-button")).toBeEnabled(); });
     await user.click(screen.getByTestId("emit-button"));
 
     // Modal should reach success then auto-navigate after 400 ms (real timer).
-    await waitFor(() => expect(screen.queryByTestId("invoice-detail")).toBeInTheDocument(), {
+    await waitFor(() => { expect(screen.queryByTestId("invoice-detail")).toBeInTheDocument(); }, {
       timeout: 4000,
     });
   }, 15000);
@@ -324,10 +324,10 @@ describe("<InvoiceForm /> Emit", () => {
     const paymentInput = await screen.findByLabelText("Total");
     await user.clear(paymentInput);
     await user.type(paymentInput, "115");
-    await waitFor(() => expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/), {
+    await waitFor(() => { expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/); }, {
       timeout: 2000,
     });
-    await waitFor(() => expect(screen.getByTestId("emit-button")).toBeEnabled());
+    await waitFor(() => { expect(screen.getByTestId("emit-button")).toBeEnabled(); });
     await user.click(screen.getByTestId("emit-button"));
 
     expect(
@@ -336,7 +336,7 @@ describe("<InvoiceForm /> Emit", () => {
     // The mensaje renders as `<span>identificador</span>: mensaje` so the
     // visible "RUC inválido" text is contained inside the `<li>`.
     const mensajes = screen.getAllByTestId("emit-mensaje");
-    expect(mensajes.some((el) => el.textContent?.includes("RUC inválido"))).toBe(true);
+    expect(mensajes.some((el) => el.textContent.includes("RUC inválido"))).toBe(true);
     // Form input preserved.
     expect(screen.getByLabelText(/Descripción/)).toHaveValue("Servicio");
   }, 15000);
@@ -356,10 +356,10 @@ describe("<InvoiceForm /> Emit", () => {
     const paymentInput = await screen.findByLabelText("Total");
     await user.clear(paymentInput);
     await user.type(paymentInput, "115");
-    await waitFor(() => expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/), {
+    await waitFor(() => { expect(screen.getByTestId("totals-total")).toHaveTextContent(/115/); }, {
       timeout: 2000,
     });
-    await waitFor(() => expect(screen.getByTestId("emit-button")).toBeEnabled());
+    await waitFor(() => { expect(screen.getByTestId("emit-button")).toBeEnabled(); });
     await user.click(screen.getByTestId("emit-button"));
     expect(
       await screen.findByTestId("emit-modal-network-error", undefined, { timeout: 3000 }),
@@ -387,10 +387,10 @@ describe("<InvoiceForm /> autosave + new customer dialog", () => {
     await user.type(screen.getByLabelText(/Razón social/), "Otra Persona");
     await user.click(screen.getByTestId("new-customer-submit"));
     await waitFor(() =>
-      expect(screen.queryByTestId("new-customer-dialog")).not.toBeInTheDocument(),
+      { expect(screen.queryByTestId("new-customer-dialog")).not.toBeInTheDocument(); },
     );
     // Customer combobox now displays the new customer's razon social.
-    expect((screen.getByTestId("customer-search-input") as HTMLInputElement).value).toContain(
+    expect((screen.getByTestId("customer-search-input")).value).toContain(
       "Otra Persona",
     );
   }, 15000);

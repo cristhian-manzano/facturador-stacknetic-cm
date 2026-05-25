@@ -69,7 +69,7 @@ async function seedCompany(args: {
   await args.prisma.company.create({
     data: {
       id: args.companyId,
-      ruc: `${args.companyId.slice(0, 13)}`.padEnd(13, "0").slice(0, 13),
+      ruc: args.companyId.slice(0, 13).padEnd(13, "0").slice(0, 13),
       razonSocial: "Poll Test Co",
       ambiente: "1",
       tipoEmision: "1",

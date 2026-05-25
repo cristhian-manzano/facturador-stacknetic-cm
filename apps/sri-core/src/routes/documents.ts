@@ -101,7 +101,7 @@ function toStatusResponse(
     createdAt: Date;
     updatedAt: Date;
   },
-  events: ReadonlyArray<{
+  events: readonly {
     id: string;
     documentId: string;
     etapa: string;
@@ -109,7 +109,7 @@ function toStatusResponse(
     mensajesJson: unknown;
     durationMs: number;
     createdAt: Date;
-  }>,
+  }[],
 ): DocumentStatusResponse {
   return {
     document: {

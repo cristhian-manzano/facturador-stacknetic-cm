@@ -34,25 +34,25 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
  * Master-key size in bytes (256 bits). Exported so call sites that validate
  * env vars can reference the same constant.
  */
-export const MASTER_KEY_BYTES = 32 as const;
+export const MASTER_KEY_BYTES = 32;
 
 /**
  * GCM nonce size in bytes (96 bits). The widely-recommended default for
  * AES-GCM; deviating from 12 is a runtime mistake — verify in tests.
  */
-export const GCM_NONCE_BYTES = 12 as const;
+export const GCM_NONCE_BYTES = 12;
 
 /**
  * GCM auth tag size in bytes (128 bits). The default returned by Node's
  * `cipher.getAuthTag()`. Lock the value so a future refactor can't silently
  * change envelope verification semantics.
  */
-export const GCM_TAG_BYTES = 16 as const;
+export const GCM_TAG_BYTES = 16;
 
 /**
  * Cipher identifier as understood by `node:crypto`.
  */
-export const CIPHER_ALGORITHM = "aes-256-gcm" as const;
+export const CIPHER_ALGORITHM = "aes-256-gcm";
 
 /**
  * Shape returned by `encryptEnvelope`. The three buffers are independent —

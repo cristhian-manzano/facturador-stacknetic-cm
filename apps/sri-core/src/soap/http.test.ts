@@ -123,8 +123,8 @@ describe("httpPostXml — wire format", () => {
 
     // Header keys arrive lowercased by undici.
     expect(observedHeaders["content-type"]).toBe("text/xml; charset=utf-8");
-    expect(observedHeaders["soapaction"]).toBe("");
-    expect(observedHeaders["accept"]).toContain("text/xml");
+    expect(observedHeaders.soapaction).toBe("");
+    expect(observedHeaders.accept).toContain("text/xml");
   });
 
   it("returns 5xx responses as-is (no throw — retry policy is elsewhere)", async () => {
@@ -173,11 +173,11 @@ describe("httpPostXml — wire format", () => {
 });
 
 describe("classifyTransportError — kind matrix", () => {
-  const matrix: Array<{
+  const matrix: {
     code: string;
     expectedKind: SriClientError["kind"];
     transient: boolean;
-  }> = [
+  }[] = [
     { code: "UND_ERR_HEADERS_TIMEOUT", expectedKind: "timeout", transient: true },
     { code: "UND_ERR_BODY_TIMEOUT", expectedKind: "timeout", transient: true },
     { code: "UND_ERR_CONNECT_TIMEOUT", expectedKind: "timeout", transient: true },

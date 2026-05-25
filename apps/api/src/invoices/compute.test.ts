@@ -16,7 +16,11 @@
  * Synthetic-only inputs; no PII.
  */
 import { describe, expect, it } from "vitest";
-import { assertPaymentsMatchTotal, computeInvoice, type ComputeInvoiceInput } from "./compute.js";
+import {
+  assertPaymentsMatchTotal,
+  computeInvoice,
+  type ComputeInvoiceInput,
+} from "./compute.js";
 
 /** Local-midnight UTC, matches `parseFechaEmision` shape. */
 function utcDay(y: number, m: number, d: number): Date {
@@ -175,7 +179,9 @@ describe("computeInvoice — mixed IVA rates (15% + 0% + 5%)", () => {
 
   it("sums each bucket independently", () => {
     const r = computeInvoice(input);
-    const byCp = Object.fromEntries(r.totalImpuestos.map((b) => [b.codigoPorcentaje, b]));
+    const byCp = Object.fromEntries(
+      r.totalImpuestos.map((b) => [b.codigoPorcentaje, b]),
+    );
     expect(byCp["4"]).toMatchObject({ baseImponible: 100, valor: 15 });
     expect(byCp["0"]).toMatchObject({ baseImponible: 50, valor: 0 });
     expect(byCp["5"]).toMatchObject({ baseImponible: 200, valor: 10 });
@@ -194,7 +200,9 @@ describe("computeInvoice — header propina and totalDescuento", () => {
     // 1 × 100 @ 15% IVA = 115; +10 propina = 125.
     const r = computeInvoice({
       fechaEmision: utcDay(2026, 5, 19),
-      lines: [{ orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] }],
+      lines: [
+        { orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] },
+      ],
       payments: [{ formaPago: "01", total: 125 }],
       propina: 10,
     });
@@ -208,7 +216,9 @@ describe("computeInvoice — header propina and totalDescuento", () => {
     // applies to the importeTotal arithmetic: 100 - 5 + 15 = 110.
     const r = computeInvoice({
       fechaEmision: utcDay(2026, 5, 19),
-      lines: [{ orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] }],
+      lines: [
+        { orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] },
+      ],
       payments: [{ formaPago: "01", total: 110 }],
       totalDescuento: 5,
     });
@@ -222,7 +232,9 @@ describe("computeInvoice — header propina and totalDescuento", () => {
 describe("computeInvoice — paymentsBalanced flag", () => {
   const baseInput: ComputeInvoiceInput = {
     fechaEmision: utcDay(2026, 5, 19),
-    lines: [{ orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] }],
+    lines: [
+      { orden: 1, cantidad: 1, precioUnitario: 100, impuestos: [IVA_15] },
+    ],
     payments: [],
   };
 
@@ -297,7 +309,9 @@ describe("computeInvoice — HALF_UP rounding at the line level", () => {
     // 0.03 * 0.15 = 0.0045 → HALF_UP at 2 dp = 0.00.
     const r1 = computeInvoice({
       fechaEmision: utcDay(2026, 5, 19),
-      lines: [{ orden: 1, cantidad: 1, precioUnitario: 0.03, impuestos: [IVA_15] }],
+      lines: [
+        { orden: 1, cantidad: 1, precioUnitario: 0.03, impuestos: [IVA_15] },
+      ],
       payments: [{ formaPago: "01", total: 0.03 }],
     });
     expect(r1.totalImpuestos[0]?.valor).toBe(0);
@@ -305,7 +319,9 @@ describe("computeInvoice — HALF_UP rounding at the line level", () => {
     // 0.04 * 0.15 = 0.006 → HALF_UP at 2 dp = 0.01.
     const r2 = computeInvoice({
       fechaEmision: utcDay(2026, 5, 19),
-      lines: [{ orden: 1, cantidad: 1, precioUnitario: 0.04, impuestos: [IVA_15] }],
+      lines: [
+        { orden: 1, cantidad: 1, precioUnitario: 0.04, impuestos: [IVA_15] },
+      ],
       payments: [{ formaPago: "01", total: 0.05 }],
     });
     expect(r2.totalImpuestos[0]?.valor).toBe(0.01);
@@ -315,11 +331,11 @@ describe("computeInvoice — HALF_UP rounding at the line level", () => {
 describe("assertPaymentsMatchTotal", () => {
   it("returns void when paymentsBalanced=true", () => {
     expect(() =>
-      assertPaymentsMatchTotal({
+      { assertPaymentsMatchTotal({
         paymentsBalanced: true,
         paymentsDelta: 0,
         importeTotal: 100,
-      }),
+      }); },
     ).not.toThrow();
   });
 
