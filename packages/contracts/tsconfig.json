@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  // Typecheck + ESLint use this superset. The build target lives in
+  // `tsconfig.build.json` and excludes `*.test.ts` / configs.
+  "include": ["src/**/*", "vitest.config.ts"]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@facturador/logger",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./redactions": {
+      "types": "./dist/redactions.d.ts",
+      "import": "./dist/redactions.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "pino": "9.5.0",
+    "pino-pretty": "11.3.0",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@facturador/config": "workspace:*",
+    "@types/node": "22.9.0",
+    "@vitest/coverage-v8": "2.1.4",
+    "vitest": "2.1.4"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "facturador-stacknetic-cm",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean",
+    "prepare": "lefthook install || true",
+    "dev": "docker compose up --build",
+    "dev:down": "docker compose down",
+    "dev:reset": "docker compose down -v",
+    "db:psql": "docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "19.5.0",
+    "@commitlint/config-conventional": "19.5.0",
+    "@facturador/config": "workspace:*",
+    "@eslint/js": "9.14.0",
+    "eslint": "9.14.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-n": "17.13.2",
+    "eslint-plugin-promise": "7.1.0",
+    "eslint-plugin-unicorn": "56.0.0",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "15.12.0",
+    "lefthook": "1.8.2",
+    "prettier": "3.3.3",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "8.13.0",
+    "vitest": "2.1.4"
+  }
+}

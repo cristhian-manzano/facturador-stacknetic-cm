@@ -1,0 +1,123 @@
+# -----------------------------------------------------------------------------
+# docker-compose.yml — local dev stack for facturador-stacknetic-cm
+# Source of truth: ai/specs/0003-docker-and-local-dev.md §6.4 + TASKS-0003 §5.1.
+# Compose v2 syntax (no top-level `version:` key).
+# -----------------------------------------------------------------------------
+name: facturador
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-facturador}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-facturador}
+      POSTGRES_DB: ${POSTGRES_DB:-facturador}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-facturador} -d $${POSTGRES_DB:-facturador}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    image: facturador-api:dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      API_PORT: ${API_PORT:-3000}
+      # In-container DATABASE_URL resolves the compose service `db`. Host-side
+      # tooling (prisma migrate, vitest) uses `.env`'s `localhost` value.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-facturador}:${POSTGRES_PASSWORD:-facturador}@db:5432/${POSTGRES_DB:-facturador}?schema=public
+      # In-container, api reaches sri-core via the compose service name.
+      SRI_CORE_URL: http://sri-core:${SRI_CORE_PORT:-3100}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  sri-core:
+    build:
+      context: .
+      dockerfile: apps/sri-core/Dockerfile
+      target: runtime
+    image: facturador-sri-core:dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      SRI_CORE_PORT: ${SRI_CORE_PORT:-3100}
+      # In-container DATABASE_URL resolves the compose service `db`. Host-side
+      # tooling (prisma migrate, vitest) uses `.env`'s `localhost` value.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-facturador}:${POSTGRES_PASSWORD:-facturador}@db:5432/${POSTGRES_DB:-facturador}?schema=public
+      # SPEC-0020 / PROMPT-0020 — stub mode forwarded from .env; the env
+      # loader refuses to boot if NODE_ENV=production && SRI_STUB_MODE=true.
+      SRI_STUB_MODE: ${SRI_STUB_MODE:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${SRI_CORE_PORT:-3100}:3100"
+    healthcheck:
+      # `/healthz` is the SPEC-0020 §FR-7 readiness liveness path; the
+      # original `/health` endpoint is preserved as an alias.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3100/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    image: facturador-web:dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      # Hot-reload mount for Vite. Read-only is enough — Vite only watches files.
+      # Only `src` is mounted: Vite needs to write a transient sibling to
+      # vite.config.ts when loading the config, so the config + index.html
+      # stay baked-in from the image and are not bind-mounted.
+      - ./apps/web/src:/app/apps/web/src:ro
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    profiles: ["dev"]
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: facturador

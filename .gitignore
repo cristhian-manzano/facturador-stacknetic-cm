@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+pnpm-debug.log*
+npm-debug.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Test / coverage
+coverage/
+.vitest-cache/
+playwright-report/
+.playwright/
+
+# Certificates / secrets (defense in depth — these MUST never be committed)
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+secrets/
+
+# Tooling caches (defense in depth)
+.turbo/
+
+# Prisma
+apps/api/prisma/migrations/dev.db*
+
+# Blob storage (SPEC-0026 §6.6). The filesystem BlobStore writes signed/
+# authorized XML payloads under `.blobs/` by default. The contents may
+# include customer PII; never commit.
+.blobs/
+**/.blobs/

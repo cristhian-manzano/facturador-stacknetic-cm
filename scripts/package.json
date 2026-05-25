@@ -1,0 +1,17 @@
+{
+  "name": "@facturador/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mint-service-jwt": "tsx mint-service-jwt.ts"
+  },
+  "dependencies": {
+    "jose": "5.9.6",
+    "ulid": "2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "tsx": "4.19.2"
+  }
+}

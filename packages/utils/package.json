@@ -1,0 +1,63 @@
+{
+  "name": "@facturador/utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
+    },
+    "./audit": {
+      "types": "./dist/audit/index.d.ts",
+      "import": "./dist/audit/index.js"
+    },
+    "./rbac": {
+      "types": "./dist/rbac/index.d.ts",
+      "import": "./dist/rbac/index.js"
+    },
+    "./service-jwt": {
+      "types": "./dist/service-jwt/index.d.ts",
+      "import": "./dist/service-jwt/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/crypto/index.d.ts",
+      "import": "./dist/crypto/index.js"
+    },
+    "./sri": {
+      "types": "./dist/sri/index.d.ts",
+      "import": "./dist/sri/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test": "dotenv -e ../../.env -- vitest run --passWithNoTests",
+    "test:coverage": "dotenv -e ../../.env -- vitest run --coverage --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@facturador/contracts": "workspace:*",
+    "@facturador/db": "workspace:*",
+    "@facturador/logger": "workspace:*",
+    "jose": "5.9.6",
+    "ulid": "2.3.0",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@facturador/config": "workspace:*",
+    "@types/node": "22.9.0",
+    "@vitest/coverage-v8": "2.1.4",
+    "dotenv-cli": "7.4.2",
+    "fast-check": "3.23.1",
+    "vitest": "2.1.4"
+  }
+}

@@ -1,0 +1,31 @@
+/* SPEC-0040 §6.5: design tokens applied before first paint, no FOUC. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+ * Document-level defaults — keep tiny so component utilities stay in charge.
+ * ------------------------------------------------------------------------- */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: theme("fontFamily.sans");
+}
+
+/* Visible keyboard focus everywhere (a11y — SPEC-0040 FR-7). */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-500;
+}
+
+/* Skip-to-main affordance for keyboard users. Stays off-screen until focused. */
+.skip-to-main {
+  @apply sr-only;
+}
+.skip-to-main:focus {
+  @apply not-sr-only fixed left-2 top-2 z-50 rounded bg-primary-700 px-3 py-2 text-white shadow;
+}

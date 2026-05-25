@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <ns2:validarComprobanteResponse xmlns:ns2="http://ec.gob.sri.ws.recepcion">
+      <RespuestaRecepcionComprobante>
+        <estado>DEVUELTA</estado>
+        <comprobantes>
+          <comprobante>
+            <claveAcceso>1234567890123456789012345678901234567890123456789</claveAcceso>
+            <mensajes>
+              <mensaje>
+                <identificador>35</identificador>
+                <mensaje>ARCHIVO NO CUMPLE ESTRUCTURA XML</mensaje>
+                <informacionAdicional>Estructura XML invalida</informacionAdicional>
+                <tipo>ERROR</tipo>
+              </mensaje>
+              <mensaje>
+                <identificador>50</identificador>
+                <mensaje>ERROR EN DIFERENCIA DE TOTALES</mensaje>
+                <informacionAdicional>Subtotal no coincide con detalle</informacionAdicional>
+                <tipo>ERROR</tipo>
+              </mensaje>
+            </mensajes>
+          </comprobante>
+        </comprobantes>
+      </RespuestaRecepcionComprobante>
+    </ns2:validarComprobanteResponse>
+  </soap:Body>
+</soap:Envelope>

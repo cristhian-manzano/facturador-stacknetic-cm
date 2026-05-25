@@ -25,7 +25,7 @@ If in doubt, apply it. Undertriggering is worse than overtriggering.
 
 1. **Secure by default.** The default path must be the safe path. If the user has to remember to add a flag, harden a config, or remove a debug toggle to be safe, the default is wrong.
 2. **Least privilege.** Every token, role, container, service account, DB user, cookie, CORS origin, and file permission should grant the minimum needed. Widen only with a concrete reason.
-3. **Defense in depth.** Assume each layer can fail. Input validation *and* parameterized queries *and* output encoding *and* a WAF is not redundant — it is resilience.
+3. **Defense in depth.** Assume each layer can fail. Input validation _and_ parameterized queries _and_ output encoding _and_ a WAF is not redundant — it is resilience.
 4. **Explain the why.** When flagging a risk or making a recommendation, state the concrete threat (what an attacker does, what they gain). "Because OWASP says so" is not an explanation.
 5. **Don't ship known-vulnerable patterns.** If a safer alternative exists and is reasonable, use it. Do not write code that introduces SQLi, XSS, SSRF, command injection, insecure deserialization, path traversal, open redirect, or hardcoded secrets when an equally simple safe form exists.
 6. **Pragmatism over paranoia.** Not every app needs HSM-backed keys. Match the controls to the actual threat model and the data's sensitivity, and say so.
@@ -46,16 +46,18 @@ When this skill triggers, run through these steps **in order**:
 For each category, ask the concrete question in parentheses. If the answer is "I don't know" or "it's not checked", that is a finding.
 
 **Injection & untrusted input**
-- SQL / NoSQL / ORM injection (*are all queries parameterized? any string concatenation with user input?*)
-- Command / shell injection (*any `exec`, `system`, `subprocess(shell=True)`, `child_process.exec` with user input?*)
-- XSS — reflected, stored, DOM (*is every output properly encoded for its sink: HTML body, attribute, JS, URL, CSS?*)
-- XXE, XML external entities (*XML parser configured with external entities disabled?*)
+
+- SQL / NoSQL / ORM injection (_are all queries parameterized? any string concatenation with user input?_)
+- Command / shell injection (_any `exec`, `system`, `subprocess(shell=True)`, `child_process.exec` with user input?_)
+- XSS — reflected, stored, DOM (_is every output properly encoded for its sink: HTML body, attribute, JS, URL, CSS?_)
+- XXE, XML external entities (_XML parser configured with external entities disabled?_)
 - LDAP / template / SSTI / header injection
-- Path traversal (*any `../`, symlink following, unvalidated file names joined to a base path?*)
-- Insecure deserialization (*`pickle`, `yaml.load`, `unserialize`, `ObjectInputStream` on untrusted data?*)
-- Open redirect (*is the redirect target validated against an allow-list?*)
+- Path traversal (_any `../`, symlink following, unvalidated file names joined to a base path?_)
+- Insecure deserialization (_`pickle`, `yaml.load`, `unserialize`, `ObjectInputStream` on untrusted data?_)
+- Open redirect (_is the redirect target validated against an allow-list?_)
 
 **Auth & session**
+
 - Is authentication required where it should be? Is it enforced server-side (never trust the client)?
 - Passwords: hashed with argon2id / bcrypt / scrypt and a proper cost; never stored plaintext, never logged.
 - MFA supported for privileged accounts where the domain warrants it.
@@ -66,12 +68,14 @@ For each category, ask the concrete question in parentheses. If the answer is "I
 - Brute-force / credential-stuffing defenses (throttling, lockout with care not to DoS the user, CAPTCHA or proof-of-work where appropriate).
 
 **Authorization**
-- Every resource access checks "is this caller allowed to see/modify *this specific object*" — not just "are they logged in". (This is BOLA / IDOR — the #1 API Top 10 issue.)
+
+- Every resource access checks "is this caller allowed to see/modify _this specific object_" — not just "are they logged in". (This is BOLA / IDOR — the #1 API Top 10 issue.)
 - Role / permission checks happen on the server, not the client.
 - Mass assignment / over-posting blocked (explicit allow-list of fields the client may set).
 - Admin paths require admin auth, not "the UI just doesn't show the button".
 
 **Data protection**
+
 - TLS everywhere in transit; HSTS where applicable.
 - Sensitive data encrypted at rest where the threat model warrants it.
 - Secrets (API keys, DB creds, signing keys): in a secret manager or env vars injected at runtime — never committed, never logged, never in client code.
@@ -79,6 +83,7 @@ For each category, ask the concrete question in parentheses. If the answer is "I
 - Strong, vetted crypto primitives only (AES-GCM, ChaCha20-Poly1305, Ed25519, X25519, SHA-256/384, HKDF, argon2id). No MD5/SHA-1 for security, no ECB, no homemade crypto, no hardcoded IVs.
 
 **Request abuse & availability**
+
 - Rate limiting / throttling / quotas on auth endpoints, expensive endpoints, and write endpoints.
 - Progressive backoff or lockout on repeated failures (without enabling attacker-triggered DoS of legitimate users).
 - Resource limits: max request size, max JSON depth, max file size, timeouts on every outbound call.
@@ -87,17 +92,20 @@ For each category, ask the concrete question in parentheses. If the answer is "I
 - Replay protection on sensitive operations (nonces, idempotency keys).
 
 **Client & transport hardening**
+
 - Security headers where applicable: `Content-Security-Policy` (no `unsafe-inline` / `unsafe-eval` unless justified), `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` or CSP `frame-ancestors`.
 - CORS: explicit allow-list of origins, never `*` with credentials, methods and headers minimized.
 - Client storage: no tokens or PII in `localStorage`/`sessionStorage` if XSS is in scope; prefer HttpOnly cookies.
 - Clickjacking defense via `frame-ancestors`.
 
 **Error handling & logging**
+
 - Errors returned to the user are generic; internals (stack traces, SQL, file paths) stay server-side.
 - Logs record security-relevant events (auth success/failure, privilege change, admin action) but never log secrets, passwords, tokens, full card numbers, or full PII.
 - Log forging / log injection: untrusted input is encoded before being logged.
 
 **Configuration & infra**
+
 - Debug / verbose modes off in production.
 - Default admin credentials removed.
 - DB users scoped to just what they need (no app running as DB superuser).
@@ -138,32 +146,41 @@ When this skill triggers on a review or audit, produce the report in this exact 
 
 ```markdown
 ## Security summary
+
 <2–4 sentences: what was reviewed, what trust boundary it crosses, and the overall posture.>
 
 ## Key findings
+
 <Bulleted list of the most important issues and the most important things done right. Keep it scannable.>
 
 ## Risks by severity
 
 ### Critical
+
 - **<title>** — <impact>. Mitigation: <fix>.
 
 ### High
+
 - ...
 
 ### Medium
+
 - ...
 
 ### Low
+
 - ...
 
 ## Recommendations
+
 <Concrete, actionable steps, ordered by priority. Include dependency changes, config changes, and design changes.>
 
 ## Corrected / secure code
+
 <Diffs or full snippets for the code-level fixes. Only include what actually changed or what the user asked to generate. Explain non-obvious choices in 1–2 lines.>
 
 ## Validation checklist
+
 - [ ] Inputs validated and outputs encoded for their sink
 - [ ] AuthN enforced server-side where required
 - [ ] AuthZ enforced per-resource (no IDOR / BOLA)
@@ -178,7 +195,7 @@ When this skill triggers on a review or audit, produce the report in this exact 
 - [ ] Threat model and trust boundary documented for this change
 ```
 
-If the user is *generating* code (not reviewing existing code), compress the report: write the secure code first, then a short "Security notes" section explaining the key decisions and the checklist at the end.
+If the user is _generating_ code (not reviewing existing code), compress the report: write the secure code first, then a short "Security notes" section explaining the key decisions and the checklist at the end.
 
 ## When there's nothing to flag
 

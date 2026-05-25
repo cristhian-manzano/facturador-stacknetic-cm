@@ -1,0 +1,64 @@
+# .dockerignore — keep build contexts small and never ship local-only or secret files
+# into image layers. Source of truth: TASKS-0003 §2.1 + ai/context/security.md.
+
+# --- Dependencies (rebuilt inside the image) ---
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+
+# --- Build outputs (regenerated inside the image) ---
+dist
+**/dist
+build
+**/build
+*.tsbuildinfo
+**/*.tsbuildinfo
+.turbo
+**/.turbo
+
+# --- Test artefacts ---
+coverage
+**/coverage
+.vitest-cache
+**/.vitest-cache
+playwright-report
+.playwright
+
+# --- Environment files (NEVER bake real secrets into images) ---
+.env
+.env.*
+!.env.example
+
+# --- VCS / editors / OS noise ---
+.git
+.gitignore
+.gitattributes
+.github
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+**/*.log
+
+# --- Certificates & secrets (defense in depth — these MUST never be committed nor shipped) ---
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+secrets/
+.local/
+
+# --- Docker / compose meta (not needed inside the image) ---
+docker-compose*.yml
+.dockerignore
+Dockerfile*
+
+# --- Repo docs / ops artefacts not needed at runtime ---
+ai
+docs
+README.md

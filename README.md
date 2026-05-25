@@ -1,52 +1,81 @@
 # facturador-stacknetic-cm
 
-Sistema de facturación electrónica para el **Servicio de Rentas Internas (SRI)** de Ecuador.
+Multi-tenant SaaS for electronic invoicing against the Ecuadorian SRI (offline scheme).
+See [`ai/specs/0000-INDEX.md`](./ai/specs/0000-INDEX.md) for the full spec roadmap.
 
-> Referencia oficial: [sri.gob.ec/facturacion-electronica](https://www.sri.gob.ec/facturacion-electronica)
+## Stack (locked)
 
-## Misión
+- pnpm workspaces monorepo, Node 22 LTS, TypeScript 5 strict ESM.
+- Express 5 API + SRI Core; Vite + React 18 web; Postgres 16; Prisma 5; Zod everywhere.
+- Local dev runs entirely under `docker compose` — no native Postgres install needed.
 
-Proveer una plataforma completa de facturación electrónica que cumpla con el esquema offline del SRI (factura, nota de crédito, nota de débito, comprobante de retención), permitiendo a empresas ecuatorianas emitir, firmar y autorizar comprobantes de forma ágil y confiable.
+## First-time setup
 
-## Meta
+1. Install Node 22 and pnpm 9 (Corepack handles the latter):
 
-Construir una solución modular cuyos componentes puedan evolucionar y comercializarse de forma independiente — tanto como sistema de facturación end-to-end para clientes finales, como en forma de API pública para integradores que solo necesiten la capa de comunicación con el SRI.
+   ```sh
+   corepack enable
+   ```
 
-## Estructura del proyecto
+2. Install workspace dependencies:
 
-El repositorio agrupa **3 proyectos independientes** que se despliegan y escalan por separado:
+   ```sh
+   pnpm install
+   ```
 
-### 1. Web — Aplicación de facturación (frontend)
+3. Copy the example environment file. This is the first step every developer
+   must run before bringing the stack up:
 
-Interfaz visual del sistema de facturación. Consumida por usuarios finales (empresas, contadores, operadores). Consume a la API de negocio.
+   ```sh
+   cp .env.example .env
+   ```
 
-### 2. API — Lógica de negocio
+   `.env` is git-ignored. Edit it to suit your local machine. Real secrets MUST
+   NOT be committed — `.env.example` only carries placeholders.
 
-Backend del sistema de facturación. Contiene los módulos del producto (clientes, productos, inventario, emisión, reportería, etc.) y toda la lógica de negocio específica de la plataforma. Delega la integración con el SRI al SRI API Core.
+4. Bring up the full local stack (Postgres, API, SRI Core, Web):
 
-### 3. SRI API Core — Facilitador SRI
+   ```sh
+   pnpm dev
+   ```
 
-Proxy/facilitador especializado en la integración con el SRI. Se ocupa exclusivamente de:
+   Smoke endpoints once the stack is healthy:
 
-- Armar los XMLs conforme a la ficha técnica del esquema offline del SRI.
-- Firmar electrónicamente los comprobantes.
-- Enviar y consultar autorización ante los web services del SRI.
-- Manejar reintentos, contingencia y estados de los comprobantes.
+   - API health: <http://localhost:3000/health>
+   - SRI Core health: <http://localhost:3100/health>
+   - Web (Vite): <http://localhost:5173>
 
-Es consumido por la API (2), y está diseñado para poder ofrecerse a futuro como **API pública independiente** para clientes que solo requieran la integración SRI sin el sistema de facturación completo.
+5. Tear down (data preserved):
 
-## ¿Por qué separarlos?
+   ```sh
+   pnpm dev:down
+   ```
 
-Mantener el SRI Core aislado de la lógica de negocio permite:
+   Tear down and wipe the Postgres volume:
 
-- Reutilizarlo como producto independiente (API como servicio).
-- Evolucionar la lógica SRI (cambios de esquema, versiones de ficha técnica) sin tocar el sistema de facturación.
-- Desplegar y escalar cada capa según su perfil de carga.
+   ```sh
+   pnpm dev:reset
+   ```
 
-## Documentación SRI
+## Workspaces
 
-Referencias oficiales del SRI (ficha técnica y ejemplos XML) en [docs/sri/](docs/sri/).
+- `apps/api` — Express 5 billing API.
+- `apps/sri-core` — Express 5 SRI signer/sender (holds certificates).
+- `apps/web` — Vite + React UI.
+- `packages/config` — shared ESLint / TypeScript / Prettier config.
+- `packages/contracts` — shared Zod schemas (`@facturador/contracts`).
+- `packages/logger` — Pino logger wrapper.
+- `packages/utils` — domain-agnostic helpers.
 
----
+## Documentation
 
-> Este README se irá ampliando con información técnica (stack, setup, arquitectura, deployment) a medida que avance el proyecto.
+The `ai/` tree holds context, ADRs, specs, plans, tasks and prompt templates:
+
+- Context: [`ai/context/`](./ai/context/)
+- Specs: [`ai/specs/`](./ai/specs/) (start at `0000-INDEX.md`)
+- ADRs: [`ai/decisions/`](./ai/decisions/)
+
+## Security
+
+`.env` files, real certificates (`*.p12`, `*.pfx`, `*.pem`, `*.key`), and SRI
+credentials MUST NOT be committed. See [`ai/context/security.md`](./ai/context/security.md).

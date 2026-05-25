@@ -1,0 +1,69 @@
+{
+  "infoTributaria": {
+    "ambiente": "1",
+    "tipoEmision": "1",
+    "razonSocial": "FACTURADOR DEMO S.A.",
+    "nombreComercial": "Facturador Demo",
+    "ruc": "9990000015001",
+    "claveAcceso": "1905202601999000001500110010010000000011234567811",
+    "codDoc": "01",
+    "estab": "001",
+    "ptoEmi": "001",
+    "secuencial": "000000001",
+    "dirMatriz": "Av. Demo 123, Quito, Ecuador"
+  },
+  "infoFactura": {
+    "fechaEmision": "19/05/2026",
+    "dirEstablecimiento": "Av. Demo 123, Quito, Ecuador",
+    "obligadoContabilidad": "SI",
+    "tipoIdentificacionComprador": "05",
+    "razonSocialComprador": "Juan Pérez Ñandú",
+    "identificacionComprador": "1710034065",
+    "direccionComprador": "Calle Florida 9-22, Cuenca",
+    "totalSinImpuestos": 100,
+    "totalDescuento": 0,
+    "totalConImpuestos": [
+      {
+        "codigo": "2",
+        "codigoPorcentaje": "4",
+        "baseImponible": 100,
+        "tarifa": 15,
+        "valor": 15
+      }
+    ],
+    "importeTotal": 115,
+    "moneda": "DOLAR",
+    "pagos": [
+      {
+        "formaPago": "20",
+        "total": 115
+      }
+    ]
+  },
+  "detalles": [
+    {
+      "codigoPrincipal": "DEMO-001",
+      "descripcion": "Producto demo IVA 15%",
+      "unidadMedida": "UND",
+      "cantidad": 1,
+      "precioUnitario": 100,
+      "descuento": 0,
+      "precioTotalSinImpuesto": 100,
+      "impuestos": [
+        {
+          "codigo": "2",
+          "codigoPorcentaje": "4",
+          "tarifa": 15,
+          "baseImponible": 100,
+          "valor": 15
+        }
+      ]
+    }
+  ],
+  "infoAdicional": [
+    {
+      "nombre": "Email",
+      "valor": "demo@facturador.test"
+    }
+  ]
+}

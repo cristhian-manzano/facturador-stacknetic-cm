@@ -1,0 +1,673 @@
+// =============================================================================
+// `@facturador/db` — Prisma schema
+// -----------------------------------------------------------------------------
+// Source of truth:
+//   - ai/specs/0004-database-and-prisma.md + TASKS-0004 (identity baseline).
+//   - ai/specs/0020-sri-core-service-bootstrap.md §6.4 + TASKS-0020 §1
+//     (Certificate, SriDocument, SriEvent, BurnedSecuencial skeleton).
+//   - ai/specs/0026-document-lifecycle-and-jobs.md §6.2 (state machine).
+//
+// Conventions:
+//   - ULID primary keys (Char(26)), generated app-side via `ulid()`.
+//   - Spanish domain field names verbatim per ai/context/glossary.md.
+//   - Every FK declares an explicit `onDelete` (default Restrict).
+//   - Every model that will be queried by a column has an explicit `@@index`.
+//   - Soft delete via nullable `deletedAt` only where business rules need it.
+//   - Passwords are stored under `passwordHash` (never `password`); the
+//     plaintext value never reaches the database (argon2id is computed at the
+//     application boundary — see prisma/seed.ts and SPEC-0010).
+//   - Certificate.p12Ciphertext / passphrase / encryption metadata lives in
+//     `apps/sri-core` only; api never queries this table. The columns are
+//     covered by REDACT_PATHS (p12*, *.privateKey, …) so a stray serialise
+//     never reaches the log stream.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Role — per-tenant role assigned through a Membership.
+// -----------------------------------------------------------------------------
+enum Role {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  OPERATOR
+  VIEWER
+}
+
+// -----------------------------------------------------------------------------
+// Company — a single RUC-owning tenant. Spanish field names are deliberate;
+// they map 1:1 to SRI ficha técnica vocabulary (see ai/context/glossary.md).
+// -----------------------------------------------------------------------------
+model Company {
+  id                    String    @id @db.Char(26)
+  ruc                   String    @unique
+  razonSocial           String
+  nombreComercial       String?
+  ambiente              String // '1' = pruebas | '2' = producción
+  tipoEmision           String // '1' = normal | '2' = contingencia
+  direccionMatriz       String
+  contribuyenteEspecial String? // resolution code, null if not designated
+  obligadoContabilidad  Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+
+  memberships Membership[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
+
+  @@index([deletedAt])
+}
+
+// -----------------------------------------------------------------------------
+// User — global identity. Linked to one or more Company rows via Membership.
+// Email is application-normalised to lowercase before insert (no DB collation
+// trick); see SPEC-0004 §10 risks.
+// -----------------------------------------------------------------------------
+model User {
+  id            String    @id @db.Char(26)
+  email         String    @unique
+  passwordHash  String
+  displayName   String
+  locale        String    @default("es-EC")
+  isSuperadmin  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  memberships Membership[]
+  sessions    Session[]
+
+  @@index([deletedAt])
+}
+
+// -----------------------------------------------------------------------------
+// Membership — only join between User and Company. Drives RBAC per-tenant.
+// FKs deliberately use Restrict so an attempt to delete a User or Company that
+// still has memberships fails loud rather than silently cascading.
+// -----------------------------------------------------------------------------
+model Membership {
+  id        String   @id @db.Char(26)
+  userId    String   @db.Char(26)
+  companyId String   @db.Char(26)
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+// -----------------------------------------------------------------------------
+// Session — server-side opaque session (see ADR-0004). The cookie carries the
+// id (ULID). `csrfTokenHash` stores the server-side hash of the CSRF secret;
+// the secret itself is delivered to the browser separately. No raw IP — store
+// a redacted/hashed form per ai/context/security.md.
+// -----------------------------------------------------------------------------
+model Session {
+  id            String   @id @db.Char(26)
+  userId        String   @db.Char(26)
+  companyId     String?  @db.Char(26)
+  csrfTokenHash String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  lastSeenAt    DateTime @default(now())
+  ip            String?
+  userAgent     String?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([userId, expiresAt])
+  @@index([companyId])
+}
+
+// -----------------------------------------------------------------------------
+// AuditLog — append-only record of security-relevant events. `payloadJson` is
+// untyped; any writer must redact PII / secrets before insert (callers are
+// responsible — see SPEC-0006 logger redaction list).
+// -----------------------------------------------------------------------------
+model AuditLog {
+  id          String   @id @db.Char(26)
+  companyId   String?  @db.Char(26) // null for system-level events (e.g. login)
+  actorUserId String?  @db.Char(26)
+  action      String // e.g. "auth.login.success"
+  entity      String // e.g. "Session"
+  entityId    String?
+  ip          String?
+  userAgent   String?
+  payloadJson Json?
+  createdAt   DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@index([action, createdAt])
+}
+
+// =============================================================================
+// SRI Core models — added per SPEC-0020 §6.4 + SPEC-0026 §6.2.
+//
+// These tables share the database with the identity baseline but are written
+// exclusively by `apps/sri-core`. The cross-table relation to `Company` is
+// logical (the FK is **not** declared as a Prisma relation because api never
+// loads SriDocument and sri-core never loads Company through Prisma); the
+// scoping happens through the `companyId` filter in every query.
+//
+// Hard rules applied here:
+//   - `Certificate.p12Ciphertext` / `p12Passphrase*` columns hold encrypted
+//     bytes. They are NEVER returned over the wire (SPEC-0021).
+//   - `SriDocument.signedXmlBlobKey` / `authorizedXmlBlobKey` reference an
+//     external blob store (SPEC-0026 §6.6). The XML bytes themselves are
+//     never persisted in Postgres.
+//   - `SriDocument.estado` only transitions through `recordEvent()` (SPEC-0026
+//     §6.3). Direct `prisma.sriDocument.update({ data: { estado } })` outside
+//     the lifecycle helper is a defect.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// SriEstado — document lifecycle states per SPEC-0026 §6.2.
+// -----------------------------------------------------------------------------
+enum SriEstado {
+  PENDIENTE
+  FIRMADO
+  ENVIADO
+  RECIBIDA
+  EN_PROCESO
+  AUTORIZADO
+  NO_AUTORIZADO
+  DEVUELTA
+  ERROR_RED
+  ERROR_BUILD
+}
+
+// -----------------------------------------------------------------------------
+// SriEtapa — pipeline stage that produced an event row.
+// -----------------------------------------------------------------------------
+enum SriEtapa {
+  BUILD
+  SIGN
+  SEND
+  RECEIVE
+  AUTHORIZE
+  POLL
+  ERROR
+}
+
+// -----------------------------------------------------------------------------
+// Certificate — per-tenant .p12 envelope, encrypted at rest.
+//
+// Cryptographic detail (AES-256-GCM nonce + tag layout, master-key versioning,
+// rotation rules) belongs to SPEC-0021. This model just reserves the columns
+// so the bootstrap can persist a fingerprint + status. The actual upload
+// endpoint lives in apps/sri-core and is implemented in PROMPT-0021.
+// -----------------------------------------------------------------------------
+model Certificate {
+  id                String   @id @db.Char(26)
+  companyId         String   @db.Char(26)
+  alias             String
+  subjectCN         String
+  issuerCN          String
+  serialNumber      String
+  validFrom         DateTime
+  validTo           DateTime
+  p12CiphertextB64  String
+  p12NonceB64       String
+  p12TagB64         String
+  // Encrypted passphrase blob — same envelope shape as the .p12, distinct key
+  // material. SPEC-0021 §6 details the derivation; for v1 we just reserve.
+  passphraseCiphertextB64 String?
+  passphraseNonceB64      String?
+  passphraseTagB64        String?
+  kmsKeyVersion     String   @default("v1")
+  fingerprintSha256 String   @unique
+  status            String // ACTIVE | INACTIVE | REVOKED | EXPIRED
+  uploadedAt        DateTime @default(now())
+  deletedAt         DateTime?
+
+  @@unique([companyId, serialNumber])
+  @@index([companyId, status])
+}
+
+// -----------------------------------------------------------------------------
+// SriDocument — one row per (companyId, claveAcceso) tuple. `claveAcceso` is
+// globally unique by SRI design (it embeds RUC + secuencial + date), so we
+// enforce the uniqueness at the schema level. Idempotency on emit reuses this
+// constraint: a second emit with the same claveAcceso upserts into the same
+// row.
+// -----------------------------------------------------------------------------
+model SriDocument {
+  id                   String    @id @db.Char(26)
+  companyId            String    @db.Char(26)
+  // Document context (SPEC-0020 §6.4 + SPEC-0023).
+  tipoComprobante      String // "01" factura, "04" nota crédito, etc.
+  claveAcceso          String    @unique
+  ambiente             String // "1" pruebas | "2" producción
+  estab                String
+  ptoEmi               String
+  secuencial           String
+  fechaEmision         DateTime
+  // SRI lifecycle.
+  estado               SriEstado
+  numeroAutorizacion   String?
+  fechaAutorizacion    DateTime?
+  // Blob keys: never the XML bytes themselves (SPEC-0026 §6.6).
+  signedXmlBlobKey     String?
+  authorizedXmlBlobKey String?
+  // Last-seen SRI mensajes (array of `{ identificador, mensaje, tipo,
+  // informacionAdicional? }`). Redaction is the writer's responsibility.
+  mensajesJson         Json?
+  // -------------------------------------------------------------------------
+  // Polling-job bookkeeping (SPEC-0026 §FR-5). The cron worker selects rows
+  // where `estado='EN_PROCESO' AND (nextPollAt IS NULL OR nextPollAt <= now())`
+  // FOR UPDATE SKIP LOCKED. After each attempt it bumps `pollAttempts`,
+  // updates `lastPollAt = now()`, and sets `nextPollAt` via exponential
+  // backoff (min(30s * 2^attempts, MAX_BACKOFF)). Default NULL means
+  // "eligible immediately" — the orchestrator writes the first nextPollAt
+  // when it observes EN_PROCESO from the synchronous autorización call.
+  // -------------------------------------------------------------------------
+  nextPollAt           DateTime?
+  lastPollAt           DateTime?
+  pollAttempts         Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  events SriEvent[]
+
+  @@index([companyId, estado, createdAt])
+  @@index([companyId, claveAcceso])
+  // Polling-job index: the worker scans `estado='EN_PROCESO' AND nextPollAt
+  // <= now()` every tick, so the composite index on (estado, nextPollAt)
+  // keeps the planner from scanning the whole table.
+  @@index([estado, nextPollAt])
+}
+
+// -----------------------------------------------------------------------------
+// SriEvent — append-only timeline row written by `recordEvent()` on every
+// state transition. The (etapa, estado) pair is the durable audit chain for
+// the UI list/detail screens.
+// -----------------------------------------------------------------------------
+model SriEvent {
+  id           String      @id @db.Char(26)
+  documentId   String      @db.Char(26)
+  document     SriDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  etapa        SriEtapa
+  estado       SriEstado
+  // `mensajesJson` shape mirrors `SriDocument.mensajesJson`.
+  mensajesJson Json?
+  durationMs   Int         @default(0)
+  createdAt    DateTime    @default(now())
+
+  @@index([documentId, createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// BurnedSecuencial — append-only audit row recording a consumed secuencial.
+//
+// Created in skeleton form per TASKS-0020 and finalised by SPEC-0030. The
+// table is keyed by (companyId, estab, ptoEmi, secuencial) — that tuple is
+// globally unique by SRI rules: once a secuencial is reserved or attached
+// to a document, it MUST NEVER be released or reused, regardless of the
+// emission outcome.
+//
+// `tipoComprobante` was added in the billing_emission_points migration
+// because the sequence space is per-(emissionPoint, codDoc) — burning a
+// "01" 005 leaves "04" 005 still reservable.
+//
+// `reason` taxonomy: 'reissue' | 'manual' | 'emission_failure'. Burns are
+// written by the orchestrator/operator paths in SPEC-0033; the field is a
+// free string so future reasons don't require a schema change.
+// -----------------------------------------------------------------------------
+model BurnedSecuencial {
+  id              String   @id @db.Char(26)
+  companyId       String   @db.Char(26)
+  estab           String
+  ptoEmi          String
+  tipoComprobante String   @default("01")
+  secuencial      String
+  reason          String   @default("reissue")
+  burnedByUserId  String?  @db.Char(26)
+  // Optional pointer back to the document that consumed the number. Null
+  // while the number is reserved but not yet attached to a SriDocument.
+  documentId      String?  @db.Char(26)
+  createdAt       DateTime @default(now())
+
+  // The (companyId, estab, ptoEmi, secuencial) uniqueness preserves the
+  // existing constraint from the SRI-core skeleton — burning the same
+  // secuencial twice (even across codDoc) is a defect.
+  @@unique([companyId, estab, ptoEmi, secuencial])
+  @@index([companyId, estab, ptoEmi])
+  @@index([companyId, estab, ptoEmi, tipoComprobante, createdAt])
+}
+
+// =============================================================================
+// Billing — SPEC-0030 emission points & sequencing.
+//
+// Owned by `apps/api`. The cross-table relation to `Company` is logical
+// (companyId is a Char(26) FK without a Prisma relation declared) for the
+// same reason as the SRI-core tables: tenant scoping is enforced at the
+// query layer, not via Prisma loaders.
+//
+// Hard rules captured in the schema:
+//   - `Establecimiento.codigo` and `EmissionPoint.codigo` are 3-digit
+//     strings (validated at the contract layer; the DB stores TEXT).
+//   - `SecuencialCounter.value` is BigInt to leave headroom past
+//     999_999_999 (the application throws ConflictError before then;
+//     BigInt avoids accidental Int32 overflow during stress tests).
+//   - Soft-delete only via `deletedAt`; counters persist past establishment
+//     deletion so the no-reuse rule is preserved if an establishment is
+//     ever resurrected.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Establecimiento — SRI "establecimiento" (a 3-digit code per tenant). A
+// tenant can have many; one may be marked `isMatriz`. The (companyId,
+// codigo) tuple is unique per tenant.
+// -----------------------------------------------------------------------------
+model Establecimiento {
+  id          String    @id @db.Char(26)
+  companyId   String    @db.Char(26)
+  codigo      String // 3 digits
+  direccion   String
+  isMatriz    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  emissionPoints EmissionPoint[]
+
+  @@unique([companyId, codigo])
+  @@index([companyId, deletedAt])
+  @@map("establecimientos")
+}
+
+// -----------------------------------------------------------------------------
+// EmissionPoint — SRI "punto de emisión" inside an Establecimiento. A
+// tenant can mark exactly one as the default per establishment via the
+// `isDefault` flag; the application enforces the at-most-one invariant
+// inside a transaction.
+// -----------------------------------------------------------------------------
+model EmissionPoint {
+  id                String    @id @db.Char(26)
+  companyId         String    @db.Char(26)
+  establecimientoId String    @db.Char(26)
+  codigo            String // 3 digits
+  descripcion       String
+  isDefault         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  establecimiento Establecimiento @relation(fields: [establecimientoId], references: [id], onDelete: Restrict)
+
+  @@unique([establecimientoId, codigo])
+  @@index([companyId, deletedAt])
+  @@map("emission_points")
+}
+
+// -----------------------------------------------------------------------------
+// SecuencialCounter — atomic numeric counter per (companyId, estab,
+// ptoEmi, tipoComprobante). Composite primary key gives every reservation
+// path a single row to lock against under Serializable isolation. `value`
+// is BigInt so the planner can keep the column NUMERIC-shaped without
+// the JS Int32 ceiling biting.
+// -----------------------------------------------------------------------------
+model SecuencialCounter {
+  companyId       String   @db.Char(26)
+  estab           String
+  ptoEmi          String
+  tipoComprobante String
+  value           BigInt   @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@id([companyId, estab, ptoEmi, tipoComprobante])
+  @@map("secuencial_counters")
+}
+
+// =============================================================================
+// Billing — SPEC-0031 Customer catalog.
+//
+// Owned by `apps/api`. Multi-tenant by `companyId`. Soft-delete only (the
+// `deletedAt` column flips non-null when an operator removes a customer; we
+// never hard-delete because invoice history references this row by `id` even
+// after the customer is "deleted").
+//
+// Hard rules applied here:
+//   - `(companyId, tipoIdentificacion, identificacion)` is unique per tenant.
+//     Same identification across different tenants is allowed by design (SPEC-
+//     0031 AC-4).
+//   - `(companyId, razonSocial)` is indexed for the search-by-prefix path.
+//   - PII columns (email, telefono, direccion) are covered by the
+//     `@facturador/logger` REDACT_PATHS list. Reads exclude them from list
+//     responses; detail responses include them but pass through the same log
+//     redactions.
+//   - Soft-delete preserves audit + invoice references. Queries always filter
+//     by `deletedAt IS NULL`.
+//   - The Consumidor Final row (tipoIdentificacion="07",
+//     identificacion="9999999999999") is upserted per tenant by the
+//     `ensureConsumidorFinal()` helper; manual creation with that fixed
+//     identifier is rejected at the API layer with a `customer.use_helper`
+//     409 (defence-in-depth — the unique constraint also fires).
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Customer — tenant-scoped customer catalog. Discriminated by
+// `tipoIdentificacion`:
+//   "04" RUC | "05" Cédula | "06" Pasaporte | "07" Consumidor Final |
+//   "08" Identificación del exterior.
+//
+// `identificacion` is stored as-is (the digits/string). Branch validation
+// (checksum rules) happens at the API service layer via Zod schemas in
+// `@facturador/contracts/customers`.
+// -----------------------------------------------------------------------------
+model Customer {
+  id                 String    @id @db.Char(26)
+  companyId          String    @db.Char(26)
+  tipoIdentificacion String // "04"|"05"|"06"|"07"|"08"
+  identificacion     String // up to 20 (the SRI ficha-técnica limit)
+  razonSocial        String
+  nombreComercial    String?
+  email              String?
+  telefono           String?
+  direccion          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  // Composite uniqueness: same tenant cannot have two rows with the same
+  // tipo + identificacion. Different tenants may share the same identifier
+  // (a freelance accountant can be a customer of multiple companies).
+  @@unique([companyId, tipoIdentificacion, identificacion])
+  // Prefix-search support for `?q=<...>` on razonSocial.
+  @@index([companyId, razonSocial])
+  // Substring search support on identificacion (SPEC-0031 §10): the
+  // composite-unique alone does not help when filtering by identificacion
+  // without tipo (search-by-q path).
+  @@index([companyId, identificacion])
+  @@index([companyId, deletedAt])
+  @@map("customers")
+}
+
+// =============================================================================
+// Billing — SPEC-0032 invoice (factura) domain.
+//
+// Owned by `apps/api`. The cross-table relation to `Company`, `Customer`, and
+// `EmissionPoint` is logical (companyId / customerId / emissionPointId are
+// Char(26) FKs without Prisma relations declared) for the same reason as the
+// other billing tables: tenant scoping is enforced at the query layer.
+//
+// Hard rules captured in the schema:
+//   - All money columns use `@db.Decimal(precision,scale)` so Postgres stores
+//     exact decimals — never floats. The application maps these via
+//     `decimal.js` (SPEC-0032 §6.2). `Number()` arithmetic in compute paths
+//     is a defect.
+//   - `cantidad` and `precioUnitario` use 6 decimals (per SRI ficha-técnica
+//     §8 quantity pattern `^\d{1,14}(\.\d{1,6})?$`).
+//   - Monetary totals use 2 decimals.
+//   - `estado` is the business-side invoice state machine (BORRADOR →
+//     EMITIDO | ANULADO). It is INDEPENDENT of `SriDocument.estado` which
+//     tracks the SRI lifecycle. The orchestrator (SPEC-0033) mirrors
+//     SriDocument.estado to `sriEstado` for fast list reads.
+//   - Lines / payments / adicionales are stored as separate rows (not a JSON
+//     blob) so the foreign-key cascade on `Invoice.id` cleans up on delete
+//     and so per-line indexes are possible. Tax detail is stored as a JSON
+//     column on each line because the impuesto array is a 1..N detail block
+//     that does not need its own table for v1.
+//   - `secuencial` and `claveAcceso` are NULL while estado=BORRADOR.
+//     SPEC-0033 fills them at emit time inside a transaction that also
+//     reserves the secuencial via SPEC-0030.
+//   - Soft-delete (`deletedAt`) is restricted to BORRADOR rows; the API
+//     refuses to flip `deletedAt` on EMITIDO. We keep the column on the
+//     model so historical audit trails reference is preserved.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// InvoiceEstado — business-side invoice state. Distinct from SriEstado.
+// -----------------------------------------------------------------------------
+enum InvoiceEstado {
+  BORRADOR
+  EMITIDO
+  ANULADO
+}
+
+// -----------------------------------------------------------------------------
+// Invoice — factura aggregate root. Persists computed totals + lines'
+// computed fields so list views don't recompute.
+// -----------------------------------------------------------------------------
+model Invoice {
+  id                    String        @id @db.Char(26)
+  companyId             String        @db.Char(26)
+  customerId            String        @db.Char(26)
+  emissionPointId       String        @db.Char(26)
+  estado                InvoiceEstado @default(BORRADOR)
+  codDoc                String        @default("01") // "01" factura
+  estab                 String // 3 digits (snapshot from EmissionPoint.parent at create)
+  ptoEmi                String // 3 digits (snapshot from EmissionPoint at create)
+  // Filled by the orchestrator (SPEC-0033) at emit time; NULL on draft.
+  secuencial            String?
+  claveAcceso           String?       @unique
+  fechaEmision          DateTime // local-date midnight, derived from caller's YYYY-MM-DD
+  // dd/mm/aaaa rendered in EC tz for XML / RIDE.
+  fechaEmisionLocal     String
+  moneda                String        @default("DOLAR")
+  ambiente              String // "1" pruebas | "2" producción
+  tipoEmision           String        @default("1") // "1" normal | "2" contingencia
+  obligadoContabilidad  Boolean       @default(false)
+  contribuyenteEspecial String?
+  // -------------------------------------------------------------------------
+  // Computed totals (server-authoritative). Reads never recompute.
+  // Decimal(14,2) is comfortable headroom past the SRI ficha-técnica limit
+  // (12 integer + 2 fractional digits).
+  // -------------------------------------------------------------------------
+  totalSinImpuestos     Decimal       @db.Decimal(14, 2)
+  totalDescuento        Decimal       @default(0) @db.Decimal(14, 2)
+  // `totalsJson` captures the per-impuesto breakdown
+  // (`{codigo, codigoPorcentaje, tarifa, baseImponible, valor}[]`). Stored
+  // as JSON because the shape is small and read whole; not worth a side
+  // table for v1.
+  totalsJson            Json
+  propina               Decimal       @default(0) @db.Decimal(14, 2)
+  importeTotal          Decimal       @db.Decimal(14, 2)
+  // Mirror of the linked SriDocument.estado (denormalised at emit). NULL
+  // while estado=BORRADOR. List views read this directly.
+  sriEstado             SriEstado?
+  emittedAt             DateTime?
+  // Last-seen SRI mensajes envelope (writer responsibility to redact).
+  mensajesJson          Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime?
+
+  lines       InvoiceLine[]
+  payments    InvoicePayment[]
+  adicionales InvoiceAdicional[]
+
+  // Cursor pagination by `(createdAt DESC, id DESC)`. We index
+  // (companyId, createdAt) so the planner uses a backward range scan; the
+  // (companyId, estado, createdAt) index supports the most common filter.
+  @@index([companyId, createdAt])
+  @@index([companyId, estado, createdAt])
+  // Filter-by-fechaEmision range scans (date filter on the list endpoint).
+  @@index([companyId, fechaEmision])
+  // Free-text search on claveAcceso — we expose the column for the list
+  // endpoint and orchestrator idempotency.
+  @@index([companyId, claveAcceso])
+  @@index([companyId, deletedAt])
+  @@map("invoices")
+}
+
+// -----------------------------------------------------------------------------
+// InvoiceLine — one row per detalle. `orden` preserves user-visible order;
+// `impuestosJson` carries the tax breakdown `[{codigo,codigoPorcentaje,
+// tarifa,baseImponible,valor}]`.
+// -----------------------------------------------------------------------------
+model InvoiceLine {
+  id                     String   @id @db.Char(26)
+  invoiceId              String   @db.Char(26)
+  orden                  Int
+  codigoPrincipal        String?
+  codigoAuxiliar         String?
+  descripcion            String // sanitised at the API; XML escapes again
+  unidadMedida           String?
+  cantidad               Decimal  @db.Decimal(18, 6)
+  precioUnitario         Decimal  @db.Decimal(18, 6)
+  descuento              Decimal  @default(0) @db.Decimal(14, 2)
+  // Server-computed; never trusted from the client.
+  precioTotalSinImpuesto Decimal  @db.Decimal(14, 2)
+  impuestosJson          Json
+  createdAt              DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, orden])
+  @@map("invoice_lines")
+}
+
+// -----------------------------------------------------------------------------
+// InvoicePayment — one row per <pago>. SRI mandates the formaPago catalogue
+// (validated in the contract); `total` per row sums to importeTotal (±0.01).
+// -----------------------------------------------------------------------------
+model InvoicePayment {
+  id           String   @id @db.Char(26)
+  invoiceId    String   @db.Char(26)
+  orden        Int
+  formaPago    String // SRI catalogue (01|15|16|17|18|19|20|21)
+  total        Decimal  @db.Decimal(14, 2)
+  plazo        Decimal? @db.Decimal(14, 2)
+  unidadTiempo String?
+  createdAt    DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, orden])
+  @@map("invoice_payments")
+}
+
+// -----------------------------------------------------------------------------
+// InvoiceAdicional — one row per <campoAdicional>. Up to 15 per invoice
+// (enforced at the contract layer).
+// -----------------------------------------------------------------------------
+model InvoiceAdicional {
+  id        String   @id @db.Char(26)
+  invoiceId String   @db.Char(26)
+  orden     Int
+  nombre    String
+  valor     String
+  createdAt DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, orden])
+  @@map("invoice_adicionales")
+}

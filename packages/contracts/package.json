@@ -1,0 +1,60 @@
+{
+  "name": "@facturador/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./primitives": {
+      "types": "./dist/primitives/index.d.ts",
+      "import": "./dist/primitives/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js"
+    },
+    "./tenants": {
+      "types": "./dist/tenants/index.d.ts",
+      "import": "./dist/tenants/index.js"
+    },
+    "./customers": {
+      "types": "./dist/customers/index.d.ts",
+      "import": "./dist/customers/index.js"
+    },
+    "./invoices": {
+      "types": "./dist/invoices/index.d.ts",
+      "import": "./dist/invoices/index.js"
+    },
+    "./sri": {
+      "types": "./dist/sri/index.d.ts",
+      "import": "./dist/sri/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@facturador/config": "workspace:*",
+    "@types/node": "22.9.0",
+    "@vitest/coverage-v8": "2.1.4",
+    "vitest": "2.1.4"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  // Typecheck + ESLint use this superset. `prisma/seed.ts` runs through `tsx`
+  // (no compile output needed) and `test/**/*.ts` runs through vitest, so the
+  // build target lives in `tsconfig.build.json` (used by `tsc -b`).
+  "include": ["src/**/*", "prisma/**/*.ts", "test/**/*.ts"]
+}

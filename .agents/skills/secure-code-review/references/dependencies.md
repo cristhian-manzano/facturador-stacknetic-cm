@@ -11,7 +11,7 @@ Before adding or upgrading a dependency, answer each of these — briefly — in
 - Does the standard library cover it? (e.g., `crypto`, `url`, `fetch` in modern Node; `hashlib`, `urllib.parse`, `zoneinfo` in modern Python.)
 - Does an existing dependency cover it? Introducing a new library that overlaps 80% with an existing one is almost always a mistake.
 - Is it <50 lines of code you could own yourself? (e.g., `is-odd`, `left-pad` — famous for a reason.)
-- Cryptography, parsing untrusted binary formats, TLS, auth protocols: *don't* roll your own, even if it seems short.
+- Cryptography, parsing untrusted binary formats, TLS, auth protocols: _don't_ roll your own, even if it seems short.
 
 ### 2. Popularity / adoption
 

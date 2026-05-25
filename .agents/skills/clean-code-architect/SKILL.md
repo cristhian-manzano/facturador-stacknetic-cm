@@ -89,7 +89,7 @@ Use Clean / Hexagonal / Ports & Adapters / Feature-based / DDD / CQRS **only** w
 
 ## Patterns to reach for (only when they add value)
 
-Treat each pattern as a tool, not a goal. Ask: *does this make the code easier to understand, change, or test?*
+Treat each pattern as a tool, not a goal. Ask: _does this make the code easier to understand, change, or test?_
 
 - **Repository** — isolate data access from domain logic.
 - **Service layer** — orchestrate use cases above the domain.
@@ -156,23 +156,29 @@ When this skill triggers, structure output as follows. Skip sections that do not
 
 ```markdown
 ## 1. Quality summary
+
 One short paragraph: overall state of the code (or plan), biggest strengths, biggest risks.
 
 ## 2. Main findings
+
 - **[Severity: critical | major | minor]** Short title
   - What: concrete observation with file/line reference when possible.
   - Why it matters: impact on maintainability / scalability / readability / testability.
 
 ## 3. Concrete recommendations
+
 Numbered, specific, actionable. Each item must be implementable without further clarification.
 
 ## 4. Proposed refactor / improved code
+
 Show the improved code (or diff-like before/after) when it helps. Keep changes minimal and targeted — do not rewrite what was already fine.
 
 ## 5. Suggested file / folder structure
+
 Only if structural changes are warranted. Show a tree and one-line purpose per file.
 
 ## 6. Final checklist
+
 - [ ] Clean code: names, function size, nesting, dead code
 - [ ] SRP and separation of concerns respected
 - [ ] Cohesion high, coupling low across modules
