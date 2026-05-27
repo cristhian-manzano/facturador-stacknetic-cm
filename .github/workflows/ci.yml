@@ -63,13 +63,13 @@ jobs:
       - uses: actions/checkout@v4
       # Hadolint is distributed as a single binary; the official action wraps
       # the latest release and can lint multiple Dockerfiles in one pass.
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: apps/api/Dockerfile
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: apps/sri-core/Dockerfile
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: apps/web/Dockerfile
 
