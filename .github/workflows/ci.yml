@@ -20,7 +20,7 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -35,10 +35,43 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
+
+  check-xsd-sync:
+    name: XSD byte-equal guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify docs/ and apps/sri-core/resources/ XSDs are byte-equal
+        run: pnpm --filter @facturador/sri-core check:xsd-sync
+
+  lint-docker:
+    name: Lint Dockerfiles (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Hadolint is distributed as a single binary; the official action wraps
+      # the latest release and can lint multiple Dockerfiles in one pass.
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/api/Dockerfile
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/sri-core/Dockerfile
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/web/Dockerfile
 
   test:
     name: Test (Vitest + coverage)
@@ -71,7 +104,7 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client

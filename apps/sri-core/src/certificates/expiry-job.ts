@@ -21,6 +21,7 @@
  *     (action, entityId, day).
  */
 import cron, { type ScheduledTask } from "node-cron";
+
 import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
 import { audit as auditFn, type AuditPrismaClient } from "@facturador/utils/audit";
@@ -45,13 +46,99 @@ export interface RunExpiryCheckResult {
   readonly expiredWritten: number;
 }
 
+/** Deterministic advisory-lock id for the daily expiry job.
+ *
+ * We hash a stable string (`cert-expiry-job`) via Postgres' `hashtext`
+ * so two replicas always pick the same lock slot without any
+ * coordination layer. The numeric form is INT32-wide; that's fine —
+ * `pg_try_advisory_lock(int)` accepts a single-int variant.
+ */
+export const EXPIRY_JOB_LOCK_NAME = "cert-expiry-job";
+
+/** Status returned by {@link runExpiryCheck} when another replica owns the lock. */
+export const EXPIRY_SKIPPED_RESULT: RunExpiryCheckResult = Object.freeze({
+  scanned: 0,
+  warningsWritten: 0,
+  expiredWritten: 0,
+});
+
+/**
+ * Try to acquire the deterministic advisory lock for the expiry job.
+ *
+ * Returns `true` when the caller holds the lock and is the sole runner
+ * for this tick; `false` when a peer beat them to it.
+ */
+async function tryAcquireAdvisoryLock(
+  prisma: PrismaClient,
+  lockName: string,
+): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ locked: boolean }[]>`
+    SELECT pg_try_advisory_lock(hashtext(${lockName})) AS locked
+  `;
+  return rows[0]?.locked === true;
+}
+
+async function releaseAdvisoryLock(prisma: PrismaClient, lockName: string): Promise<void> {
+  await prisma.$executeRaw`SELECT pg_advisory_unlock(hashtext(${lockName}))`;
+}
+
 /**
  * Scan ACTIVE certs and emit audit rows for any cert whose days-remaining
  * matches one of the warning buckets (or is already negative).
  *
+ * Concurrency:
+ *   - Wraps the job body in `pg_try_advisory_lock(hashtext('cert-expiry-job'))`
+ *     so two replicas never both emit a warning audit row for the same
+ *     day. The losing replica returns {@link EXPIRY_SKIPPED_RESULT} and
+ *     logs a single `info` line so dashboards can confirm the lock is
+ *     working.
+ *   - We never block on the lock — `pg_try_advisory_lock` returns
+ *     immediately. The job runs daily; another replica will run it on
+ *     the next tick or another scheduled invocation.
+ *
  * Returns counters useful for tests + dashboards.
  */
 export async function runExpiryCheck(
+  prisma: PrismaClient,
+  logger: Logger,
+  now: Date = new Date(),
+): Promise<RunExpiryCheckResult> {
+  const acquired = await tryAcquireAdvisoryLock(prisma, EXPIRY_JOB_LOCK_NAME);
+  if (!acquired) {
+    logger.info(
+      {
+        event: "certificate.expiry_cron_skipped",
+        reason: "lock_held_by_peer",
+      },
+      "expiry cron skipped (advisory lock held by another replica)",
+    );
+    return EXPIRY_SKIPPED_RESULT;
+  }
+  try {
+    return await runExpiryCheckBody(prisma, logger, now);
+  } finally {
+    // Always release — including on throw — so the next tick can grab
+    // it. `pg_advisory_unlock` is a no-op when the lock isn't held by
+    // the current session, so a transient connection drop between
+    // acquire + release simply leaves the lock to expire with the
+    // session.
+    try {
+      await releaseAdvisoryLock(prisma, EXPIRY_JOB_LOCK_NAME);
+    } catch (err) {
+      logger.warn(
+        { err, event: "certificate.expiry_cron_unlock_failed" },
+        "advisory unlock failed",
+      );
+    }
+  }
+}
+
+/**
+ * Pure-ish body of the expiry check — the same logic that ran before the
+ * advisory-lock guard landed. Kept exported so the test suite can drive
+ * it without acquiring real Postgres locks.
+ */
+export async function runExpiryCheckBody(
   prisma: PrismaClient,
   logger: Logger,
   now: Date = new Date(),

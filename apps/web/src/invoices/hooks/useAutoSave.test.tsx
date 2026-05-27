@@ -1,10 +1,12 @@
 /**
  * `useAutoSave` tests
  * (SPEC-0042 §FR-8 / TASKS-0042 §3.2 / hard rule: 30 s interval, collapse
- * duplicate fires, cancel on unmount).
+ * duplicate fires, cancel on unmount + REVIEW-0044 §8 ETag conflict).
  */
-import { describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import { ApiError } from "../../lib/api.js";
 
 import { useAutoSave, type AutoSaveSaver } from "./useAutoSave.js";
 
@@ -152,7 +154,7 @@ describe("useAutoSave", () => {
   it("aborts the in-flight request on unmount", () => {
     vi.useFakeTimers();
     let receivedSignal: AbortSignal | null = null;
-    const saver: AutoSaveSaver = (_id, _body, signal) => {
+    const saver: AutoSaveSaver = (_id, _body, { signal }) => {
       receivedSignal = signal;
       return new Promise(() => undefined);
     };
@@ -217,6 +219,75 @@ describe("useAutoSave", () => {
       await Promise.resolve();
     });
     expect(onError).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it("forwards the current etag to the saver and adopts the next one", async () => {
+    vi.useFakeTimers();
+    const seenEtags: (string | null)[] = [];
+    const saver = vi.fn(async (_id, _body, { etag }: { etag: string | null }) => {
+      seenEtags.push(etag);
+      return { etag: `etag-${seenEtags.length}` };
+    });
+    renderHook(() => {
+      useAutoSave({
+        invoiceId: "inv-1",
+        dirty: true,
+        buildBody: () => makeBody(),
+        intervalMs: 100,
+        initialEtag: "etag-0",
+        saver: saver as unknown as AutoSaveSaver,
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(seenEtags[0]).toBe("etag-0");
+    // Second tick should have picked up the etag returned by the first save.
+    expect(seenEtags[1]).toBe("etag-1");
+    vi.useRealTimers();
+  });
+
+  it("invokes onConflict (NOT onError) on 412 Precondition Failed", async () => {
+    vi.useFakeTimers();
+    const onConflict = vi.fn();
+    const onError = vi.fn();
+    const saver = vi.fn(async () => {
+      throw new ApiError({
+        type: "about:blank",
+        title: "Precondition Failed",
+        status: 412,
+        code: "invoice.etag_mismatch",
+      });
+    });
+    renderHook(() => {
+      useAutoSave({
+        invoiceId: "inv-1",
+        dirty: true,
+        buildBody: () => makeBody(),
+        intervalMs: 100,
+        saver: saver as unknown as AutoSaveSaver,
+        onConflict,
+        onError,
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onConflict).toHaveBeenCalledOnce();
+    expect(onError).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

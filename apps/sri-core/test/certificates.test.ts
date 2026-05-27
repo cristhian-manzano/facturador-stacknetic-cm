@@ -14,16 +14,20 @@
  *   - `generateSyntheticP12` produces a self-signed cert in memory; no
  *     real .p12 is committed.
  */
-import { describe, expect, it, beforeAll } from "vitest";
 import request from "supertest";
 import { ulid } from "ulid";
+import { describe, expect, it, beforeAll } from "vitest";
+
+import { ProblemDetailSchema } from "@facturador/contracts/errors";
 import type { PrismaClient } from "@facturador/db";
 import { useTestSchema } from "@facturador/db/test-harness";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
-import { ProblemDetailSchema } from "@facturador/contracts/errors";
-import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
-import { createTestApp } from "./factory.js";
+
 import { __resetActiveCertificateCache } from "../src/certificates/active.js";
+
+import { createTestApp } from "./factory.js";
+import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
+
 
 /**
  * Create a Company row with the given id so the AuditLog FK is satisfied.

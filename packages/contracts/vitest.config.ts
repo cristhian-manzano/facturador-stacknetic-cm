@@ -1,32 +1,20 @@
 /**
  * Vitest config for `@facturador/contracts`.
  *
- * Coverage targets per TASKS-0005 §11.1: statement coverage >= 95%.
- * Subpath-exported domains live under `src/<domain>/` and each schema file
- * has a sibling `.test.ts`.
+ * Uses the shared `defineFacturadorVitestConfig` factory (SPEC-0007 §1) so
+ * pool options, reporter set, and per-package coverage thresholds stay in
+ * sync with the rest of the monorepo. The contracts package overrides the
+ * default thresholds to keep its historical 95% statement bar (the schemas
+ * are pure data with no runtime branching).
  */
-import { defineConfig } from "vitest/config";
+import { defineFacturadorVitestConfig } from "@facturador/config/vitest";
 
-export default defineConfig({
-  test: {
-    globals: true,
-    include: ["src/**/*.test.ts"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "text-summary", "json-summary"],
-      include: ["src/**/*.ts"],
-      exclude: [
-        "src/**/index.ts",
-        "src/**/*.test.ts",
-        "src/**/__tests__/**",
-        "src/**/__fixtures__/**",
-      ],
-      thresholds: {
-        statements: 95,
-        branches: 90,
-        functions: 95,
-        lines: 95,
-      },
-    },
-  },
+export default defineFacturadorVitestConfig({
+  packageName: "@facturador/contracts",
+  environment: "node",
+  // No `test/setup.ts` in this package — contracts are pure Zod schemas
+  // with no I/O to initialise.
+  includeSetupFile: false,
+  // Keep the historical bar from the previous hand-rolled config.
+  coverageThresholds: { statements: 95, branches: 90, functions: 95, lines: 95 },
 });

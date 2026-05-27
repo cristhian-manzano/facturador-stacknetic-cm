@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <ns2:autorizacionComprobanteResponse xmlns:ns2="http://ec.gob.sri.ws.autorizacion">
+      <RespuestaAutorizacionComprobante>
+        <claveAccesoConsultada>1234567890123456789012345678901234567890123456789</claveAccesoConsultada>
+        <numeroComprobantes>1</numeroComprobantes>
+        <autorizaciones>
+          <autorizacion>
+            <estado>AUTORIZADO</estado>
+            <numeroAutorizacion>9876543210987654321098765432109876543210987654321</numeroAutorizacion>
+            <fechaAutorizacion>2026-05-19T10:34:21-05:00</fechaAutorizacion>
+            <ambiente>PRUEBAS</ambiente>
+            <comprobante><factura id="comprobante" version="2.1.0"><infoTributaria><razonSocial>ACME-INLINE</razonSocial></infoTributaria></factura></comprobante>
+            <mensajes/>
+          </autorizacion>
+        </autorizaciones>
+      </RespuestaAutorizacionComprobante>
+    </ns2:autorizacionComprobanteResponse>
+  </soap:Body>
+</soap:Envelope>

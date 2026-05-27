@@ -60,8 +60,10 @@
  *     some upstream versions).
  */
 import { webcrypto } from "node:crypto";
+
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { SignedXml, type OptionsXAdES } from "xadesjs";
+
 import { ensureXadesEngine } from "./webcrypto-setup.js";
 
 /* -------------------------------------------------------------------------- */
@@ -413,6 +415,7 @@ export async function signFacturaXml(input: SignFacturaXmlInput): Promise<SignFa
        validates `<factura id="comprobante"` is present, so xmldom always
        produces a `<factura>` documentElement. Unreachable from any input
        that satisfies the public contract. */
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (root === null || root.localName !== "factura") {
       throw new XmlSignError("INVALID_INPUT_XML", "documentElement is not <factura> after parse");
     }
@@ -484,7 +487,7 @@ async function verifySignedXmlInternal(
   if (signatures.length > 1) {
     return {
       valid: false,
-      errors: [`expected exactly one <ds:Signature>, found ${signatures.length}`],
+      errors: [`expected exactly one <ds:Signature>, found ${String(signatures.length)}`],
     };
   }
 

@@ -11,8 +11,8 @@
  *   The target hostname `api` resolves inside the docker compose network
  *   (PROMPT-0003 §6.2). Tests don't use this server; Vitest mocks via MSW.
  */
-import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), "");
@@ -39,6 +39,30 @@ export default defineConfig(({ mode }) => {
     build: {
       target: "es2022",
       sourcemap: true,
+      rollupOptions: {
+        // Split heavy dependencies into dedicated chunks so the LOGIN route
+        // (the only eager-loaded route) doesn't pay the cost of code that
+        // only the authenticated app actually needs.
+        //
+        //   - `vendor-react`     — React + ReactDOM + react-router (small,
+        //                          shared across every route).
+        //   - `vendor-query`     — TanStack Query (only used by routes that
+        //                          fetch server data; not /login).
+        //   - `vendor-rhf`       — react-hook-form + zod resolver (used by
+        //                          LoginPage; small but separable so
+        //                          authed-only routes can skip the resolver
+        //                          if they don't use RHF).
+        //   - `vendor-zod`      — zod schemas (used everywhere; isolate so
+        //                          the parser tree is cached separately).
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-query": ["@tanstack/react-query"],
+            "vendor-rhf": ["react-hook-form", "@hookform/resolvers"],
+            "vendor-zod": ["zod"],
+          },
+        },
+      },
     },
   };
 });

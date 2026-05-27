@@ -19,8 +19,9 @@
  */
 import type { Logger } from "@facturador/logger";
 import type { Role } from "@facturador/utils/rbac";
-import type { AuthenticatedSession, AuthenticatedUser } from "../auth/types.js";
+
 import type { ActiveMembership } from "../auth/require-tenant.js";
+import type { AuthenticatedSession, AuthenticatedUser } from "../auth/types.js";
 
 declare global {
   namespace Express {

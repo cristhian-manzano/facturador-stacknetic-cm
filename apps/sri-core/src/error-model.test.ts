@@ -8,10 +8,13 @@
  * Everything else (forced-error matrix, redaction, request-id) is identical.
  */
 import { Writable } from "node:stream";
-import { describe, expect, it } from "vitest";
+
 import request from "supertest";
+import { describe, expect, it } from "vitest";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
 import { createLogger } from "@facturador/logger";
+
 import { createApp } from "./server.js";
 
 interface CapturedLine {

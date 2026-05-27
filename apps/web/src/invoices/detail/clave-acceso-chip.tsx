@@ -76,6 +76,9 @@ export function ClaveAccesoChip({ clave }: ClaveAccesoChipProps): ReactElement {
     // contexts. The hard rule: NEVER throw; surface a no-op + toast.
     const clipboard =
       typeof navigator !== "undefined" &&
+      // `navigator.clipboard` is typed as non-nullable in modern lib.dom
+      // but is genuinely absent in jsdom + insecure contexts.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       navigator.clipboard !== undefined &&
       typeof navigator.clipboard.writeText === "function"
         ? navigator.clipboard

@@ -21,12 +21,15 @@
  *     same router so they share the same auth chain.
  */
 import { Router } from "express";
+
 import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
+
+import { assertCsrf } from "../auth/csrf.js";
+import { requirePermission } from "../auth/require-permission.js";
 import { buildRequireSession } from "../auth/require-session.js";
 import { buildRequireTenant } from "../auth/require-tenant.js";
-import { requirePermission } from "../auth/require-permission.js";
-import { assertCsrf } from "../auth/csrf.js";
+
 import { buildInvoiceHandlers } from "./handlers.js";
 import { buildOrchestratorHandlers } from "./orchestrator.js";
 
@@ -43,7 +46,16 @@ export interface InvoiceRouterDeps {
 
 export function buildInvoiceRouter(deps: InvoiceRouterDeps): Router {
   const router: Router = Router();
-  const handlers = buildInvoiceHandlers(deps);
+  // Forward sri-core overrides to BOTH the CRUD handlers (the detail
+  // endpoint hydrates SriDocument + events) and the orchestrator (emit /
+  // reissue / refresh).
+  const handlers = buildInvoiceHandlers({
+    prisma: deps.prisma,
+    logger: deps.logger,
+    ...(deps.sriCoreBaseUrl === undefined ? {} : { sriCoreBaseUrl: deps.sriCoreBaseUrl }),
+    ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
+    ...(deps.serviceJwtSecret === undefined ? {} : { serviceJwtSecret: deps.serviceJwtSecret }),
+  });
   const orchestrator = buildOrchestratorHandlers({
     prisma: deps.prisma,
     logger: deps.logger,

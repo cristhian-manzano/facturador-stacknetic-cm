@@ -6,11 +6,12 @@
  * `apps/web/src/invoices/tax-rates.ts` already.
  */
 import type { ReactElement } from "react";
+
 import type { Invoice } from "@facturador/contracts/invoices";
 
+import { t } from "../../i18n/es.js";
 import { formatMoney } from "../money.js";
 import { FORMA_PAGO_TABLE } from "../tax-rates.js";
-import { t } from "../../i18n/es.js";
 
 function labelFormaPago(codigo: string): string {
   const row = FORMA_PAGO_TABLE.find((r) => r.codigo === codigo);
@@ -41,7 +42,7 @@ export function PaymentsPanel({ invoice }: PaymentsPanelProps): ReactElement {
         </thead>
         <tbody className="divide-y divide-slate-100">
           {invoice.payments.map((p, idx) => (
-            <tr key={`${idx}-${p.formaPago}`} data-testid={`payment-detail-${idx}`}>
+            <tr key={`${String(idx)}-${p.formaPago}`} data-testid={`payment-detail-${String(idx)}`}>
               <td className="px-2 py-1 text-slate-800">{labelFormaPago(p.formaPago)}</td>
               <td className="px-2 py-1 text-right font-medium text-slate-900">
                 {formatMoney(p.total)}

@@ -18,15 +18,17 @@
  * No real network: Supertest drives the express app in-process. MSW is
  * not used here because we want the real verifier to run.
  */
-import { describe, expect, it } from "vitest";
+import { SignJWT } from "jose";
 import request from "supertest";
 import { ulid } from "ulid";
-import { SignJWT } from "jose";
-import { useTestSchema } from "@facturador/db/test-harness";
-import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
+import { describe, expect, it } from "vitest";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
+import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
 import { EmitDocumentResponseSchema } from "@facturador/contracts/sri";
+import { useTestSchema } from "@facturador/db/test-harness";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
+
 import { createTestApp } from "./factory.js";
 
 const SECRET = "integration-test-service-jwt-secret-32-chars-of-entropy_";

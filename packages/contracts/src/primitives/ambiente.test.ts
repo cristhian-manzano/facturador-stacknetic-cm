@@ -2,6 +2,7 @@
  * Tests for `AmbienteSchema`. Per TASKS-0005 §2.10.
  */
 import { describe, expect, it } from "vitest";
+
 import { AmbienteSchema } from "./ambiente.js";
 
 describe("AmbienteSchema", () => {

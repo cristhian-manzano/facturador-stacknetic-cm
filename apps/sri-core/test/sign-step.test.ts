@@ -21,17 +21,21 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, beforeAll } from "vitest";
+
 import { ulid } from "ulid";
+import { describe, expect, it, beforeAll } from "vitest";
+
 import { useTestSchema } from "@facturador/db/test-harness";
 import { createLogger } from "@facturador/logger";
-import { Writable } from "node:stream";
-import { encryptP12 } from "../src/crypto/envelope.js";
+
 import { __resetActiveCertificateCache } from "../src/certificates/active.js";
-import { buildFacturaXml } from "../src/xml/factura.js";
-import { runSignStep } from "../src/lifecycle/sign-step.js";
+import { encryptP12 } from "../src/crypto/envelope.js";
 import { InMemoryBlobStore } from "../src/lifecycle/blob-store.js";
+import { runSignStep } from "../src/lifecycle/sign-step.js";
+import { buildFacturaXml } from "../src/xml/factura.js";
+
 import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
 
 const __filename = fileURLToPath(import.meta.url);

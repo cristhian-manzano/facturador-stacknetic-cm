@@ -7,9 +7,11 @@
  * the test runner does not boot a throwaway schema. The endpoint must
  * answer 200 + `{"db":"ok"}` (SPEC-0004 AC-5).
  */
-import { afterAll, describe, expect, it } from "vitest";
 import request from "supertest";
+import { afterAll, describe, expect, it } from "vitest";
+
 import { createPrismaClient } from "@facturador/db";
+
 import { createApp } from "./server.js";
 
 const prisma = createPrismaClient();

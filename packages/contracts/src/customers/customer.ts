@@ -19,6 +19,7 @@
  * Refs: SPEC-0031, SPEC-0032 §6.4.
  */
 import { z } from "zod";
+
 import { CedulaSchema } from "../primitives/cedula.js";
 import { EmailSchema } from "../primitives/email.js";
 import { PasaporteSchema } from "../primitives/pasaporte.js";

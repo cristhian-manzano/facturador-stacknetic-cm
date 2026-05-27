@@ -2,6 +2,7 @@
  * Tests for `IsoDateSchema`. Per TASKS-0005 §2.8.
  */
 import { describe, expect, it } from "vitest";
+
 import { IsoDateSchema } from "./iso-date.js";
 
 describe("IsoDateSchema", () => {

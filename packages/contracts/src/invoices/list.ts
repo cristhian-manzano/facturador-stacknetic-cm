@@ -6,12 +6,14 @@
  * needs. Detail-page fetches enrich.
  */
 import { z } from "zod";
+
 import { ClaveAccesoSchema } from "../primitives/clave-acceso.js";
+import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "../primitives/establecimiento.js";
 import { IsoDateSchema } from "../primitives/iso-date.js";
 import { MoneySchema } from "../primitives/money.js";
-import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "../primitives/establecimiento.js";
 import { UlidSchema } from "../primitives/ulid.js";
 import { SriEstadoSchema } from "../sri/document.js";
+
 import { InvoiceEstadoSchema } from "./invoice.js";
 
 export const InvoiceListItemSchema = z.object({

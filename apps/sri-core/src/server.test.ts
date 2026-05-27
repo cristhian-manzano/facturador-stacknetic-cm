@@ -5,8 +5,9 @@
  * This is the only test required by TASKS-0003 §4.3.
  */
 
-import { describe, expect, it } from "vitest";
 import request from "supertest";
+import { describe, expect, it } from "vitest";
+
 import { createApp, type HealthBody } from "./server.js";
 
 describe("GET /health", () => {

@@ -13,10 +13,12 @@
  *   - SPEC-0025 §6.3 envelopes.
  *   - TASKS-0025 §2 validation step.
  */
-import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
 import {
   buildAutorizacionEnvelope,
   buildRecepcionEnvelope,

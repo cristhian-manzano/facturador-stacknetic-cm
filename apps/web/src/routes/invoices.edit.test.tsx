@@ -1,14 +1,15 @@
 /**
  * Tests for `/invoices/:id/edit` (SPEC-0042 / TASKS-0042 §1.2).
  */
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
+
 import { InvoicesEditPage } from "./invoices.$id.edit.js";
 
 const ME = {

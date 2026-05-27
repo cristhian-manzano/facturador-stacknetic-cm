@@ -11,7 +11,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+
+import { describe, it, expect, vi, afterEach } from "vitest";
+
 import { buildFacturaXml } from "./factura.js";
 import {
   getFacturaXsdPath,
@@ -82,5 +84,30 @@ describe("schema resource paths", () => {
     const p = getXmldsigXsdPath();
     expect(fs.existsSync(p)).toBe(true);
     expect(fs.statSync(p).size).toBeGreaterThan(0);
+  });
+});
+
+describe("validateAgainstXsd — schema cache shape", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    __resetSchemaCacheForTests();
+  });
+
+  it("reads the XSD bytes from disk exactly twice (factura + xmldsig) across many calls", async () => {
+    __resetSchemaCacheForTests();
+    // Spy AFTER the reset so we observe only the loadSchemas() calls.
+    const spy = vi.spyOn(fs, "readFileSync");
+    const { xmlForSigning } = buildFacturaXml(readGoldenInput());
+
+    // First call — should drive both factura + xmldsig reads.
+    await validateAgainstXsd(xmlForSigning);
+    const countAfterFirst = spy.mock.calls.length;
+    expect(countAfterFirst).toBeGreaterThan(0);
+
+    // Second + third calls — must NOT add reads. The XSD bytes live in
+    // the module-level cache from the first call onwards.
+    await validateAgainstXsd(xmlForSigning);
+    await validateAgainstXsd(xmlForSigning);
+    expect(spy.mock.calls.length).toBe(countAfterFirst);
   });
 });

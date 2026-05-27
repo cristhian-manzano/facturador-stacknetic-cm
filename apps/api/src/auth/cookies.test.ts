@@ -10,8 +10,9 @@
  * a stub `Response` for the dev branch (the test runner sets
  * NODE_ENV=test, which behaves identically to dev for cookie naming).
  */
-import { describe, expect, it, vi } from "vitest";
 import type { Request, Response } from "express";
+import { describe, expect, it, vi } from "vitest";
+
 import {
   buildCsrfCookieName,
   buildCsrfCookieOptions,

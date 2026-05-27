@@ -8,6 +8,7 @@
  * "sri-core"` so log aggregators can route lines by service.
  */
 import { createLogger, type Logger } from "@facturador/logger";
+
 import { env } from "./env.js";
 
 export const logger: Logger = createLogger({

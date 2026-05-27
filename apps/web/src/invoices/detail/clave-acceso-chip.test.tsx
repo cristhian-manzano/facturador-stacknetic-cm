@@ -11,8 +11,8 @@
  *     (button still rendered + label flips to "No se pudo copiar").
  *   - The formatter is total: empty string in → empty string out.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClaveAccesoChip, formatClaveAcceso } from "./clave-acceso-chip.js";
 

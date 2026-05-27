@@ -4,6 +4,7 @@
  * `UpdateMemberRole`).
  */
 import { describe, expect, it } from "vitest";
+
 import {
   AddMemberSchema,
   MemberListItemSchema,

@@ -10,12 +10,13 @@
  *     (signalled via `onLastFieldEnter`).
  *   - Inline parse-money errors below numeric inputs.
  */
-import { useFormContext, type FieldErrors } from "react-hook-form";
 import type { KeyboardEvent, ReactElement } from "react";
+import { useFormContext, type FieldErrors } from "react-hook-form";
 
+import { t } from "../../i18n/es.js";
 import { parseMoney } from "../money.js";
 import { IVA_TABLE } from "../tax-rates.js";
-import { t } from "../../i18n/es.js";
+
 import type { InvoiceFormValues } from "./types.js";
 
 export interface LineRowProps {

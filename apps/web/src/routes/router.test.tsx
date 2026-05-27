@@ -6,14 +6,15 @@
  * tests in `auth/*.test.tsx` this gives us the redirect contract end-to-
  * end (route → guard → page) coverage.
  */
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
+
 import { createTestRouter } from "./router.js";
 
 const ME_OWNER = {
@@ -63,29 +64,34 @@ describe("router", () => {
     expect(screen.getByRole("heading", { name: "Acceso denegado" })).toBeInTheDocument();
   });
 
-  it("renders /tenants/select as a public-after-login route", () => {
+  it("renders /tenants/select as a public-after-login route", async () => {
     mountAt("/tenants/select", ME_OWNER);
-    expect(screen.getByRole("heading", { name: "Selecciona una empresa" })).toBeInTheDocument();
+    // /tenants/select is lazy-loaded behind Suspense, await the chunk.
+    expect(
+      await screen.findByRole("heading", { name: "Selecciona una empresa" }),
+    ).toBeInTheDocument();
   });
 
-  it("renders the home page inside AppLayout for authenticated users", () => {
+  it("renders the home page inside AppLayout for authenticated users", async () => {
     mountAt("/", ME_OWNER);
-    expect(screen.getByRole("heading", { level: 1, name: "Bienvenido" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Bienvenido" }),
+    ).toBeInTheDocument();
   });
 
-  it("renders invoices placeholder for OWNER (invoice.read)", () => {
+  it("renders invoices placeholder for OWNER (invoice.read)", async () => {
     mountAt("/invoices", ME_OWNER);
-    expect(screen.getByRole("heading", { name: "Facturas" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Facturas" })).toBeInTheDocument();
   });
 
-  it("renders customers placeholder for OWNER (customer.read)", () => {
+  it("renders customers placeholder for OWNER (customer.read)", async () => {
     mountAt("/customers", ME_OWNER);
-    expect(screen.getByRole("heading", { name: "Clientes" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Clientes" })).toBeInTheDocument();
   });
 
-  it("renders establecimientos placeholder for OWNER (establecimiento.manage)", () => {
+  it("renders establecimientos placeholder for OWNER (establecimiento.manage)", async () => {
     mountAt("/establecimientos", ME_OWNER);
-    expect(screen.getByRole("heading", { name: "Establecimientos" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Establecimientos" })).toBeInTheDocument();
   });
 
   it("renders 404 for an unknown route", () => {

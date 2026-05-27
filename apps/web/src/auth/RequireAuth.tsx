@@ -17,8 +17,8 @@
  * The redirect is always `replace: true` so the unauthenticated route
  * doesn't pollute the browser back stack.
  */
-import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "./context.js";
 

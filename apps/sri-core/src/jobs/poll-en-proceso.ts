@@ -42,10 +42,11 @@
 import type { PrismaClient, SriDocument } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
-import { AutorizacionClient, type Ambiente } from "../soap/index.js";
-import { recordEvent } from "../lifecycle/events.js";
+
 import type { BlobStore } from "../blobs/blob-store.js";
 import { authorizedXmlKey } from "../blobs/blob-store.js";
+import { recordEvent } from "../lifecycle/events.js";
+import { AutorizacionClient, type Ambiente } from "../soap/index.js";
 
 /* -------------------------------------------------------------------------- */
 /*                                Public API                                  */
@@ -151,7 +152,15 @@ export async function runPollBatch(
     // "operator does not exist: SriEstado = unknown". Casting via
     // `::text` keeps the SELECT planner-friendly + works under the
     // composite (estado, nextPollAt) index.
-    const rows = (await tx.$queryRaw`
+    const rows = await tx.$queryRaw<
+      {
+        id: string;
+        companyId: string;
+        claveAcceso: string;
+        ambiente: string;
+        pollAttempts: number;
+      }[]
+    >`
       SELECT id, "companyId", "claveAcceso", "ambiente", "pollAttempts"
       FROM "SriDocument"
       WHERE "estado"::text = 'EN_PROCESO'
@@ -160,7 +169,7 @@ export async function runPollBatch(
       ORDER BY COALESCE("nextPollAt", "updatedAt") ASC
       LIMIT ${batchSize}
       FOR UPDATE SKIP LOCKED
-    `);
+    `;
     realBatchSize = rows.length;
 
     for (const row of rows) {

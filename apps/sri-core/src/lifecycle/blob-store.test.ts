@@ -3,6 +3,7 @@
  * used by the sign-step until SPEC-0026 lands.
  */
 import { describe, expect, it } from "vitest";
+
 import { InMemoryBlobStore } from "./blob-store.js";
 
 describe("InMemoryBlobStore", () => {

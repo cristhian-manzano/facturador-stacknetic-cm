@@ -17,9 +17,11 @@
  *     `REDACT_PATHS`. The redaction list is extend-only.
  */
 import * as os from "node:os";
+
 import pino, { type Logger, type LoggerOptions } from "pino";
-import { REDACT_PATHS } from "./redactions.js";
+
 import { env as defaultEnv } from "./env.js";
+import { REDACT_PATHS } from "./redactions.js";
 
 /** The set of services that can call `createLogger`. */
 export type ServiceName = "api" | "sri-core" | "web" | "worker";

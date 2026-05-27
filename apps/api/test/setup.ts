@@ -16,6 +16,7 @@
  *     disk is `process.stdout`, never a file path.
  */
 import { afterEach, beforeAll } from "vitest";
+
 import { mswServer } from "./msw/server.js";
 
 beforeAll(() => {

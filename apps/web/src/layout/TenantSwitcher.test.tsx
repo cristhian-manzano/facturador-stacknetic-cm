@@ -17,15 +17,16 @@
  *   - Selecting the CURRENT tenant is a no-op (closes the panel only).
  *   - Esc closes the panel.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
+
 import { TenantSwitcher } from "./TenantSwitcher.js";
 
 const ME_MULTI = {

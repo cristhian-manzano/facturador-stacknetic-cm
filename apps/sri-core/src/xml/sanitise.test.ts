@@ -7,6 +7,7 @@
  * lossy one (≤ 300 chars) and gets a dedicated boundary test.
  */
 import { describe, it, expect } from "vitest";
+
 import {
   cleanDescripcion,
   cleanSingleLineText,

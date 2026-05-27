@@ -2,6 +2,7 @@
  * Tests for `UpdateCustomerSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { UpdateCustomerSchema } from "./update-customer.js";
 
 describe("UpdateCustomerSchema", () => {

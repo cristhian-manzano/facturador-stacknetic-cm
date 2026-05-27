@@ -10,12 +10,16 @@
  * full pipeline against test doubles.
  */
 import { Writable } from "node:stream";
+
 import type { Express } from "express";
+
 import type { PrismaClient } from "@facturador/db";
 import { createLogger, type Logger } from "@facturador/logger";
-import { createApp } from "../src/server.js";
+
+import type { JtiDenyList } from "../src/auth/service-jwt.js";
 import type { BlobStore } from "../src/blobs/blob-store.js";
 import { InMemoryBlobStore } from "../src/blobs/blob-store.js";
+import { createApp } from "../src/server.js";
 import type { AutorizacionClient, RecepcionClient } from "../src/soap/index.js";
 
 export interface TestAppHandle {
@@ -33,6 +37,22 @@ export interface CreateTestAppOptions {
   blobStore?: BlobStore;
   recepcionClient?: RecepcionClient;
   autorizacionClient?: AutorizacionClient;
+  /**
+   * Optional jti deny-list. When omitted, the factory hands the app a
+   * permissive no-op deny-list so existing tests that re-use a single
+   * minted token across multiple Supertest calls keep working. The
+   * dedicated replay test in `src/auth/service-jwt.test.ts` covers the
+   * production policy.
+   */
+  jtiDenyList?: JtiDenyList;
+}
+
+/** Permissive deny-list that never rejects — the test-default. */
+function noOpJtiDenyList(): JtiDenyList {
+  return {
+    has: () => false,
+    set: () => undefined,
+  };
 }
 
 function captureSink(): { stream: Writable; read(): string; reset(): void } {
@@ -60,9 +80,14 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestAppHandle
     destination: sink.stream,
   });
   const blobStore: BlobStore = options.blobStore ?? new InMemoryBlobStore();
+  // Default to a permissive deny-list so existing tests can re-use a
+  // single minted token across multiple calls. The replay-defence
+  // policy is exercised by its dedicated unit test.
+  const jtiDenyList = options.jtiDenyList ?? noOpJtiDenyList();
   const app = createApp({
     logger,
     blobStore,
+    jtiDenyList,
     ...(options.prisma === undefined ? {} : { prisma: options.prisma }),
     ...(options.serviceJwtSecret === undefined
       ? {}

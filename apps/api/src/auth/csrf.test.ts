@@ -7,9 +7,11 @@
  *   - `assertCsrf` returns 403 on missing header, mismatching cookie/header,
  *     or mismatching stored hash; passes through on a valid triple.
  */
-import { describe, expect, it, vi } from "vitest";
 import type { NextFunction, Request, Response } from "express";
+import { describe, expect, it, vi } from "vitest";
+
 import { ForbiddenError } from "@facturador/utils/errors";
+
 import { assertCsrf, hashCsrfToken, mintCsrfToken } from "./csrf.js";
 import type { AuthenticatedSession } from "./types.js";
 

@@ -11,6 +11,7 @@
  * about **shape**, not arithmetic (SPEC-0032 §FR-3).
  */
 import { z } from "zod";
+
 import { CustomerInputSchema } from "../customers/customer.js";
 import { IsoDateSchema } from "../primitives/iso-date.js";
 import { MoneyQtySchema, MoneySchema } from "../primitives/money.js";

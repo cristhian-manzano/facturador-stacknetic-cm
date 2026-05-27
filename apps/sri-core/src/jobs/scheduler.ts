@@ -2,7 +2,7 @@
  * Cron scheduler glue for the polling job.
  *
  * Source of truth:
- *   - SPEC-0026 §FR-5 (cron `*​/2 * * * *`).
+ *   - SPEC-0026 FR-5 (cron expression "every 2 minutes").
  *   - TASKS-0026 §4.3.
  *   - PROMPT-0026 §6 (NODE_ENV !== "test" guard).
  *
@@ -11,21 +11,31 @@
  * tests don't import this module, they call `runPollBatch` directly.
  */
 import cron, { type ScheduledTask } from "node-cron";
+
 import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
-import { AutorizacionClient } from "../soap/index.js";
+
 import type { BlobStore } from "../blobs/blob-store.js";
+import { AutorizacionClient } from "../soap/index.js";
+
 import { runPollBatch, type RunPollBatchOptions } from "./poll-en-proceso.js";
+import type { PollingHealthState } from "./polling-health.js";
 
 export interface StartPollingSchedulerOptions {
   readonly prisma: PrismaClient;
   readonly autorizacionClient: AutorizacionClient;
   readonly blobStore: BlobStore;
-  /** Cron expression. Default `*​/2 * * * *` (every 2 minutes). */
+  /** Cron expression. Default is the "every 2 minutes" pattern. */
   readonly cron?: string;
   /** Default batch tuning forwarded into `runPollBatch`. */
   readonly batchOptions?: RunPollBatchOptions;
   readonly logger?: Pick<Logger, "info" | "warn" | "error">;
+  /**
+   * Optional polling-health state. When set, the scheduler stamps
+   * `recordBatchCompleted` after each successful batch. The `/readyz`
+   * route reads this same state so a stale subsystem reports 503.
+   */
+  readonly pollingHealth?: PollingHealthState;
 }
 
 export interface PollingSchedulerHandle {
@@ -57,6 +67,9 @@ export function startPollingScheduler(
             },
             options.batchOptions ?? {},
           );
+          // Stamp polling health on success — the /readyz route reads
+          // this to decide whether the polling subsystem is alive.
+          options.pollingHealth?.recordBatchCompleted();
         } catch (err) {
           options.logger?.error(
             {

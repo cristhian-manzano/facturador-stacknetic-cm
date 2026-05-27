@@ -5,6 +5,7 @@
  * taxpayer numbers (PROMPT-0005 §6).
  */
 import { describe, expect, it } from "vitest";
+
 import { RucSchema, isValidRuc, isValidRucPersonaNatural, isValidRucSociedad } from "./ruc.js";
 
 describe("RucSchema — sociedad privada (third digit = 9)", () => {

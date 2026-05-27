@@ -15,9 +15,10 @@
  * Mirror of `apps/api/src/middleware/error-handler.ts`.
  */
 import type { ErrorRequestHandler } from "express";
+
 import { toProblemDetail } from "@facturador/utils/errors";
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (err: unknown, req, res, _next) => {
   const problem = toProblemDetail(err, req.id);
 
   if (req.log !== undefined) {

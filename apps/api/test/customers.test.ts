@@ -21,14 +21,17 @@
  *   - List responses do NOT include PII columns.
  *   - body cannot inject `companyId` (server pins it from session).
  */
-import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { ulid } from "ulid";
-import { useTestSchema } from "@facturador/db/test-harness";
+import { describe, it, expect } from "vitest";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
+import { useTestSchema } from "@facturador/db/test-harness";
 import type { Role } from "@facturador/utils/rbac";
+
 import { hashPassword } from "../src/auth/password.js";
 import { ensureConsumidorFinal } from "../src/customers/ensure-consumidor-final.js";
+
 import { createTestApp } from "./factory.js";
 
 const SESSION_COOKIE = "facturador_session";
@@ -168,7 +171,11 @@ async function attachMembership(
   role: Role,
 ): Promise<void> {
   const id = ulid();
-  await prisma.membership.create({ data: { id, userId, companyId, role } });
+  // Active membership: production-readiness invitation lifecycle requires
+  // `acceptedAt` non-null for `requireTenant` to pass.
+  await prisma.membership.create({
+    data: { id, userId, companyId, role, acceptedAt: new Date() },
+  });
 }
 
 async function loginAndGetCookies(

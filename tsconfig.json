@@ -1,0 +1,27 @@
+{
+  // Root project-references entry point. Used by `pnpm typecheck:project`
+  // (which runs `tsc --build --noEmit` from the repo root). The default
+  // `pnpm typecheck` script remains workspace-parallel: it calls each
+  // workspace's `tsc -p tsconfig.json --noEmit` independently. Project
+  // references give us:
+  //
+  //   - Correct upstream-first compile order for `tsc --build`.
+  //   - Faster incremental rebuilds via `.tsbuildinfo` caches.
+  //   - IDE goto-definition that jumps to source (not built `.d.ts`).
+  //
+  // The references point at the `tsconfig.build.json` of each workspace
+  // because that is the file with `composite: true` set. The
+  // typecheck-mode `tsconfig.json` files keep `noEmit: true` and run
+  // their own per-workspace check via `pnpm typecheck`.
+  "files": [],
+  "references": [
+    { "path": "./packages/config/tsconfig.build.json" },
+    { "path": "./packages/contracts/tsconfig.build.json" },
+    { "path": "./packages/db/tsconfig.build.json" },
+    { "path": "./packages/logger/tsconfig.build.json" },
+    { "path": "./packages/utils/tsconfig.build.json" },
+    { "path": "./apps/api/tsconfig.json" },
+    { "path": "./apps/sri-core/tsconfig.json" },
+    { "path": "./apps/web/tsconfig.json" }
+  ]
+}

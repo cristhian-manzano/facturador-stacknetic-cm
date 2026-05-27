@@ -19,6 +19,7 @@
  *   - SPEC-0031 §6.3.
  */
 import { z } from "zod";
+
 import { isValidCedulaChecksum } from "./cedula.js";
 
 const RUC_REGEX = /^\d{13}$/;

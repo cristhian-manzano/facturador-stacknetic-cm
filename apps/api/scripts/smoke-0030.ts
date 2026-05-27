@@ -11,7 +11,9 @@
  * idempotent.
  */
 import { ulid } from "ulid";
+
 import { prisma } from "@facturador/db";
+
 import { reserveSecuencial } from "../src/sequencing/reserve.js";
 
 async function main(): Promise<void> {
@@ -103,7 +105,7 @@ async function main(): Promise<void> {
   await prisma.$disconnect();
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   process.stderr.write(`[smoke-0030] FAILED: ${String(err)}\n`);
   process.exitCode = 1;
 });

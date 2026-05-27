@@ -11,14 +11,15 @@
  */
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Link, useParams } from "react-router-dom";
+
 import type { InvoiceDetail } from "@facturador/contracts/invoices";
 
 import { RequirePermission } from "../auth/RequirePermission.js";
-import { ApiError } from "../lib/api.js";
 import { t } from "../i18n/es.js";
 import { getInvoiceDetail } from "../invoices/api.js";
 import { InvoiceForm } from "../invoices/form/invoice-form.js";
 import type { InvoiceFormValues } from "../invoices/form/types.js";
+import { ApiError } from "../lib/api.js";
 
 function detailToFormValues(detail: InvoiceDetail): InvoiceFormValues {
   const inv = detail.invoice;

@@ -19,12 +19,15 @@
  * matrix (OWNER/ADMIN only).
  */
 import { Router } from "express";
+
 import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
+
+import { assertCsrf } from "../auth/csrf.js";
+import { requirePermission } from "../auth/require-permission.js";
 import { buildRequireSession } from "../auth/require-session.js";
 import { buildRequireTenant } from "../auth/require-tenant.js";
-import { requirePermission } from "../auth/require-permission.js";
-import { assertCsrf } from "../auth/csrf.js";
+
 import { buildEstablecimientoHandlers } from "./handlers.js";
 
 export interface EstablecimientoRouterDeps {

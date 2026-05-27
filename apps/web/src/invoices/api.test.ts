@@ -18,12 +18,13 @@ describe("buildInvoiceListSearchParams", () => {
     expect(buildInvoiceListSearchParams({ estado: ["EMITIDO"] }).toString()).toBe("estado=EMITIDO");
   });
 
-  it("serialises multiple estados via repeated params", () => {
+  it("serialises multiple estados as canonical comma-form (REVIEW-0044 §5)", () => {
+    // URLSearchParams encodes "," as %2C.
     expect(
       buildInvoiceListSearchParams({
         estado: ["BORRADOR", "EMITIDO"],
       }).toString(),
-    ).toBe("estado=BORRADOR&estado=EMITIDO");
+    ).toBe("estado=BORRADOR%2CEMITIDO");
   });
 
   it("serialises from + to + q + cursor + limit", () => {

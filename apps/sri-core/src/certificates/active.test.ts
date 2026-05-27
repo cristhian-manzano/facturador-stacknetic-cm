@@ -15,11 +15,14 @@
  * library is well-tested. We mock `Date.now` and call its `purgeStale`
  * method to deterministically exercise the eviction window.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ulid } from "ulid";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { newId } from "@facturador/db";
-import { encryptP12 } from "../crypto/envelope.js";
+
 import { generateSyntheticP12 } from "../../test/fixtures/synthetic-cert.js";
+import { encryptP12 } from "../crypto/envelope.js";
+
 import {
   ACTIVE_CACHE_TTL_MS,
   __resetActiveCertificateCache,

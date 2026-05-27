@@ -14,8 +14,9 @@
  * downstream apps are broken at runtime.
  */
 import { describe, expect, it } from "vitest";
-import { RucSchema } from "@facturador/contracts/primitives";
+
 import { LoginRequestSchema } from "@facturador/contracts/auth";
+import { RucSchema } from "@facturador/contracts/primitives";
 
 describe("@facturador/contracts consumer smoke", () => {
   it("RucSchema (subpath /primitives) accepts a valid sociedad RUC", () => {

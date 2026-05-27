@@ -15,6 +15,7 @@
  * after `id` is provided (the factory mints one via ULID).
  */
 import { TenantSchema, type Tenant } from "@facturador/contracts/tenants";
+
 import { newId } from "./_ids.js";
 
 /** Synthetic RUC table — all start with `9999`, all valid checksum. */

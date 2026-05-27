@@ -2,10 +2,12 @@
  * `EmitModal` + reducer + helpers tests
  * (SPEC-0042 §FR-7 / §6.5 / TASKS-0042 §2.7).
  */
-import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../lib/api.js";
+
 import {
   EmitModal,
   EMIT_MODAL_INITIAL,
@@ -14,7 +16,7 @@ import {
   emitResponseToAction,
   useEmitModal,
 } from "./emit-modal.js";
-import type { ReactElement } from "react";
+
 
 describe("emitModalReducer — state machine", () => {
   it("idle → submitting on submit", () => {

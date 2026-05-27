@@ -6,17 +6,19 @@
  * missing required key — Zod refuses the parse and this test fails.  This
  * is the cheapest possible drift detector and runs on every CI invocation.
  */
-import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { RucSchema } from "@facturador/contracts/primitives";
+import { describe, expect, it } from "vitest";
+
 import { LoginRequestSchema, MembershipSummarySchema } from "@facturador/contracts/auth";
+import { RucSchema } from "@facturador/contracts/primitives";
 import { TenantSchema } from "@facturador/contracts/tenants";
+
+import { newId } from "./_ids.js";
+import { auditLogFactory } from "./audit-log.js";
 import { SYNTHETIC_RUCS, companyFactory, companyToTenant } from "./company.js";
-import { userFactory, userToPublic } from "./user.js";
 import { membershipFactory, membershipToSummary } from "./membership.js";
 import { sessionFactory } from "./session.js";
-import { auditLogFactory } from "./audit-log.js";
-import { newId } from "./_ids.js";
+import { userFactory, userToPublic } from "./user.js";
 
 describe("fixtures policy — synthetic data only", () => {
   it("every SYNTHETIC_RUC starts with `9999` and passes RucSchema", () => {

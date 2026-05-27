@@ -2,7 +2,31 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    // TODO(REVIEW-0044 §2): Switch to `module: "NodeNext"` + `moduleResolution: "NodeNext"`
+    //   for parity with the Node 22 native-ESM runtime. Source already uses
+    //   `.js` suffixes on relative imports. Blocked by `decimal.js@10.4.3`:
+    //   its `.d.ts` ships both `export default Decimal` and
+    //   `export namespace Decimal`, which TS NodeNext resolves to the
+    //   namespace instead of the class (TS error TS2351 + TS2709 in
+    //   `src/invoices/money.ts`). Two viable fixes:
+    //     (a) Bump `decimal.js` past a version that drops the namespace
+    //         declaration (currently no such release).
+    //     (b) Rewrite the imports to `import { Decimal } from "decimal.js"`
+    //         in `money.ts` + `compute.property.test.ts` and drop the
+    //         re-export. Deferred to avoid scope creep in this prompt.
+    //   Build/runtime are unaffected — `tsx` and Vite both honour `.js`
+    //   suffixes under `Bundler` and Node ESM resolves them natively.
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
+  "include": ["src/**/*", "test/**/*", "scripts/**/*", "vitest.config.ts"],
+  // Project references — enable `tsc --build` ergonomics across the
+  // monorepo. The default `pnpm typecheck` still runs each workspace
+  // independently in `--noEmit` mode (see package.json); these references
+  // only matter when running `pnpm typecheck:project` at the repo root.
+  "references": [
+    { "path": "../../packages/contracts/tsconfig.build.json" },
+    { "path": "../../packages/db/tsconfig.build.json" },
+    { "path": "../../packages/logger/tsconfig.build.json" },
+    { "path": "../../packages/utils/tsconfig.build.json" }
+  ]
 }

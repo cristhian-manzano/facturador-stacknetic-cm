@@ -104,7 +104,13 @@ export const ALL_ACTIONS: readonly Action[] = [
 export const MATRIX: Readonly<Record<Action, readonly Role[]>> = {
   // Tenant
   "tenant.read": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR", "VIEWER"],
-  "tenant.update": ["OWNER", "ADMIN"],
+  // SPEC-0011 §FR-5: `tenant.update` is OWNER-only by default. Operators
+  // who need the legacy ADMIN-can-rename behaviour can set
+  // `RBAC_ADMIN_CAN_UPDATE_TENANT=true` in apps/api; that gate is
+  // enforced server-side in `requirePermission` (the static matrix here
+  // stays OWNER-only so the web SPA's `can()` predicate doesn't surface
+  // a Rename button the server would reject).
+  "tenant.update": ["OWNER"],
   "tenant.manage_members": ["OWNER", "ADMIN"],
   // Customer
   "customer.read": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR", "VIEWER"],
@@ -130,6 +136,9 @@ export const MATRIX: Readonly<Record<Action, readonly Role[]>> = {
  */
 export function can(role: Role, action: Action): boolean {
   const allowed = MATRIX[action];
+  // Defensive: TS narrows `action` to legal Action keys, but a runtime
+  // caller from the SPA may pass an arbitrary string at the JS boundary.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (allowed === undefined) return false;
   return allowed.includes(role);
 }

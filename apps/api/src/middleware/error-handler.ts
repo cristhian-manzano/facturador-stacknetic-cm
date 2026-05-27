@@ -16,9 +16,10 @@
  * minimal 500 envelope if anything goes wrong.
  */
 import type { ErrorRequestHandler } from "express";
+
 import { toProblemDetail } from "@facturador/utils/errors";
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (err: unknown, req, res, _next) => {
   const problem = toProblemDetail(err, req.id);
 
   // Server-side log line (full err, redaction-aware). Never returned to client.

@@ -17,7 +17,7 @@
  * Thresholds are NEVER relaxed to make a build pass (PROMPT-0007 §2). If your
  * package can't meet them, write more tests — don't lower the bar.
  */
-import { defineConfig, type UserConfig } from "vitest/config";
+import { defineConfig, type ViteUserConfig } from "vitest/config";
 
 /**
  * Per-package coverage threshold preset. Values mirror SPEC-0007 §FR-2 and
@@ -102,7 +102,7 @@ export interface DefineFacturadorVitestConfigOptions {
  */
 export function defineFacturadorVitestConfig(
   options: DefineFacturadorVitestConfigOptions,
-): UserConfig {
+): ViteUserConfig {
   const {
     packageName,
     environment = "node",

@@ -1,11 +1,11 @@
 /**
  * `LineRow` test — RHF integration + inline parse-money errors + Enter shortcut.
  */
-import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FormProvider, useForm } from "react-hook-form";
 import type { ReactElement, ReactNode } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import { describe, expect, it, vi } from "vitest";
 
 import { LineRow } from "./line-row.js";
 import type { InvoiceFormValues } from "./types.js";

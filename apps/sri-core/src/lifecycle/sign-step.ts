@@ -39,12 +39,14 @@
  * when builds and signs happen on different workers.
  */
 import type { PrismaClient } from "@facturador/db";
-import { NotFoundError, ForbiddenError } from "@facturador/utils/errors";
 import type { Logger } from "@facturador/logger";
+import { NotFoundError, ForbiddenError } from "@facturador/utils/errors";
+
 import { getActiveCertificate } from "../certificates/active.js";
 import { signFacturaXml, type SignAlgo } from "../xml/sign.js";
-import { recordEvent } from "./events.js";
+
 import type { BlobStore } from "./blob-store.js";
+import { recordEvent } from "./events.js";
 
 export interface RunSignStepInput {
   /** The `SriDocument.id` to sign. */

@@ -7,3 +7,4 @@
  */
 export { ProblemDetailSchema, type ProblemDetail } from "./problem-detail.js";
 export { SriMensajeSchema, type SriMensaje } from "../sri/mensaje.js";
+export { ErrorCodes, type ErrorCode } from "./codes.js";

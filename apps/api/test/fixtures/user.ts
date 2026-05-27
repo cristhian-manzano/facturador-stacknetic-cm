@@ -12,9 +12,12 @@
  *   - DisplayName is generic and not derived from any real customer.
  */
 import { randomBytes } from "node:crypto";
+
 import { z } from "zod";
+
 import type { UserPublic } from "@facturador/contracts/auth";
 import { EmailSchema, UlidSchema } from "@facturador/contracts/primitives";
+
 import { newId } from "./_ids.js";
 
 // Local shape mirrors `UserPublicSchema` (which isn't exported). Used to

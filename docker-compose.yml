@@ -107,8 +107,11 @@ services:
       # stay baked-in from the image and are not bind-mounted.
       - ./apps/web/src:/app/apps/web/src:ro
 
-  mailhog:
-    image: mailhog/mailhog:latest
+  # Mailpit — modern replacement for the abandoned MailHog (last release 2020).
+  # Same protocol surface (SMTP on 1025, web UI on 8025) so no app changes.
+  # Gated behind the `dev` profile so CI / prod compose runs skip it.
+  mailpit:
+    image: axllent/mailpit:latest
     restart: unless-stopped
     profiles: ["dev"]
     ports:

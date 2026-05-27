@@ -9,6 +9,7 @@
  * Mirror of `apps/api/src/middleware/request-logger.ts`.
  */
 import type { RequestHandler } from "express";
+
 import { withRequest, type Logger } from "@facturador/logger";
 
 export const createRequestLogger = (rootLogger: Logger): RequestHandler => {

@@ -16,6 +16,7 @@ import type { CreateInvoice, UpdateInvoice } from "@facturador/contracts/invoice
 
 import { parseMoney } from "../money.js";
 import { getIvaRow, IVA_CODIGO } from "../tax-rates.js";
+
 import type { InvoiceFormValues } from "./types.js";
 
 /**
@@ -24,6 +25,10 @@ import type { InvoiceFormValues } from "./types.js";
  * or the server-side validation). The form layer treats every primitive
  * field as a plain string.
  */
+// `T` is intentionally only on the return slot — the caller picks the
+// branded target type. Suppresses the no-unnecessary-type-parameters rule
+// (used pattern-wide in @facturador/contracts for branded primitives).
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 function brand<T>(value: string): T {
   return value as unknown as T;
 }

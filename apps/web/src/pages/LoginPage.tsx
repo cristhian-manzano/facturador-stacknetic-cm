@@ -39,10 +39,11 @@
  *     React state for the duration of the page render and they're GC'd
  *     when the route unmounts.
  */
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
+
 import {
   LoginRequestSchema,
   LoginResponseSchema,
@@ -52,8 +53,8 @@ import {
 import { useAuth } from "../auth/context.js";
 import { mapProblemErrorsToForm } from "../auth/form-errors.js";
 import { sanitiseNext } from "../auth/sanitise-next.js";
-import { ApiError, apiFetch } from "../lib/api.js";
 import { t } from "../i18n/es.js";
+import { ApiError, apiFetch } from "../lib/api.js";
 
 /**
  * Top-level banner kinds the login page can display. Each maps to a copy

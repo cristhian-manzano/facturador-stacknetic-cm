@@ -23,7 +23,8 @@
  *   - PROMPT-0025 §6 (security policy).
  */
 import { Agent, request, type Dispatcher } from "undici";
-import { SriClientError } from "./errors.js";
+
+import { SriCircuitOpenError, SriClientError, SriResponseTooLargeError } from "./errors.js";
 
 /**
  * TLS configuration locked at TLSv1.2 minimum. The `tls.SecureContext`
@@ -92,7 +93,19 @@ export interface HttpPostXmlOptions {
    * see docs §11 "Configuración HTTPS". The default is `""`.
    */
   readonly soapAction?: string;
+  /**
+   * Maximum response size in bytes. Default {@link DEFAULT_MAX_RESPONSE_BYTES}
+   * (20 MiB). A response larger than the cap (either announced via
+   * Content-Length or observed while streaming chunks) raises
+   * {@link SriResponseTooLargeError}. This protects the worker from
+   * malformed >100 MB responses that would otherwise OOM
+   * `body.text()`.
+   */
+  readonly maxResponseBytes?: number;
 }
+
+/** SPEC-0025 (and the audit punchlist) — 20 MiB cap on SRI responses. */
+export const DEFAULT_MAX_RESPONSE_BYTES = 20 * 1024 * 1024;
 
 export interface HttpPostXmlResult {
   readonly status: number;
@@ -110,7 +123,15 @@ export interface HttpPostXmlResult {
  * keeps the HTTP layer pure (no policy decisions).
  */
 export async function httpPostXml(opts: HttpPostXmlOptions): Promise<HttpPostXmlResult> {
+  // Circuit-breaker short-circuit — the breaker fails-fast when a recent
+  // burst of `SriRetryBudgetExceededError`s exceeded the trip threshold.
+  const breakerState = peekCircuitState();
+  if (breakerState.state === "open") {
+    throw new SriCircuitOpenError(undefined, { until: breakerState.openUntilMs });
+  }
+
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUTS.bodyTimeoutMs;
+  const maxResponseBytes = opts.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   const dispatcher: Dispatcher = opts.dispatcher ?? getDefaultAgent();
   const started = Date.now();
 
@@ -131,15 +152,166 @@ export async function httpPostXml(opts: HttpPostXmlOptions): Promise<HttpPostXml
       bodyTimeout: timeoutMs,
       headersTimeout: Math.min(timeoutMs, DEFAULT_TIMEOUTS.headersTimeoutMs),
     });
-    const text = await response.body.text();
+
+    // Fail-fast if Content-Length announces a body larger than the cap.
+    // We never reach `.text()` so we never buffer the body.
+    const cl = readContentLength(response.headers as Record<string, unknown>);
+    if (cl !== undefined && cl > maxResponseBytes) {
+      // Best-effort drain so the connection can be reused.
+      response.body.dump().catch(() => undefined);
+      throw new SriResponseTooLargeError(
+        `SRI response Content-Length ${String(cl)} exceeds cap ${String(maxResponseBytes)}`,
+        { limitBytes: maxResponseBytes, seenBytes: cl },
+      );
+    }
+
+    // Stream + accumulate; abort if the total ever crosses the cap.
+    const text = await readCappedText(response.body, maxResponseBytes);
     return {
       status: response.statusCode,
       text,
       elapsedMs: Date.now() - started,
     };
   } catch (cause) {
+    // Surface the typed errors without re-wrapping.
+    if (cause instanceof SriResponseTooLargeError) {
+      throw cause;
+    }
+    if (cause instanceof SriClientError) {
+      throw cause;
+    }
     const elapsedMs = Date.now() - started;
     throw classifyTransportError(cause, elapsedMs);
+  }
+}
+
+/**
+ * Buffer the response body up to `maxBytes`. The moment the running
+ * total exceeds the cap we abandon the stream and throw
+ * {@link SriResponseTooLargeError}. Returns the decoded UTF-8 string
+ * for callers that need to feed it through `parseRecepcionResponse` /
+ * `parseAutorizacionResponse`.
+ */
+async function readCappedText(
+  body: AsyncIterable<Buffer | Uint8Array>,
+  maxBytes: number,
+): Promise<string> {
+  let total = 0;
+  const chunks: Buffer[] = [];
+  for await (const chunkRaw of body) {
+    const chunk = Buffer.isBuffer(chunkRaw) ? chunkRaw : Buffer.from(chunkRaw);
+    total += chunk.byteLength;
+    if (total > maxBytes) {
+      throw new SriResponseTooLargeError(
+        `SRI response exceeded cap of ${String(maxBytes)} bytes (read ${String(total)})`,
+        { limitBytes: maxBytes, seenBytes: total },
+      );
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function readContentLength(headers: Record<string, unknown>): number | undefined {
+  // undici lowercases header names, but defensively look at all-cases.
+  const raw =
+    (headers["content-length"] as string | string[] | undefined) ??
+    (headers["Content-Length"] as string | string[] | undefined);
+  if (raw === undefined) return undefined;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === undefined) return undefined;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Circuit breaker                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Lightweight rolling-window circuit breaker for the SRI transport.
+ *
+ * Source of truth: audit-punchlist Item 11 (REVIEW-0025 §11 #1).
+ *
+ *   - Window: 60 s.
+ *   - Trip: 10 consecutive `SriRetryBudgetExceededError`s.
+ *   - Cool-down: 30 s of `open`.
+ *   - Half-open: a single probe request is allowed; success closes the
+ *     breaker, failure re-opens it for another cool-down.
+ *
+ * We deliberately only count `SriRetryBudgetExceededError` (not every
+ * SriClientError) because budget-exceeded is the strongest signal that
+ * SRI is truly down — transient single-attempt errors are absorbed by
+ * `withRetry` and don't need a circuit.
+ */
+export const DEFAULT_BREAKER_OPTIONS = Object.freeze({
+  /** Trip after this many consecutive budget-exceeded errors. */
+  failureThreshold: 10,
+  /** Sliding window for failures (ms). */
+  windowMs: 60_000,
+  /** Cool-down after trip (ms). */
+  coolDownMs: 30_000,
+});
+
+type CircuitState =
+  | { state: "closed" }
+  | { state: "open"; openUntilMs: number }
+  | { state: "half_open" };
+
+interface CircuitBreaker {
+  failures: number[]; // epoch ms of recent SriRetryBudgetExceededError
+  state: CircuitState;
+}
+
+let breaker: CircuitBreaker = { failures: [], state: { state: "closed" } };
+
+/** Reset the circuit breaker. Tests only. */
+export function _resetCircuitBreakerForTests(): void {
+  breaker = { failures: [], state: { state: "closed" } };
+}
+
+/**
+ * Look at the breaker state, transitioning out of `open` into
+ * `half_open` once the cool-down has elapsed. The transition is what
+ * lets the next request through as a probe.
+ */
+export function peekCircuitState(now: number = Date.now()): CircuitState {
+  const s = breaker.state;
+  if (s.state === "open" && s.openUntilMs <= now) {
+    breaker.state = { state: "half_open" };
+    return breaker.state;
+  }
+  return s;
+}
+
+/**
+ * Record an outcome from the retry wrapper. Success closes the breaker
+ * (and clears the failure window). A `SriRetryBudgetExceededError`
+ * appends to the window and trips the breaker once the threshold is
+ * crossed.
+ */
+export function recordCircuitOutcome(
+  outcome: "success" | "budget_exceeded",
+  now: number = Date.now(),
+): void {
+  if (outcome === "success") {
+    // Half-open success → close. Closed success keeps the window
+    // bounded too: any successful response means consecutive failures
+    // reset.
+    breaker.failures = [];
+    breaker.state = { state: "closed" };
+    return;
+  }
+  // budget_exceeded: prune outside-window entries, append now, and
+  // trip if threshold crossed.
+  const cutoff = now - DEFAULT_BREAKER_OPTIONS.windowMs;
+  breaker.failures = breaker.failures.filter((t) => t > cutoff);
+  breaker.failures.push(now);
+  if (breaker.failures.length >= DEFAULT_BREAKER_OPTIONS.failureThreshold) {
+    breaker.state = {
+      state: "open",
+      openUntilMs: now + DEFAULT_BREAKER_OPTIONS.coolDownMs,
+    };
   }
 }
 
@@ -202,8 +374,8 @@ function readErrorCode(value: unknown): string | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const obj = value as { code?: unknown; cause?: { code?: unknown } };
   if (typeof obj.code === "string") return obj.code;
-  if (obj.cause !== undefined && typeof obj.cause === "object" && obj.cause !== null) {
-    const innerCode = (obj.cause as { code?: unknown }).code;
+  if (obj.cause !== undefined && typeof obj.cause === "object") {
+    const innerCode = obj.cause.code;
     if (typeof innerCode === "string") return innerCode;
   }
   return undefined;

@@ -2,6 +2,7 @@
  * Tests for `UlidSchema`. Per TASKS-0005 §2.1: positive + negative cases.
  */
 import { describe, expect, it } from "vitest";
+
 import { UlidSchema } from "./ulid.js";
 
 describe("UlidSchema", () => {

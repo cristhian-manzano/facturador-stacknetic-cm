@@ -14,17 +14,18 @@
  *     but NOT Reissue.
  *   - ACCOUNTANT role sees Reissue.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
-import { InvoicesDetailPage } from "./invoices.$id.js";
 import { POLL_INTERVAL_MS } from "../invoices/detail/polling.js";
+
+import { InvoicesDetailPage } from "./invoices.$id.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -372,6 +373,47 @@ describe("/invoices/:id — RBAC gating", () => {
     await screen.findByTestId("detail-header");
     expect(screen.getByTestId("action-reissue")).toBeInTheDocument();
   });
+});
+
+describe("/invoices/:id — polling pauses while tab is hidden", () => {
+  it(
+    "no additional fetch fires while document.visibilityState === 'hidden'",
+    async () => {
+      let callCount = 0;
+      buildMount({
+        detailHandlers: [
+          http.get(`/api/v1/invoices/${INVOICE_ID}`, () => {
+            callCount++;
+            return HttpResponse.json(buildDetail({ sriEstado: "EN_PROCESO" }));
+          }),
+        ],
+      });
+      // Initial fetch resolves.
+      await screen.findByTestId("sri-estado-badge-EN_PROCESO");
+      const baseline = callCount;
+
+      // Flip the tab to hidden and notify React Router / TanStack Query.
+      Object.defineProperty(document, "visibilityState", {
+        value: "hidden",
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+
+      // Wait through more than one polling interval. Because the route's
+      // refetchInterval returns `false` when hidden, no extra request
+      // should fire.
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS + 500));
+      expect(callCount).toBe(baseline);
+
+      // Restore visibility so we don't leak into subsequent tests.
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    },
+    POLL_INTERVAL_MS + 4000,
+  );
 });
 
 describe("/invoices/:id — AUTORIZADO placeholders", () => {

@@ -11,10 +11,11 @@
  * server-returned `importeTotal`).
  */
 import type { ReactElement } from "react";
+
 import type { PreviewTotalsResponse } from "@facturador/contracts/invoices";
 
-import { formatMoney } from "../money.js";
 import { t } from "../../i18n/es.js";
+import { formatMoney } from "../money.js";
 
 export interface TotalsPanelProps {
   readonly totals: PreviewTotalsResponse | null;

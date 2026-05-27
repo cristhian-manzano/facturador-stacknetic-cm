@@ -6,9 +6,9 @@
  * for `RequirePermission` and the global `auth:403` handler, so the page
  * needs to stay readable + actionable.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 
 import { ForbiddenPage } from "./ForbiddenPage.js";
 

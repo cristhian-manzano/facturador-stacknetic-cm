@@ -67,3 +67,45 @@ export class SriRetryBudgetExceededError extends SriClientError {
     this.name = "SriRetryBudgetExceededError";
   }
 }
+
+/**
+ * Raised when SRI returns a response larger than the configured cap.
+ *
+ * The audit punchlist requires a hard ceiling on the autorización SOAP
+ * response so a malformed (or hostile) payload cannot OOM the worker.
+ * We classify as non-transient — the body itself is what's wrong, not
+ * the transport.
+ */
+export class SriResponseTooLargeError extends SriClientError {
+  readonly limitBytes: number;
+  readonly seenBytes: number;
+
+  constructor(message: string, opts: { limitBytes: number; seenBytes: number; cause?: unknown }) {
+    super(message, {
+      kind: "parse",
+      transient: false,
+      code: "sri.response_too_large",
+      ...(opts.cause === undefined ? {} : { cause: opts.cause }),
+    });
+    this.name = "SriResponseTooLargeError";
+    this.limitBytes = opts.limitBytes;
+    this.seenBytes = opts.seenBytes;
+  }
+}
+
+/**
+ * Raised when the SRI client's circuit breaker is OPEN and rejects a
+ * call without going to the network.
+ */
+export class SriCircuitOpenError extends SriClientError {
+  constructor(message = "SRI circuit breaker is open", opts: { until: number }) {
+    super(message, {
+      kind: "network",
+      transient: false,
+      code: "sri.circuit_open",
+    });
+    this.name = "SriCircuitOpenError";
+    this.openUntilMs = opts.until;
+  }
+  readonly openUntilMs: number;
+}

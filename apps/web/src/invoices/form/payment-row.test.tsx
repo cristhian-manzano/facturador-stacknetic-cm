@@ -1,11 +1,11 @@
 /**
  * `PaymentRow` test.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FormProvider, useForm } from "react-hook-form";
 import type { ReactElement, ReactNode } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import { describe, expect, it } from "vitest";
 
 import { PaymentRow } from "./payment-row.js";
 import type { InvoiceFormValues } from "./types.js";

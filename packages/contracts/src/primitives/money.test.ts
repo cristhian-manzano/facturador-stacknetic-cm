@@ -2,6 +2,7 @@
  * Tests for `MoneySchema` and `MoneyQtySchema`. Per TASKS-0005 §2.7.
  */
 import { describe, expect, it } from "vitest";
+
 import { MoneyQtySchema, MoneySchema } from "./money.js";
 
 describe("MoneySchema", () => {

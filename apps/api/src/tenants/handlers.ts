@@ -33,10 +33,9 @@
  */
 
 import type { Request, RequestHandler, Response } from "express";
-import type { PrismaClient } from "@facturador/db";
-import { AuthError, ForbiddenError, NotFoundError } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
-import type { Logger } from "@facturador/logger";
+import { z } from "zod";
+
+import { SessionTenantSwitchSchema } from "@facturador/contracts/auth";
 import {
   AddMemberSchema,
   CreateTenantSchema,
@@ -46,10 +45,15 @@ import {
   UpdateMemberRoleSchema,
   UpdateTenantSchema,
 } from "@facturador/contracts/tenants";
-import { SessionTenantSwitchSchema } from "@facturador/contracts/auth";
-import { z } from "zod";
+import type { PrismaClient } from "@facturador/db";
+import type { Logger } from "@facturador/logger";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import { AuthError, ForbiddenError, NotFoundError } from "@facturador/utils/errors";
+
+
 import { setSessionCookies } from "../auth/cookies.js";
 import { switchSessionTenant } from "../auth/session-store.js";
+
 import {
   addMember as addMemberSvc,
   changeMemberRole,
@@ -104,8 +108,12 @@ export function buildTenantHandlers(deps: TenantHandlerDeps): TenantHandlers {
     try {
       const user = req.user;
       if (user === undefined) throw new AuthError();
+      // Filter on `acceptedAt: { not: null }` so users only see tenants
+      // they have actually joined — invitations they have NOT accepted
+      // yet do not appear in the tenant switcher.
+      // eslint-disable-next-line @facturador/security/require-companyId-filter -- tenant list returns ALL tenants the authenticated user is a member of across companies; companyId scoping would be wrong
       const memberships = await prisma.membership.findMany({
-        where: { userId: user.id },
+        where: { userId: user.id, acceptedAt: { not: null } },
         include: { company: true },
         orderBy: { createdAt: "asc" },
       });
@@ -195,9 +203,15 @@ export function buildTenantHandlers(deps: TenantHandlerDeps): TenantHandlers {
       const { companyId } = SessionTenantSwitchSchema.parse(req.body);
 
       // Verify membership. Same generic 403 body whether the tenant doesn't
-      // exist or the user isn't a member — no enumeration oracle.
-      const membership = await prisma.membership.findUnique({
-        where: { userId_companyId: { userId: user.id, companyId } },
+      // exist or the user isn't a member — no enumeration oracle. We
+      // additionally require `acceptedAt IS NOT NULL` so an unaccepted
+      // invitation can never become the active tenant.
+      const membership = await prisma.membership.findFirst({
+        where: {
+          userId: user.id,
+          companyId,
+          acceptedAt: { not: null },
+        },
       });
       if (membership === null) {
         throw new ForbiddenError("Not a member of target tenant", "no_membership");

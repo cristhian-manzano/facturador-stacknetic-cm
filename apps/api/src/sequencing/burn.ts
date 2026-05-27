@@ -32,8 +32,8 @@
  *     throws `ConflictError("secuencial.already_burned")`. Callers
  *     wanting idempotent burns should catch and ignore.
  */
-import { Prisma } from "@facturador/db";
 import type { PrismaClient } from "@facturador/db";
+import { Prisma } from "@facturador/db";
 import { newId } from "@facturador/db";
 import { ConflictError } from "@facturador/utils/errors";
 

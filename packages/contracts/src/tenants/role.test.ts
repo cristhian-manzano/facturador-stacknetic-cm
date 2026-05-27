@@ -2,6 +2,7 @@
  * Tests for `RoleSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { RoleSchema } from "./role.js";
 
 describe("RoleSchema", () => {

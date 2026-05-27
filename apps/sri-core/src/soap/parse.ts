@@ -21,9 +21,11 @@
  * Never log the raw XML body. Callers may pass the parsed result to
  * the lifecycle layer which logs only mensaje identifiers + tipos.
  */
-import { DOMParser } from "@xmldom/xmldom";
+import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import xpath from "xpath";
+
 import type { SriMensaje } from "@facturador/contracts/sri";
+
 import { SriClientError } from "./errors.js";
 
 /**
@@ -96,7 +98,12 @@ function parseDocument(xml: string): Document {
     },
   };
   const doc = new DOMParser({ errorHandler: handler }).parseFromString(xml, "text/xml");
+  // Defensive: xmldom's typings claim `documentElement: HTMLElement` but in
+  // practice a malformed input can surface as undefined/null with no fatal
+  // callback. Belt and braces.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (fatal !== null || doc.documentElement === null) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     throw new SriClientError(`SRI returned malformed XML: ${fatal ?? "no root element"}`, {
       kind: "parse",
       transient: false,
@@ -255,18 +262,24 @@ export function parseAutorizacionResponse(xml: string): AutorizacionParseResult 
   );
   const mensajes = mensajeNodes.map(readMensaje);
 
-  // Extract the embedded XML. We grab textContent of `<comprobante>` —
-  // CDATA contents come through as text per the XML spec.
+  // Extract the embedded XML. SRI usually wraps the inner `<factura>`
+  // in `<![CDATA[...]]>`; the standard libxml-style parsers expose
+  // CDATA text via `textContent`. However, some (test? legacy?) SRI
+  // boxes have been observed shipping the inner element inline (no
+  // CDATA wrapper) — in that case `textContent` collapses every child
+  // element to "" and we'd silently lose the comprobante.
+  //
+  // We implement both paths:
+  //   1. If the comprobante node's text content (post-trim) looks like
+  //      XML (`<...>`), accept it verbatim. This is the CDATA case.
+  //   2. Otherwise, serialise the first ELEMENT_NODE child back to XML
+  //      via xmldom's XMLSerializer. This recovers the inline path.
   let autorizadoXml: string | undefined;
   if (estado === "AUTORIZADO") {
     const comprobanteNodes = selectNodes(autorizacionNode, `./*[local-name()='comprobante']`);
     const comprobanteNode = comprobanteNodes[0];
     if (comprobanteNode !== undefined) {
-      // xmldom's Node has `textContent` available on Element nodes.
-      const text = (comprobanteNode as unknown as { textContent: string | null }).textContent;
-      if (text !== null && text.trim() !== "") {
-        autorizadoXml = text.trim();
-      }
+      autorizadoXml = extractComprobanteXml(comprobanteNode);
     }
   }
 
@@ -291,4 +304,58 @@ export function normaliseAutorizacionEstado(value: string): AutorizacionEstadoPa
   if (v === "NO AUTORIZADO" || v === "NO_AUTORIZADO" || v === "RECHAZADA") return "NO_AUTORIZADO";
   if (v === "EN PROCESO" || v === "EN_PROCESO") return "EN_PROCESO";
   return "DESCONOCIDO";
+}
+
+/* -------------------------------------------------------------------------- */
+/* Comprobante extraction                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** DOM node-type constant for element nodes (the Node.ELEMENT_NODE value). */
+const ELEMENT_NODE = 1;
+
+/**
+ * Extract the inner XML carried by `<comprobante>`.
+ *
+ *   1. CDATA case (SRI standard): `textContent` carries the decoded
+ *      XML as a single string. We detect it because the trimmed text
+ *      starts with `<`.
+ *   2. Inline case (defensive — observed in some test SRI boxes):
+ *      `textContent` is "" because the children are real elements. We
+ *      serialise the first element child back to XML via xmldom's
+ *      XMLSerializer.
+ *
+ * Returns undefined when neither shape yields a payload.
+ */
+export function extractComprobanteXml(comprobanteNode: Node): string | undefined {
+  // Case 1: CDATA / text payload.
+  const text = (comprobanteNode as unknown as { textContent: string | null }).textContent;
+  if (text !== null) {
+    const trimmed = text.trim();
+    if (trimmed.length > 0 && trimmed.startsWith("<")) {
+      return trimmed;
+    }
+  }
+
+  // Case 2: inline element child. Walk the immediate children for the
+  // first ELEMENT_NODE and serialise it.
+  const children = (comprobanteNode as unknown as { childNodes: ArrayLike<Node> }).childNodes;
+  // Defensive: xmldom typings say childNodes is required, but in practice
+  // a stripped node can lack it.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (children !== undefined) {
+    // `children` is an ArrayLike<Node>, not iterable, so the index loop is
+    // intentional — for-of would need an explicit Array.from() coercion.
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
+    for (let i = 0; i < children.length; i += 1) {
+      const child = children[i];
+      if (
+        child !== undefined &&
+        (child as unknown as { nodeType: number }).nodeType === ELEMENT_NODE
+      ) {
+        const serialized = new XMLSerializer().serializeToString(child);
+        return serialized.trim().length === 0 ? undefined : serialized;
+      }
+    }
+  }
+  return undefined;
 }

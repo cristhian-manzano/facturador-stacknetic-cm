@@ -2,10 +2,14 @@
  * `@facturador/utils` — shared platform utilities.
  *
  * Prefer subpath imports:
- *   - `@facturador/utils/errors` — AppError hierarchy + toProblemDetail.
- *   - `@facturador/utils/audit`  — audit log helper.
- *   - `@facturador/utils/rbac`   — permission matrix + `can()` predicate.
- *   - `@facturador/utils/sri`    — SRI clave-de-acceso build + validate.
+ *   - `@facturador/utils/errors`   — AppError hierarchy + toProblemDetail.
+ *   - `@facturador/utils/audit`    — audit log helper + payload-hash chain.
+ *   - `@facturador/utils/rbac`     — permission matrix + `can()` predicate.
+ *   - `@facturador/utils/sri`      — SRI clave-de-acceso build + validate.
+ *   - `@facturador/utils/context`  — AsyncLocalStorage request context.
+ *   - `@facturador/utils/time`     — `nowInEcuador` wall-clock helper.
+ *   - `@facturador/utils/hash`     — SHA-256 + IP/email hashing.
+ *   - `@facturador/utils/db`       — soft-delete `where` helpers.
  *
  * The barrel re-exports the most commonly consumed names for convenience.
  */
@@ -73,3 +77,18 @@ export {
   type BuildClaveAccesoErrorCode,
   type BuildClaveAccesoInput,
 } from "./sri/index.js";
+
+export {
+  runWithContext,
+  getContext,
+  requireContext,
+  type RequestContext,
+} from "./context/index.js";
+
+export { nowInEcuador, type EcuadorWallClock } from "./time/index.js";
+
+export { sha256Hex, normaliseIp, hashIp, hashEmail } from "./hash/index.js";
+
+export { isActive, withSoftDelete } from "./db/index.js";
+
+export { canonicalJson, computeAuditPayloadHash } from "./audit/payload-hash.js";

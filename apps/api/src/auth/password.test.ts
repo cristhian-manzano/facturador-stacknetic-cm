@@ -10,8 +10,9 @@
  *     here — that's covered by the integration test in `test/auth.test.ts`).
  *   - `ARGON2_PARAMS` matches the OWASP 2024 minimums verbatim.
  */
-import { describe, expect, it } from "vitest";
 import argon2 from "argon2";
+import { describe, expect, it } from "vitest";
+
 import { ARGON2_PARAMS, DUMMY_HASH, hashPassword, verifyPassword } from "./password.js";
 
 describe("apps/api/auth/password — ARGON2_PARAMS", () => {

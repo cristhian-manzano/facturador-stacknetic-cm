@@ -11,11 +11,12 @@
  *   - PROMPT-0041 hard constraint — "on switch, call
  *     POST /api/v1/session/tenant and then queryClient.clear()".
  */
-import { z } from "zod";
 import type { QueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 
-import { RoleSchema } from "@facturador/contracts/tenants";
 import { UlidSchema } from "@facturador/contracts/primitives";
+import { RoleSchema } from "@facturador/contracts/tenants";
+
 import { apiFetch } from "../lib/api.js";
 
 /**

@@ -17,6 +17,7 @@
  *   - Email under `@facturador.test`.
  */
 import { http, HttpResponse } from "msw";
+
 import { LoginResponseSchema, MeResponseSchema } from "@facturador/contracts/auth";
 
 const API_BASE = "http://api.test";

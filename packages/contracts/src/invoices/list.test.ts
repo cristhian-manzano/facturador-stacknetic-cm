@@ -2,6 +2,7 @@
  * Tests for invoice list shapes.
  */
 import { describe, expect, it } from "vitest";
+
 import { InvoiceListItemSchema, InvoiceListResponseSchema } from "./list.js";
 
 const ULID = "01HX8K0PYFA9B7Y1M2N3P4Q5R6";

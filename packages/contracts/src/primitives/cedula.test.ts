@@ -5,6 +5,7 @@
  * `1710034065` is the AC-4 fixture from SPEC-0005.
  */
 import { describe, expect, it } from "vitest";
+
 import { CedulaSchema, isValidCedulaChecksum } from "./cedula.js";
 
 describe("CedulaSchema", () => {

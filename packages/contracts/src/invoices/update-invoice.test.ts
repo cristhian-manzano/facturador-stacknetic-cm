@@ -2,6 +2,7 @@
  * Tests for `UpdateInvoiceSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { UpdateInvoiceSchema } from "./update-invoice.js";
 
 describe("UpdateInvoiceSchema", () => {

@@ -24,13 +24,14 @@
  *   - The "busy" state surfaces via `aria-busy="true"` while the request
  *     is in flight.
  */
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../auth/context.js";
-import { cn } from "../lib/cn.js";
+import { broadcastSignout } from "../auth/cross-tab.js";
 import { t } from "../i18n/es.js";
+import { cn } from "../lib/cn.js";
 
 export interface SignOutButtonProps {
   className?: string;
@@ -53,6 +54,10 @@ export function SignOutButton({ className }: SignOutButtonProps): ReactElement {
         // even when the network fails, so the UI must end up in a clean
         // logged-out state regardless.
         queryClient.clear();
+        // Notify other tabs so they also drop the logged-in shell. The
+        // BroadcastChannel API gracefully no-ops in browsers that don't
+        // support it (see `cross-tab.ts`).
+        broadcastSignout();
         navigate("/login", { replace: true });
         setBusy(false);
       }

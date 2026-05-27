@@ -16,6 +16,7 @@
  */
 import type { Request, RequestHandler } from "express";
 import type { ZodSchema } from "zod";
+
 import type { SriMensaje } from "@facturador/contracts/errors";
 import { ValidationError } from "@facturador/utils/errors";
 
@@ -49,8 +50,7 @@ const issuesToMensajes = (
 const build =
   <T>(slice: RequestSlice, schema: ZodSchema<T>): RequestHandler =>
   (req, _res, next) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const value: unknown = (req as any)[slice];
+    const value: unknown = (req as unknown as Record<RequestSlice, unknown>)[slice];
     const result = schema.safeParse(value);
     if (!result.success) {
       next(
@@ -65,8 +65,8 @@ const build =
   };
 
 function assignSlice(req: Request, slice: RequestSlice, value: unknown): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (req as any)[slice] = value;
+  // Express 5 makes `req.query` a getter; mutate via a writable record cast.
+  (req as unknown as Record<RequestSlice, unknown>)[slice] = value;
 }
 
 export const validateBody = <T>(schema: ZodSchema<T>): RequestHandler => build("body", schema);

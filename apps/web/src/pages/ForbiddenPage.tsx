@@ -4,8 +4,8 @@
  * Static page; no fetches. The "back" CTA uses absolute navigation to
  * `/` because Router history may have stacked the forbidden route only.
  */
-import { Link } from "react-router-dom";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 
 import { t } from "../i18n/es.js";
 

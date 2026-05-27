@@ -17,7 +17,9 @@
  *     is stable across whitespace differences.
  */
 import { createHash } from "node:crypto";
+
 import forge from "node-forge";
+
 import {
   BadPassphraseError,
   ExpiredCertificateError,
@@ -126,6 +128,9 @@ export function parseP12(
 
   // node-forge stores the serial as a hex string. Pad to even length to
   // make the value cleanly displayable.
+  // Defensive: node-forge typings claim `serialNumber: string` but in
+  // practice some malformed certs surface it as `null`. Belt and braces.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const rawSerial = cert.serialNumber ?? "";
   const serialHex =
     rawSerial.length % 2 === 0 ? rawSerial.toLowerCase() : `0${rawSerial}`.toLowerCase();

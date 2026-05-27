@@ -11,6 +11,7 @@
  * read them defensively (`?? null` → skip rendering when absent).
  */
 import type { ReactElement } from "react";
+
 import type { Customer } from "@facturador/contracts/customers";
 
 import { t } from "../../i18n/es.js";

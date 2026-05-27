@@ -10,10 +10,11 @@
  * is justified per PROMPT-0005 §2 (downstream spec defines the inner shape).
  */
 import { z } from "zod";
+
 import { AmbienteSchema } from "../primitives/ambiente.js";
 import { ClaveAccesoSchema } from "../primitives/clave-acceso.js";
-import { FechaEmisionSchema } from "../primitives/fecha-emision.js";
 import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "../primitives/establecimiento.js";
+import { FechaEmisionSchema } from "../primitives/fecha-emision.js";
 import { TipoEmisionSchema } from "../primitives/tipo-emision.js";
 import { UlidSchema } from "../primitives/ulid.js";
 

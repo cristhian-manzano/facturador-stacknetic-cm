@@ -93,14 +93,26 @@ model User {
 // Membership — only join between User and Company. Drives RBAC per-tenant.
 // FKs deliberately use Restrict so an attempt to delete a User or Company that
 // still has memberships fails loud rather than silently cascading.
+//
+// Invitation lifecycle (forward-compatible with SPEC-0050 invitations):
+//   - `invitedAt`: set when an OWNER/ADMIN creates the membership through the
+//     invite flow. NULL for memberships created directly (e.g. seed/OWNER
+//     bootstrap).
+//   - `acceptedAt`: set when the invitee accepts. A membership is "active"
+//     iff `acceptedAt IS NOT NULL` — `requireTenant` MUST filter on this
+//     predicate so an unaccepted invite does not grant tenant access.
+// The backfill migration sets `acceptedAt = createdAt` for every existing
+// row so existing tenants stay active without code changes.
 // -----------------------------------------------------------------------------
 model Membership {
-  id        String   @id @db.Char(26)
-  userId    String   @db.Char(26)
-  companyId String   @db.Char(26)
-  role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @db.Char(26)
+  userId     String    @db.Char(26)
+  companyId  String    @db.Char(26)
+  role       Role
+  invitedAt  DateTime?
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
@@ -114,6 +126,13 @@ model Membership {
 // id (ULID). `csrfTokenHash` stores the server-side hash of the CSRF secret;
 // the secret itself is delivered to the browser separately. No raw IP — store
 // a redacted/hashed form per ai/context/security.md.
+//
+// `ipHash` (sha256 of the normalised IP, daily-salted — see SPEC-0010 §6.9)
+// is kept alongside the raw `ip` column during the migration window. Newly
+// created sessions write both; the raw `ip` column is deprecated and will be
+// dropped in a follow-up migration once readers have switched over. Adding
+// `ipHash` lets the auth subsystem stop persisting the raw IP without losing
+// per-IP traceability for audit log correlation.
 // -----------------------------------------------------------------------------
 model Session {
   id            String   @id @db.Char(26)
@@ -123,7 +142,8 @@ model Session {
   createdAt     DateTime @default(now())
   expiresAt     DateTime
   lastSeenAt    DateTime @default(now())
-  ip            String?
+  ip            String? // DEPRECATED: kept for migration window; new writers populate ipHash instead.
+  ipHash        String? // sha256 of normalised IP (32 hex chars per SPEC-0010 §6.9).
   userAgent     String?
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -137,6 +157,19 @@ model Session {
 // AuditLog — append-only record of security-relevant events. `payloadJson` is
 // untyped; any writer must redact PII / secrets before insert (callers are
 // responsible — see SPEC-0006 logger redaction list).
+//
+// `subjectHash` (sha256 of the canonicalised "subject" of the event — for
+// `auth.login.failure` rows the subject is the lowercased email) lets OWNERs
+// grep brute-force attempts (`SELECT … WHERE subjectHash = ? ORDER BY
+// createdAt DESC`) without ever persisting the raw identifier. Nullable
+// because most action types (e.g. `invoice.emit_finished`) have no subject.
+// SPEC-0010 §FR-8 motivates the column.
+//
+// `payloadHash` (sha256(prev.payloadHash || canonical(payloadJson))) backs
+// the tamper-evident audit chain proposed in REVIEW-0006 §10 #6. The helper
+// that computes the value lives in `@facturador/utils/audit`; this column is
+// nullable so existing rows remain valid and writers can adopt the chain
+// incrementally.
 // -----------------------------------------------------------------------------
 model AuditLog {
   id          String   @id @db.Char(26)
@@ -147,13 +180,19 @@ model AuditLog {
   entityId    String?
   ip          String?
   userAgent   String?
+  subjectHash String? // sha256(email) for auth.login.failure; nullable otherwise.
   payloadJson Json?
+  payloadHash String? // sha256(prev.payloadHash || canonical(payloadJson)); see @facturador/utils/audit.
   createdAt   DateTime @default(now())
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
   @@index([action, createdAt])
+  // SubjectHash lookups support brute-force review queries scoped by time
+  // window. Nullable column → partial-shaped index is fine; Postgres skips
+  // NULL keys for `WHERE subjectHash = ?` lookups regardless.
+  @@index([subjectHash, createdAt])
 }
 
 // =============================================================================
@@ -283,7 +322,11 @@ model SriDocument {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  events SriEvent[]
+  events            SriEvent[]
+  // Reverse side of BurnedSecuencial.documentId. Required by Prisma when
+  // declaring the FK on BurnedSecuencial; query path stays unchanged
+  // (sri-core never loads through this relation — it's just navigability).
+  burnedSecuenciales BurnedSecuencial[]
 
   @@index([companyId, estado, createdAt])
   @@index([companyId, claveAcceso])
@@ -328,6 +371,14 @@ model SriEvent {
 // `reason` taxonomy: 'reissue' | 'manual' | 'emission_failure'. Burns are
 // written by the orchestrator/operator paths in SPEC-0033; the field is a
 // free string so future reasons don't require a schema change.
+//
+// `documentId` is a Prisma relation to `SriDocument.id` with
+// `onDelete: SetNull` (intentionally NOT Cascade — the burn record outlives
+// the SriDocument by design: if the document row is ever pruned, we keep
+// the audit trail of which secuencial was consumed and merely clear the
+// back-pointer). The column remains nullable: a number can be burned while
+// only reserved (no document yet) and again later once the SriDocument
+// exists.
 // -----------------------------------------------------------------------------
 model BurnedSecuencial {
   id              String   @id @db.Char(26)
@@ -338,10 +389,13 @@ model BurnedSecuencial {
   secuencial      String
   reason          String   @default("reissue")
   burnedByUserId  String?  @db.Char(26)
-  // Optional pointer back to the document that consumed the number. Null
-  // while the number is reserved but not yet attached to a SriDocument.
+  // Pointer back to the document that consumed the number. Null while the
+  // number is reserved but not yet attached, or after the SriDocument row
+  // is hard-deleted (onDelete SetNull preserves the burn audit trail).
   documentId      String?  @db.Char(26)
   createdAt       DateTime @default(now())
+
+  document SriDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
   // The (companyId, estab, ptoEmi, secuencial) uniqueness preserves the
   // existing constraint from the SRI-core skeleton — burning the same
@@ -481,6 +535,12 @@ model Customer {
   email              String?
   telefono           String?
   direccion          String?
+  // `isActive` is independent of soft-delete: an operator may want to keep a
+  // customer in history but temporarily prevent it from appearing in new
+  // invoices' search results. `deletedAt` is permanent; `isActive=false` is
+  // a reversible "hide from picker" flag. Backfilled to `true` for existing
+  // rows. See REVIEW-0031 §11 #5.
+  isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
@@ -496,6 +556,8 @@ model Customer {
   // without tipo (search-by-q path).
   @@index([companyId, identificacion])
   @@index([companyId, deletedAt])
+  // Filter-by-isActive list scans (customer picker, "show inactive" toggle).
+  @@index([companyId, isActive])
   @@map("customers")
 }
 
@@ -544,6 +606,22 @@ enum InvoiceEstado {
 // -----------------------------------------------------------------------------
 // Invoice — factura aggregate root. Persists computed totals + lines'
 // computed fields so list views don't recompute.
+//
+// SRI authorisation mirror columns (`numeroAutorizacion`, `fechaAutorizacion`,
+// `sriDocumentId`) close the API/sri-core data gap flagged in REVIEW-0033.
+// The values are mastered by sri-core's `SriDocument`; the orchestrator
+// (SPEC-0033 §6.3) copies them onto the invoice row at emit time so the
+// detail GET endpoint can render the authorised receipt without a
+// cross-service join. `sriDocumentId` is a SOFT FK (no Prisma relation
+// declared) — the column is just an indexed pointer for backfill / repair
+// scripts. The orchestrator never reads through this column; sri-core owns
+// the SriDocument table and api never queries it through Prisma.
+//
+// `replacesInvoiceId` makes the reissue chain queryable: when a NO_AUTORIZADO
+// invoice is reissued, the clone records the original's id so the UI can
+// show "this invoice replaces X". The FK is `Restrict` so we never silently
+// orphan reissue chains; if an operator tries to hard-delete an original
+// that has descendants, the constraint forces them to delete bottom-up.
 // -----------------------------------------------------------------------------
 model Invoice {
   id                    String        @id @db.Char(26)
@@ -582,9 +660,21 @@ model Invoice {
   // Mirror of the linked SriDocument.estado (denormalised at emit). NULL
   // while estado=BORRADOR. List views read this directly.
   sriEstado             SriEstado?
+  // SRI authorisation mirror — populated from sri-core on AUTORIZADO per
+  // SPEC-0033 §6.3 FR-1.6. NULL until the orchestrator observes AUTORIZADO.
+  numeroAutorizacion    String?
+  fechaAutorizacion     DateTime?
+  // Soft FK to sri-core's SriDocument.id (intentionally no Prisma relation —
+  // api never loads SriDocument through Prisma; this is a backfill pointer).
+  sriDocumentId         String?       @db.Char(26)
   emittedAt             DateTime?
   // Last-seen SRI mensajes envelope (writer responsibility to redact).
   mensajesJson          Json?
+  // Reissue chain pointer: when this invoice was created by /reissue, points
+  // to the original invoice that was replaced. Null for first emissions.
+  // Restrict prevents orphaning the chain if someone tries to hard-delete
+  // the original — they must walk the descendants first.
+  replacesInvoiceId     String?       @db.Char(26)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   deletedAt             DateTime?
@@ -592,6 +682,12 @@ model Invoice {
   lines       InvoiceLine[]
   payments    InvoicePayment[]
   adicionales InvoiceAdicional[]
+
+  // Self-relation: a row points back to the invoice it replaces. `replacedBy`
+  // is the reverse-side (one original may be replaced by many reissue clones
+  // if the first reissue itself was rejected and reissued again, etc.).
+  replaces   Invoice?  @relation("InvoiceReissueChain", fields: [replacesInvoiceId], references: [id], onDelete: Restrict)
+  replacedBy Invoice[] @relation("InvoiceReissueChain")
 
   // Cursor pagination by `(createdAt DESC, id DESC)`. We index
   // (companyId, createdAt) so the planner uses a backward range scan; the
@@ -604,6 +700,12 @@ model Invoice {
   // endpoint and orchestrator idempotency.
   @@index([companyId, claveAcceso])
   @@index([companyId, deletedAt])
+  // Reissue-chain navigation: list all invoices that replaced a given
+  // original within a tenant.
+  @@index([companyId, replacesInvoiceId])
+  // Soft FK lookup: backfill / repair scripts that go from SriDocument.id
+  // back to the owning Invoice. Sparse column → index payload stays tiny.
+  @@index([companyId, sriDocumentId])
   @@map("invoices")
 }
 

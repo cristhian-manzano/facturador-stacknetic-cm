@@ -34,17 +34,20 @@
  *     durationMs) — never the JWT, never the request body.
  */
 import type { Request, RequestHandler } from "express";
-import { Prisma } from "@facturador/db";
+import { z } from "zod";
+
+import type { EmitDocumentResponse, DocumentStatusResponse } from "@facturador/contracts/sri";
 import type {
   Customer,
   Establecimiento,
   PrismaClient,
   SriEstado,
 } from "@facturador/db";
+import { Prisma } from "@facturador/db";
 import { newId } from "@facturador/db";
-import { z } from "zod";
-import type { EmitDocumentResponse, DocumentStatusResponse } from "@facturador/contracts/sri";
+import type { Logger } from "@facturador/logger";
 import { buildClaveAcceso, generateCodigoNumerico } from "@facturador/utils";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import {
   AuthError,
   BusinessError,
@@ -52,14 +55,15 @@ import {
   UpstreamError,
   ValidationError,
 } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
-import type { Logger } from "@facturador/logger";
-import { reserveSecuencial } from "../sequencing/reserve.js";
+
+import { env } from "../env.js";
 import { burnSecuencial } from "../sequencing/burn.js";
+import { reserveSecuencial } from "../sequencing/reserve.js";
 import { sriCoreFetch } from "../sri/client.js";
+
+import { toInvoiceDetailWire } from "./handlers.js";
 import { findInvoiceById, type InvoiceWithChildren } from "./repository.js";
 import { translateInvoiceToSriRequest } from "./translate-to-sri.js";
-import { toInvoiceDetailWire } from "./handlers.js";
 
 const auditAdapter = (prisma: PrismaClient): AuditPrismaClient =>
   prisma as unknown as AuditPrismaClient;
@@ -108,39 +112,42 @@ function isAlreadyEmitted(estado: string): boolean {
  * Mirror-write helper. All mirror updates use a field-by-field shape so
  * we never `data: { ...response }` and accidentally leak unknown keys
  * (PROMPT-0033 §4 hard rule).
+ *
+ * The production-readiness migration added `numeroAutorizacion`,
+ * `fechaAutorizacion`, and `sriDocumentId` columns to the `invoices`
+ * table; we now persist them here so the detail GET endpoint can
+ * render the authorised receipt without a cross-service join.
  */
 async function applyMirror(
   prisma: PrismaClient,
   invoiceId: string,
+  companyId: string,
   patch: {
     sriEstado: SriEstado;
     numeroAutorizacion: string | null;
     fechaAutorizacion: Date | null;
+    sriDocumentId?: string | null;
     mensajesJson: unknown;
   },
 ): Promise<void> {
+  const data: Prisma.InvoiceUpdateInput = {
+    sriEstado: patch.sriEstado,
+    numeroAutorizacion: patch.numeroAutorizacion,
+    fechaAutorizacion: patch.fechaAutorizacion,
+    mensajesJson:
+      patch.mensajesJson === null || patch.mensajesJson === undefined
+        ? Prisma.JsonNull
+        : (patch.mensajesJson as Prisma.InputJsonValue),
+  };
+  if (patch.sriDocumentId !== undefined) {
+    data.sriDocumentId = patch.sriDocumentId;
+  }
+  // Defence-in-depth: `companyId` in the WHERE prevents a stray invoiceId
+  // (e.g. swapped at the call site) from updating another tenant's row.
   await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: {
-      sriEstado: patch.sriEstado,
-      // We persist these onto the Invoice for the list/detail views.
-      // The full SriDocument lives in sri-core.
-      mensajesJson:
-        patch.mensajesJson === null || patch.mensajesJson === undefined
-          ? Prisma.JsonNull
-          : (patch.mensajesJson as Prisma.InputJsonValue),
-    },
+    where: { id: invoiceId, companyId },
+    data,
   });
-  // The numeroAutorizacion + fechaAutorizacion are denormalised onto the
-  // invoice only if present. The mirror lives in `sriDocument` upstream;
-  // tests assert these flow back via the detail response. We surface them
-  // via a separate column-less side channel: the next refresh pulls them
-  // from sri-core. (The Invoice row's `numeroAutorizacion` column does not
-  // exist in the schema — the orchestrator just stores `sriEstado` + the
-  // mensajes blob; numeroAutorizacion comes back through `/refresh` /
-  // detail joins in SPEC-0043.)
-  void patch.numeroAutorizacion;
-  void patch.fechaAutorizacion;
 }
 
 interface ReservedInvoice {
@@ -228,9 +235,12 @@ async function reserveInTransaction(
     };
   }
 
-  // Reserve secuencial + compute clave + persist atomically.
+  // Reserve secuencial + compute clave + persist atomically. The retry
+  // budget is operator-tunable via `SECUENCIAL_RESERVE_MAX_RETRIES` so
+  // a noisy environment can dial down the retry cost without a redeploy
+  // (see apps/api/README.md).
   const secuencial = await reserveSecuencial(
-    { prisma },
+    { prisma, maxRetries: env.SECUENCIAL_RESERVE_MAX_RETRIES },
     {
       companyId,
       estab: emissionPoint.establecimiento.codigo,
@@ -252,8 +262,13 @@ async function reserveInTransaction(
     tipoEmision: "1",
   });
 
+  // Defence-in-depth: `companyId` in the WHERE guarantees this update can
+  // only ever touch a row already scoped to the authenticated tenant —
+  // even though `invoice` was loaded via `findInvoiceById` (which already
+  // filters by companyId), making the constraint explicit here keeps the
+  // intent visible at the call site.
   const updated = await prisma.invoice.update({
-    where: { id: invoice.id },
+    where: { id: invoice.id, companyId },
     data: {
       secuencial,
       claveAcceso,
@@ -339,22 +354,54 @@ async function callSriCoreEmit(
 }
 
 /**
- * Field-by-field mirror write from an `EmitDocumentResponse`.
+ * Synthesise a single SriMensaje when the upstream returns DEVUELTA /
+ * NO_AUTORIZADO with no `mensajes`. The UI never has to render an empty
+ * error list — the placeholder spells out the situation in Spanish.
+ *
+ * This is a pure helper; it returns either the original mensajes (when
+ * the upstream supplied at least one) or the synthesised fallback.
+ */
+export function ensureMensajesNonEmpty(
+  estado: SriEstado,
+  mensajes: EmitDocumentResponse["mensajes"],
+): NonNullable<EmitDocumentResponse["mensajes"]> {
+  if (estado !== "DEVUELTA" && estado !== "NO_AUTORIZADO") {
+    return mensajes ?? [];
+  }
+  if (mensajes !== undefined && mensajes.length > 0) {
+    return mensajes;
+  }
+  return [
+    {
+      identificador: "UNKNOWN",
+      tipo: "ERROR",
+      mensaje: "El SRI rechazó el comprobante sin mensajes específicos.",
+    },
+  ];
+}
+
+/**
+ * Field-by-field mirror write from an `EmitDocumentResponse`. Mensajes
+ * are guaranteed non-empty for DEVUELTA / NO_AUTORIZADO via
+ * `ensureMensajesNonEmpty` (production-readiness §12).
  */
 async function mirrorEmitResponse(
   prisma: PrismaClient,
   invoiceId: string,
+  companyId: string,
   resp: EmitDocumentResponse,
-): Promise<void> {
-  await applyMirror(prisma, invoiceId, {
+): Promise<NonNullable<EmitDocumentResponse["mensajes"]>> {
+  const mensajes = ensureMensajesNonEmpty(resp.estado, resp.mensajes);
+  await applyMirror(prisma, invoiceId, companyId, {
     sriEstado: resp.estado,
     numeroAutorizacion: resp.numeroAutorizacion ?? null,
     fechaAutorizacion:
       resp.fechaAutorizacion === undefined
         ? null
         : new Date(resp.fechaAutorizacion),
-    mensajesJson: resp.mensajes ?? null,
+    mensajesJson: mensajes,
   });
+  return mensajes;
 }
 
 /**
@@ -497,7 +544,7 @@ export function buildOrchestratorHandlers(
       } catch (err) {
         // Persist ERROR_RED and audit; the invoice stays EMITIDO (the
         // secuencial is burned — UI guides the user to reissue or refresh).
-        await applyMirror(prisma, reserved.invoice.id, {
+        await applyMirror(prisma, reserved.invoice.id, companyId, {
           sriEstado: "ERROR_RED",
           numeroAutorizacion: null,
           fechaAutorizacion: null,
@@ -528,8 +575,15 @@ export function buildOrchestratorHandlers(
         );
       }
 
-      // 3) Mirror update.
-      await mirrorEmitResponse(prisma, reserved.invoice.id, sriResp);
+      // 3) Mirror update. Returns the (possibly synthesised) mensajes so
+      // the response body and DB write agree even when the upstream
+      // returned an empty list on DEVUELTA / NO_AUTORIZADO.
+      const mensajesForBody = await mirrorEmitResponse(
+        prisma,
+        reserved.invoice.id,
+        companyId,
+        sriResp,
+      );
       const fresh = await findInvoiceById(prisma, {
         id: reserved.invoice.id,
         companyId,
@@ -554,7 +608,11 @@ export function buildOrchestratorHandlers(
         },
       );
 
-      res.status(200).json(buildEmitResponseBody(fresh, sriResp));
+      res
+        .status(200)
+        .json(
+          buildEmitResponseBody(fresh, { ...sriResp, mensajes: mensajesForBody }),
+        );
     } catch (err) {
       next(err);
     }
@@ -607,6 +665,7 @@ export function buildOrchestratorHandlers(
             tipoComprobante: "01",
             // `source.secuencial` is asserted non-null above (see the
             // `secuencial === null` guard at the top of the handler).
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             secuencial: source.secuencial!,
             reason: "reissue",
             burnedByUserId: req.user?.id ?? null,
@@ -653,6 +712,12 @@ export function buildOrchestratorHandlers(
             propina: source.propina,
             importeTotal: source.importeTotal,
             totalsJson: (source.totalsJson ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+            // Reissue chain pointer: navigate from the clone back to the
+            // original. Restrict FK prevents orphaning if someone tries
+            // to hard-delete the original — they must walk descendants
+            // first. The detail wire shape surfaces this so the UI can
+            // display "this invoice replaces …".
+            replacesInvoiceId: source.id,
           },
         });
         // Clone lines.
@@ -780,16 +845,20 @@ export function buildOrchestratorHandlers(
         );
       }
 
-      // Mirror back. The fechaAutorizacion arrives as ISO; we only persist
-      // sriEstado + mensajes (column-shape).
+      // Mirror back. The fechaAutorizacion arrives as ISO; we coerce to
+      // Date for the Prisma column. `sriDocumentId` is the upstream
+      // SriDocument's id — captured here so a follow-up sweep / repair
+      // script can navigate Invoice → SriDocument without a clave-acceso
+      // lookup.
       const fechaAuth = status.document.fechaAutorizacion;
-      await applyMirror(prisma, id, {
+      await applyMirror(prisma, id, companyId, {
         sriEstado: status.document.estado,
         numeroAutorizacion: status.document.numeroAutorizacion ?? null,
         fechaAutorizacion:
           fechaAuth === null || fechaAuth === undefined
             ? null
             : new Date(fechaAuth),
+        sriDocumentId: status.document.id,
         mensajesJson: status.events.flatMap((e) => e.mensajes),
       });
 

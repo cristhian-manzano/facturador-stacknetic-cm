@@ -23,8 +23,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import { FormProvider, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
-import { ApiError } from "../../lib/api.js";
+import { emitToast } from "../../app/toast-bus.js";
 import { t } from "../../i18n/es.js";
+import { ApiError } from "../../lib/api.js";
 import {
   createInvoiceDraft,
   listEmissionPointOptions,
@@ -38,6 +39,7 @@ import { useDebouncedTotals } from "../hooks/useDebouncedTotals.js";
 import { useEmitInvoice } from "../hooks/useEmitInvoice.js";
 import { moneyEquals, sumMoney } from "../money.js";
 import { pickIvaCode } from "../tax-rates.js";
+
 import { CustomerCombobox } from "./customer-combobox.js";
 import { EmitModal, emitErrorToAction, emitResponseToAction, useEmitModal } from "./emit-modal.js";
 import { LineRow } from "./line-row.js";
@@ -137,29 +139,36 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
   // Subscribe to a stable slice of values used by the totals call.
   const watched = useWatch({ control });
 
-  // Build the preview-totals payload (returns null when not ready).
-  const previewBody = useMemo(() => {
-    const current = getValues();
-    const r = toCreateInvoicePayload(current);
-    return r.ok ? r.value : null;
-    // We deliberately include `watched` so the memo re-evaluates after each
-    // form change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched, getValues]);
+  // Build the preview-totals payload (returns null when not ready). `watched`
+  // is the intentional trigger; the linter can't see the through-RHF subscription.
+  const previewBody = useMemo(
+    () => {
+      const current = getValues();
+      const r = toCreateInvoicePayload(current);
+      return r.ok ? r.value : null;
+    },
+    // RHF subscription: `watched` is the trigger; getValues is stable.
+    /* eslint-disable-next-line react-hooks/exhaustive-deps -- intentional */
+    [watched, getValues],
+  );
 
   const totals = useDebouncedTotals(previewBody, {
     enabled: previewBody !== null,
     delayMs: 250,
   });
 
-  // Build the payments-balanced flag.
-  const paymentsBalanced = useMemo(() => {
-    if (totals.data === null) return true; // optimistic until first preview
-    const lineTotalsRaw = getValues("payments").map((p) => p.total);
-    const sum = sumMoney(lineTotalsRaw);
-    return moneyEquals(sum, totals.data.importeTotal);
+  // Build the payments-balanced flag. `watched` is the intentional trigger;
+  // the linter cannot see the RHF subscription wiring.
+  const paymentsBalanced = useMemo(
+    () => {
+      if (totals.data === null) return true; // optimistic until first preview
+      const lineTotalsRaw = getValues("payments").map((p) => p.total);
+      const sum = sumMoney(lineTotalsRaw);
+      return moneyEquals(sum, totals.data.importeTotal);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totals.data, watched, getValues]);
+    [totals.data, watched, getValues],
+  );
 
   // -------------------------------------------------------------------------
   // First-edit draft creation
@@ -205,7 +214,6 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
     if (!ready) return;
     firstEditAttempted.current = true;
     void ensureDraft();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watched, invoiceId, ensureDraft, getValues]);
 
   // Auto-save every 30 s if dirty + draft exists.
@@ -217,7 +225,18 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
       const built = toUpdateInvoicePayload(current);
       return built.ok ? built.value : null;
     }, [getValues]),
-    onSaved: () => { setAutoSavedAt(Date.now()); },
+    onSaved: () => {
+      setAutoSavedAt(Date.now());
+    },
+    onConflict: () => {
+      // Another tab beat us to it (REVIEW-0044 §8). Surface a toast via
+      // the global bus; the form stays editable but the user should
+      // refresh to pick up the latest state.
+      emitToast({
+        message: "Otra pestaña actualizó este borrador. Recarga la página.",
+        variant: "error",
+      });
+    },
   });
 
   // Load emission points on mount (unless test override provided).
@@ -246,7 +265,7 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
         setEmissionPointsLoading(false);
       });
     return (): void => { controller.abort(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `getValues` and `setValue` are stable RHF refs; including them would trigger this effect on every render.
   }, [props.emissionPointsOverride]);
 
   // -------------------------------------------------------------------------
@@ -426,7 +445,7 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
             </div>
 
             <CustomerCombobox
-              value={customerIdWatch ?? ""}
+              value={customerIdWatch}
               selectedLabel={customerLabel}
               onSelect={handleCustomerSelect}
               onCreateNewRequested={() => { setShowNewCustomerDialog(true); }}
@@ -447,7 +466,7 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
               <button
                 type="button"
                 data-testid="add-line"
-                onClick={() => { lines.append(newLine(fechaWatch ?? todayIsoLocal())); }}
+                onClick={() => { lines.append(newLine(fechaWatch)); }}
                 className="rounded border border-primary-600 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
               >
                 {t("invoice.form.lines.add")}
@@ -461,7 +480,7 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
                   canRemove={canRemoveLine}
                   isLast={idx === lines.fields.length - 1}
                   onRemove={() => { lines.remove(idx); }}
-                  onLastFieldEnter={() => { lines.append(newLine(fechaWatch ?? todayIsoLocal())); }}
+                  onLastFieldEnter={() => { lines.append(newLine(fechaWatch)); }}
                 />
               ))}
             </div>

@@ -2,6 +2,7 @@
  * Tests for `EstabSchema`, `PtoEmiSchema`, `SecuencialSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "./establecimiento.js";
 
 describe("EstabSchema", () => {

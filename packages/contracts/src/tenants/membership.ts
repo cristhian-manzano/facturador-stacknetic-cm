@@ -9,8 +9,10 @@
  * model).
  */
 import { z } from "zod";
-import { UlidSchema } from "../primitives/ulid.js";
+
 import { EmailSchema } from "../primitives/email.js";
+import { UlidSchema } from "../primitives/ulid.js";
+
 import { RoleSchema } from "./role.js";
 
 export const MembershipSummarySchema = z.object({

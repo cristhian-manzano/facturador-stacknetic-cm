@@ -2,6 +2,18 @@
  * Subpath: `@facturador/contracts/sri`.
  */
 export {
+  IVA_CODIGO,
+  ICE_CODIGO,
+  IRBPNR_CODIGO,
+  IVA_15_EFFECTIVE_FROM,
+  IVA_TABLE,
+  pickIvaCode,
+  isIvaCodeValidFor,
+  getIvaRow,
+  type IvaCatalogRow,
+  type PickIvaCodeResult,
+} from "./iva.js";
+export {
   SriEstadoSchema,
   SriCodDocSchema,
   SriDocumentSchema,

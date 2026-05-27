@@ -17,6 +17,7 @@
  * (BCE issues 2048-bit RSA certs) so we mirror real-world parsing.
  */
 import { generateKeyPairSync } from "node:crypto";
+
 import forge from "node-forge";
 
 export interface SyntheticCertOptions {

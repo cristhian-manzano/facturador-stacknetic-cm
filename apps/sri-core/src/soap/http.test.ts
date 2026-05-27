@@ -20,8 +20,14 @@
  *   - TASKS-0025 §1.2 (validation).
  *   - PROMPT-0025 §6 (TLS).
  */
-import { afterEach, describe, expect, it } from "vitest";
 import { MockAgent } from "undici";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import {
+  SriCircuitOpenError,
+  SriClientError,
+  SriResponseTooLargeError,
+} from "./errors.js";
 import {
   httpPostXml,
   TLS_OPTIONS,
@@ -30,8 +36,11 @@ import {
   _resetDefaultAgentForTests,
   classifyTransportError,
   DEFAULT_TIMEOUTS,
+  DEFAULT_BREAKER_OPTIONS,
+  _resetCircuitBreakerForTests,
+  recordCircuitOutcome,
+  peekCircuitState,
 } from "./http.js";
-import { SriClientError } from "./errors.js";
 
 const FAKE_HOST = "https://sri.example.test";
 const FAKE_PATH = "/RecepcionComprobantesOffline";
@@ -213,5 +222,93 @@ describe("classifyTransportError — kind matrix", () => {
   it("handles null + non-object inputs gracefully", () => {
     expect(classifyTransportError(null, 0).kind).toBe("network");
     expect(classifyTransportError("string-error", 0).kind).toBe("network");
+  });
+});
+
+describe("httpPostXml — response size cap", () => {
+  beforeEach(() => _resetCircuitBreakerForTests());
+
+  it("throws SriResponseTooLargeError when Content-Length exceeds the cap", async () => {
+    const { agent, pool } = makeMockAgent();
+    pool.intercept({ path: FAKE_PATH, method: "POST" }).reply(200, "<x/>", {
+      headers: { "content-length": "1048576" }, // 1 MiB advertised
+    });
+
+    await expect(
+      httpPostXml({
+        url: `${FAKE_HOST}${FAKE_PATH}`,
+        body: "<x/>",
+        dispatcher: agent,
+        maxResponseBytes: 1024, // 1 KiB cap
+      }),
+    ).rejects.toBeInstanceOf(SriResponseTooLargeError);
+  });
+
+  it("throws SriResponseTooLargeError when streamed bytes exceed the cap without a header", async () => {
+    const { agent, pool } = makeMockAgent();
+    // 10 KiB body — exceeds the 1 KiB cap once streamed.
+    const big = "<x>" + "a".repeat(10_000) + "</x>";
+    pool.intercept({ path: FAKE_PATH, method: "POST" }).reply(200, big);
+
+    await expect(
+      httpPostXml({
+        url: `${FAKE_HOST}${FAKE_PATH}`,
+        body: "<x/>",
+        dispatcher: agent,
+        maxResponseBytes: 1024,
+      }),
+    ).rejects.toBeInstanceOf(SriResponseTooLargeError);
+  });
+
+  it("accepts a response that fits under the cap (default cap is 20 MiB)", async () => {
+    const { agent, pool } = makeMockAgent();
+    pool.intercept({ path: FAKE_PATH, method: "POST" }).reply(200, "<ok/>");
+    const r = await httpPostXml({
+      url: `${FAKE_HOST}${FAKE_PATH}`,
+      body: "<x/>",
+      dispatcher: agent,
+    });
+    expect(r.status).toBe(200);
+    expect(r.text).toBe("<ok/>");
+  });
+});
+
+describe("httpPostXml — circuit breaker", () => {
+  beforeEach(() => _resetCircuitBreakerForTests());
+
+  it("opens after threshold consecutive budget_exceeded outcomes; short-circuits next call", async () => {
+    for (let i = 0; i < DEFAULT_BREAKER_OPTIONS.failureThreshold; i += 1) {
+      recordCircuitOutcome("budget_exceeded");
+    }
+    const state = peekCircuitState();
+    expect(state.state).toBe("open");
+
+    // With the breaker open, the next httpPostXml call must throw
+    // without going to the network.
+    await expect(
+      httpPostXml({
+        url: `${FAKE_HOST}${FAKE_PATH}`,
+        body: "<x/>",
+      }),
+    ).rejects.toBeInstanceOf(SriCircuitOpenError);
+  });
+
+  it("transitions to half-open after the cool-down elapses", () => {
+    for (let i = 0; i < DEFAULT_BREAKER_OPTIONS.failureThreshold; i += 1) {
+      recordCircuitOutcome("budget_exceeded", 1_000_000);
+    }
+    expect(peekCircuitState(1_000_000).state).toBe("open");
+
+    // Step the clock past the cool-down — `peekCircuitState` flips to
+    // half_open so the next probe goes through.
+    const after = peekCircuitState(1_000_000 + DEFAULT_BREAKER_OPTIONS.coolDownMs + 1);
+    expect(after.state).toBe("half_open");
+  });
+
+  it("a single success resets the failure window and closes the breaker", () => {
+    recordCircuitOutcome("budget_exceeded");
+    recordCircuitOutcome("budget_exceeded");
+    recordCircuitOutcome("success");
+    expect(peekCircuitState().state).toBe("closed");
   });
 });

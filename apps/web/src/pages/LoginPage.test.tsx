@@ -12,15 +12,16 @@
  *   - Focus management: email field is focused on mount.
  *   - `?next=https://evil.com` → navigation falls back to `/`.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
+
 import { LoginPage } from "./LoginPage.js";
 
 const ME_PAYLOAD = {

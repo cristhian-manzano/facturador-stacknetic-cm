@@ -10,10 +10,11 @@
  *   - Does NOT render emails or phones (verified by absence of the
  *     fields from the prop shape).
  */
-import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { describe, expect, it } from "vitest";
+
 import type { InvoiceListItem } from "@facturador/contracts/invoices";
 
 import { InvoicesTable, formatFechaEs } from "./invoices-table.js";

@@ -18,9 +18,10 @@
  *
  * Run with: `pnpm --filter @facturador/db seed`.
  */
-import argon2 from "argon2";
 import { PrismaClient, Role } from "@prisma/client";
+import argon2 from "argon2";
 import { ulid } from "ulid";
+
 import { readSeedEnv } from "../src/env.js";
 
 const ARGON2_PARAMS = {
@@ -75,14 +76,21 @@ async function main(): Promise<void> {
       },
     });
 
+    // OWNER bootstrap membership is implicitly active — it predates the
+    // invitation flow (SPEC-0050). Without `acceptedAt`, the future
+    // `requireTenant` "is active" check (production_readiness_columns
+    // migration §4) would refuse this row. `invitedAt` stays NULL: this
+    // membership was never invited, it was provisioned directly.
+    const now = new Date();
     await prisma.membership.upsert({
       where: { userId_companyId: { userId: user.id, companyId: company.id } },
-      update: {},
+      update: { acceptedAt: now },
       create: {
         id: ulid(),
         userId: user.id,
         companyId: company.id,
         role: Role.OWNER,
+        acceptedAt: now,
       },
     });
 

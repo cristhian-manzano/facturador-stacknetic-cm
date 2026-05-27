@@ -16,6 +16,7 @@
  * Synthetic-only inputs; no PII.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   assertPaymentsMatchTotal,
   computeInvoice,

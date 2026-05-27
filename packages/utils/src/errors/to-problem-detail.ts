@@ -16,8 +16,10 @@
  * `type` is the URN `urn:facturador:error:<code>`.
  */
 import { ZodError } from "zod";
+
 import { ProblemDetailSchema, type ProblemDetail } from "@facturador/contracts/errors";
 import type { SriMensaje } from "@facturador/contracts/errors";
+
 import { AppError } from "./app-error.js";
 
 const TITLE_MAX = 300;

@@ -15,15 +15,18 @@
  *   - SPEC-0025 §AC-4, §AC-5, §AC-7.
  *   - TASKS-0025 §5.1, §6.1, §7.1.
  */
-import { afterEach, describe, expect, it } from "vitest";
-import { MockAgent } from "undici";
-import { Writable } from "node:stream";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
+
+import { MockAgent } from "undici";
+import { afterEach, describe, expect, it } from "vitest";
+
 import { createLogger } from "@facturador/logger";
-import { RecepcionClient, type RecepcionClientEnv } from "./recepcion-client.js";
+
 import { SriRetryBudgetExceededError } from "./errors.js";
+import { RecepcionClient, type RecepcionClientEnv } from "./recepcion-client.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -2,7 +2,7 @@
  * `<PendingBanner />` — aggregates the count of "pending" invoices on
  * the current page and offers a one-click "Refrescar todas" that fans
  * out per-row `POST /:id/refresh` calls with a small concurrency cap
- * (SPEC-0043 §13 + TASKS-0043 §1.4).
+ * (SPEC-0043 §13 + TASKS-0043 §1.4 + REVIEW-0044 §7).
  *
  * "Pending" definition (matches the polling-eligible set):
  *
@@ -16,13 +16,20 @@
  *
  * Concurrency: a tiny pool of 3 in-flight requests at a time. Pure
  * helper `runWithConcurrency` exposed for the unit test.
+ *
+ * Per-row spinner (REVIEW-0044 §7): while a refresh is in flight for an
+ * invoice, we render an inline `<RowSpinner />` listing the pending row
+ * ids. When MSW (or the real API) responds, the row's spinner clears.
+ * This makes the user-feedback granular instead of the single "Refrescando…"
+ * label across the whole batch.
  */
 import { useCallback, useMemo, useState, type ReactElement } from "react";
+
 import type { InvoiceListItem } from "@facturador/contracts/invoices";
 
-import { isPollableEstado } from "../detail/polling.js";
-import { refreshInvoice } from "../api.js";
 import { t } from "../../i18n/es.js";
+import { refreshInvoice } from "../api.js";
+import { isPollableEstado } from "../detail/polling.js";
 
 /**
  * Run `tasks` with at most `concurrency` running in parallel. Resolves
@@ -42,6 +49,7 @@ export async function runWithConcurrency<T>(
   if (concurrency < 1) throw new Error("concurrency must be ≥ 1");
   let nextIndex = 0;
   async function worker(): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
       const idx = nextIndex++;
       if (idx >= tasks.length) return;
@@ -63,6 +71,27 @@ export async function runWithConcurrency<T>(
 
 export const PENDING_REFRESH_CONCURRENCY = 3;
 
+/**
+ * Tiny inline spinner. Pure SVG-free (Tailwind animate-spin) so it
+ * doesn't pull in an icon library.
+ */
+function RowSpinner({ id }: { id: string }): ReactElement {
+  return (
+    <span
+      role="status"
+      aria-live="polite"
+      data-testid={`pending-row-spinner-${id}`}
+      className="inline-flex items-center gap-1 rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-mono text-sky-900"
+    >
+      <span
+        aria-hidden="true"
+        className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-sky-500 border-t-transparent"
+      />
+      {id.slice(-6)}
+    </span>
+  );
+}
+
 export interface PendingBannerProps {
   readonly items: readonly InvoiceListItem[];
   /** Called when the batch finishes (success or per-row error). */
@@ -78,17 +107,27 @@ export function PendingBanner({
 }: PendingBannerProps): ReactElement | null {
   const pending = useMemo(() => items.filter((it) => isPollableEstado(it.sriEstado)), [items]);
   const [running, setRunning] = useState(false);
+  const [inFlight, setInFlight] = useState<readonly string[]>([]);
 
   const onRefreshAll = useCallback(async () => {
     if (pending.length === 0) return;
     if (running) return;
     setRunning(true);
+    setInFlight(pending.map((p) => p.id));
     const fn = refreshFn ?? ((id: string) => refreshInvoice(id));
-    const tasks = pending.map((row) => () => fn(row.id));
+    // Wrap each task so the per-row spinner clears when the call settles
+    // (regardless of resolve / reject). This gives the user fine-grained
+    // feedback during a batch refresh (REVIEW-0044 §7).
+    const tasks = pending.map((row) => () =>
+      fn(row.id).finally(() => {
+        setInFlight((prev) => prev.filter((id) => id !== row.id));
+      }),
+    );
     try {
       await runWithConcurrency(tasks, PENDING_REFRESH_CONCURRENCY);
     } finally {
       setRunning(false);
+      setInFlight([]);
       onBatchDone?.();
     }
   }, [pending, running, refreshFn, onBatchDone]);
@@ -104,9 +143,19 @@ export function PendingBanner({
     <div
       data-testid="pending-banner"
       role="status"
-      className="flex items-center justify-between gap-3 rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+      className="flex flex-wrap items-center justify-between gap-3 rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
     >
       <span data-testid="pending-banner-message">{message}</span>
+      {inFlight.length > 0 && (
+        <div
+          data-testid="pending-row-spinners"
+          className="flex max-w-full flex-wrap items-center gap-1"
+        >
+          {inFlight.map((id) => (
+            <RowSpinner key={id} id={id} />
+          ))}
+        </div>
+      )}
       <button
         type="button"
         data-testid="pending-banner-refresh"

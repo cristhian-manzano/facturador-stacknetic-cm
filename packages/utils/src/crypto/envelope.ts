@@ -76,7 +76,7 @@ export interface EncryptedEnvelope {
 function assertMasterKey(key: Buffer): void {
   if (key.length !== MASTER_KEY_BYTES) {
     throw new Error(
-      `crypto.envelope: master key must be ${MASTER_KEY_BYTES} bytes (got ${key.length}).`,
+      `crypto.envelope: master key must be ${String(MASTER_KEY_BYTES)} bytes (got ${String(key.length)}).`,
     );
   }
 }
@@ -116,12 +116,12 @@ export function decryptEnvelope(envelope: EncryptedEnvelope, masterKey: Buffer):
   assertMasterKey(masterKey);
   if (envelope.nonce.length !== GCM_NONCE_BYTES) {
     throw new Error(
-      `crypto.envelope: nonce must be ${GCM_NONCE_BYTES} bytes (got ${envelope.nonce.length}).`,
+      `crypto.envelope: nonce must be ${String(GCM_NONCE_BYTES)} bytes (got ${String(envelope.nonce.length)}).`,
     );
   }
   if (envelope.tag.length !== GCM_TAG_BYTES) {
     throw new Error(
-      `crypto.envelope: tag must be ${GCM_TAG_BYTES} bytes (got ${envelope.tag.length}).`,
+      `crypto.envelope: tag must be ${String(GCM_TAG_BYTES)} bytes (got ${String(envelope.tag.length)}).`,
     );
   }
   const decipher = createDecipheriv(CIPHER_ALGORITHM, masterKey, envelope.nonce);
@@ -143,7 +143,7 @@ export function decodeMasterKeyHex(value: string): Buffer {
   }
   if (value.length !== MASTER_KEY_BYTES * 2) {
     throw new Error(
-      `crypto.envelope: master key must be ${MASTER_KEY_BYTES * 2} hex characters (got ${value.length}).`,
+      `crypto.envelope: master key must be ${String(MASTER_KEY_BYTES * 2)} hex characters (got ${String(value.length)}).`,
     );
   }
   return Buffer.from(value, "hex");

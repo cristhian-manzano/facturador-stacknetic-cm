@@ -3,8 +3,8 @@
  * (SPEC-0042 §6.3 + hard rules: 250 ms debounce, AbortController cancels
  * in-flight, never computes totals client-side).
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 afterEach(() => {
   // Defensive: ensure each test starts with real timers regardless of
@@ -12,8 +12,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-import { useDebouncedTotals } from "./useDebouncedTotals.js";
 import type { CreateInvoice, PreviewTotalsResponse } from "@facturador/contracts/invoices";
+
+import { useDebouncedTotals } from "./useDebouncedTotals.js";
 
 function makePayload(qty = "1"): CreateInvoice {
   return {

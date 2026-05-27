@@ -22,14 +22,14 @@
  *   - Each button labelled with the company name + role.
  *   - Banner uses `role="alert"`.
  */
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../auth/context.js";
-import { ApiError } from "../lib/api.js";
 import { switchActiveTenant } from "../auth/tenant-api.js";
 import { t } from "../i18n/es.js";
+import { ApiError } from "../lib/api.js";
 
 export function TenantSelectPage(): ReactElement {
   const { memberships, refresh } = useAuth();

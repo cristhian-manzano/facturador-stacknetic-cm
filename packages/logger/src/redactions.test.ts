@@ -7,6 +7,7 @@
  *     present (the list may be extended; never reduced).
  */
 import { describe, expect, it } from "vitest";
+
 import { REDACT_PATHS } from "./redactions.js";
 
 describe("REDACT_PATHS", () => {
@@ -43,6 +44,11 @@ describe("REDACT_PATHS", () => {
     "*.direccionComprador",
     "*.SERVICE_JWT_SECRET",
     "*.SRI_CERT_MASTER_KEY_HEX",
+    // PROMPT production-readiness §5: csrfToken (raw token, not the hash)
+    // must also be redacted at every nesting level so a stray log of the
+    // login response body never leaks the cookie value.
+    "csrfToken",
+    "*.csrfToken",
   ] as const;
 
   it.each(REQUIRED_PATHS)("includes %s", (path) => {

@@ -12,10 +12,12 @@
  * PURE: no fetches, no side effects.
  */
 import type { ReactElement } from "react";
+
 import type { InvoiceDetail } from "@facturador/contracts/invoices";
 
 import { t } from "../../i18n/es.js";
 import { EstadoBadge, SriEstadoBadge } from "../list/estado-badge.js";
+
 import { ClaveAccesoChip } from "./clave-acceso-chip.js";
 
 /**
@@ -121,7 +123,7 @@ export function Header({ detail, isPolling = false }: HeaderProps): ReactElement
         </div>
       )}
 
-      {fechaAutorizacion !== null && fechaAutorizacion !== undefined && (
+      {fechaAutorizacion !== null && (
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
             {t("invoice.detail.header.fechaAutorizacion")}

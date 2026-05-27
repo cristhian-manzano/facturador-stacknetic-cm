@@ -7,9 +7,11 @@
  *   - Drives the MSW server: registers the canonical `/api/v1/me` handler,
  *     fetches the URL, and asserts the response satisfies `MeResponseSchema`.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
 import { MeResponseSchema } from "@facturador/contracts/auth";
+
 import { handlers, API_BASE_URL } from "./msw/handlers.js";
 import { mswServer } from "./msw/server.js";
 

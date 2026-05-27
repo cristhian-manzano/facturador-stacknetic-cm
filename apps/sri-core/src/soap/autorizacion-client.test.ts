@@ -13,13 +13,16 @@
  *   - SPEC-0025 §AC-3, §AC-4, §AC-5.
  *   - TASKS-0025 §5.2, §7.1.
  */
-import { afterEach, describe, expect, it } from "vitest";
-import { MockAgent } from "undici";
-import { Writable } from "node:stream";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
+
+import { MockAgent } from "undici";
+import { afterEach, describe, expect, it } from "vitest";
+
 import { createLogger } from "@facturador/logger";
+
 import { AutorizacionClient, type AutorizacionClientEnv } from "./autorizacion-client.js";
 
 const __filename = fileURLToPath(import.meta.url);

@@ -19,6 +19,7 @@
  * regressions early (OWNER always allowed; VIEWER never allowed to mutate).
  */
 import { describe, expect, it } from "vitest";
+
 import {
   ALL_ACTIONS,
   ALL_ROLES,
@@ -92,6 +93,18 @@ describe("RBAC matrix — exhaustive", () => {
     expect(can("ACCOUNTANT", "tenant.manage_members")).toBe(false);
     expect(can("ACCOUNTANT", "certificate.manage")).toBe(false);
     expect(can("ACCOUNTANT", "establecimiento.manage")).toBe(false);
+  });
+
+  it("tenant.update is OWNER-only (SPEC-0011 §FR-5; production-readiness)", () => {
+    // The matrix is the source of truth for the SPA's `can()` predicate;
+    // the server may opt-in to ADMIN-can-update via the
+    // `RBAC_ADMIN_CAN_UPDATE_TENANT` env flag, but that override lives in
+    // `requirePermission`, not here. The matrix MUST stay OWNER-only.
+    expect(can("OWNER", "tenant.update")).toBe(true);
+    expect(can("ADMIN", "tenant.update")).toBe(false);
+    expect(can("ACCOUNTANT", "tenant.update")).toBe(false);
+    expect(can("OPERATOR", "tenant.update")).toBe(false);
+    expect(can("VIEWER", "tenant.update")).toBe(false);
   });
 
   it("OPERATOR cannot reissue invoices or manage certificates", () => {

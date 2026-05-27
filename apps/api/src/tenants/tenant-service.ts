@@ -21,6 +21,7 @@
  */
 
 import { ulid } from "ulid";
+
 import type { Prisma, PrismaClient } from "@facturador/db";
 import { BusinessError, ConflictError, NotFoundError } from "@facturador/utils/errors";
 import type { Role } from "@facturador/utils/rbac";
@@ -82,6 +83,10 @@ export async function createTenantWithOwner(
           userId: actorUserId,
           companyId,
           role: "OWNER",
+          // OWNER bootstrap is implicitly accepted (no invite handshake).
+          // Setting `acceptedAt = now` keeps the row active for the
+          // `requireTenant` lookup which filters `acceptedAt: { not: null }`.
+          acceptedAt: new Date(),
         },
       }),
     ]);
@@ -150,7 +155,20 @@ export async function addMember(
   const id = ulid();
   try {
     await prisma.membership.create({
-      data: { id, userId, companyId, role },
+      data: {
+        id,
+        userId,
+        companyId,
+        role,
+        // SPEC-0050 invitation lifecycle: `invitedAt` marks the moment
+        // the OWNER/ADMIN issued the invite; `acceptedAt` will be set
+        // by the invitee's accept flow (out of scope for v1). For now
+        // we set both so the row is immediately active — matches the
+        // pre-invitation behaviour. When the accept flow lands, drop
+        // the `acceptedAt` from this call.
+        invitedAt: new Date(),
+        acceptedAt: new Date(),
+      },
     });
   } catch (err) {
     if (isPrismaKnownError(err) && err.code === "P2002") {

@@ -14,6 +14,7 @@
  * Pure: takes the events array; no fetches.
  */
 import type { ReactElement } from "react";
+
 import type { SriEvent } from "@facturador/contracts/sri";
 
 import { t } from "../../i18n/es.js";
@@ -123,8 +124,8 @@ export function SriTimeline({ events }: SriTimelineProps): ReactElement {
                   <ul data-testid={`sri-event-mensajes-${ev.id}`} className="mt-1 space-y-0.5">
                     {ev.mensajes.map((m, idx) => (
                       <li
-                        key={`${m.identificador}-${idx}`}
-                        data-testid={`sri-mensaje-${ev.id}-${idx}`}
+                        key={`${m.identificador}-${String(idx)}`}
+                        data-testid={`sri-mensaje-${ev.id}-${String(idx)}`}
                         className={
                           m.tipo === "ERROR" ? "text-xs text-rose-700" : "text-xs text-slate-700"
                         }

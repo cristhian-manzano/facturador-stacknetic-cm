@@ -1,10 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*"]
+  // Typecheck superset — also includes the workspace's own vitest.config.ts
+  // so ESLint can parse it with this project's TS context. The build
+  // target (`tsconfig.build.json`) excludes the config file and carries
+  // `composite: true` + `rootDir: src` for project-reference mode.
+  "include": ["src/**/*", "vitest.config.ts"]
 }

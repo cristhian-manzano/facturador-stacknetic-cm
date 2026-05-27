@@ -39,13 +39,13 @@
  *   - The "current" tenant is announced via `aria-checked` so a screen
  *     reader user knows the option is the active one.
  */
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { useAuth } from "../auth/context.js";
 import { switchActiveTenant } from "../auth/tenant-api.js";
-import { cn } from "../lib/cn.js";
 import { t } from "../i18n/es.js";
+import { cn } from "../lib/cn.js";
 
 export interface TenantSwitcherProps {
   /** Optional extra className for the trigger button. */
@@ -153,7 +153,7 @@ export function TenantSwitcher({ className }: TenantSwitcherProps): ReactElement
                 <li key={m.companyId}>
                   <button
                     type="button"
-                    role="menuitem"
+                    role="menuitemradio"
                     aria-checked={isCurrent}
                     aria-busy={isBusy}
                     disabled={pendingId !== null}

@@ -7,10 +7,11 @@
  * sneaks in (e.g. a developer copy-pastes a `fetch("/api/...")` into a
  * route component during a refactor).
  */
-import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

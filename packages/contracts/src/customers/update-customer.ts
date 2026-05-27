@@ -6,6 +6,7 @@
  * other contact fields are optional.
  */
 import { z } from "zod";
+
 import { EmailSchema } from "../primitives/email.js";
 
 export const UpdateCustomerSchema = z

@@ -18,6 +18,8 @@
  *   - TASKS-0025 §4.1 (schedule + jitter + budget).
  */
 import { describe, expect, it } from "vitest";
+
+import { SriClientError, SriRetryBudgetExceededError } from "./errors.js";
 import {
   withRetry,
   DEFAULT_RETRY_SCHEDULE_MS,
@@ -25,7 +27,6 @@ import {
   DEFAULT_RETRY_JITTER_MS,
   type RetryAttemptInfo,
 } from "./retry.js";
-import { SriClientError, SriRetryBudgetExceededError } from "./errors.js";
 
 function transient(msg = "boom"): SriClientError {
   return new SriClientError(msg, { kind: "network", transient: true });

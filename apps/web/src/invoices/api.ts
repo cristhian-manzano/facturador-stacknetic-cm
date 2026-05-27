@@ -11,6 +11,9 @@
  * NOT exported:
  *   - URL constants; the helpers are the only consumers.
  */
+import { z } from "zod";
+
+import { CreateCustomerSchema, type CreateCustomer } from "@facturador/contracts/customers";
 import {
   CreateInvoiceSchema,
   EmitInvoiceResponseSchema,
@@ -26,8 +29,6 @@ import {
   type PreviewTotalsResponse,
   type UpdateInvoice,
 } from "@facturador/contracts/invoices";
-import { CreateCustomerSchema, type CreateCustomer } from "@facturador/contracts/customers";
-import { z } from "zod";
 
 import { apiFetch } from "../lib/api.js";
 
@@ -316,10 +317,11 @@ export interface InvoiceListFilters {
  */
 export function buildInvoiceListSearchParams(filters: InvoiceListFilters): URLSearchParams {
   const params = new URLSearchParams();
-  if (filters.estado !== undefined) {
-    for (const e of filters.estado) {
-      params.append("estado", e);
-    }
+  if (filters.estado !== undefined && filters.estado.length > 0) {
+    // Canonical comma-form (REVIEW-0044 §5). The API parser also accepts
+    // repeated `?estado=` for backwards-compat; we always emit the new
+    // shape so URLs are stable across the SPA.
+    params.set("estado", [...filters.estado].join(","));
   }
   if (filters.from !== undefined && filters.from !== "") {
     params.set("from", filters.from);

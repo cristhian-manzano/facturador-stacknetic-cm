@@ -2,6 +2,7 @@
  * Tests for `SessionTenantSwitchSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { SessionTenantSwitchSchema } from "./session.js";
 
 describe("SessionTenantSwitchSchema", () => {

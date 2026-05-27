@@ -7,13 +7,14 @@
  *   - 401 → status becomes "unauthenticated"; downstream guards redirect.
  *   - auth:401 event dispatched after mount → state clears.
  */
-import { describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
 import { render, screen, waitFor, act } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import type { ReactElement } from "react";
+import { describe, expect, it } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AUTH_EVENT_UNAUTHORIZED } from "../lib/api.js";
+
 import { AuthProvider, useAuth } from "./context.js";
 
 function Probe(): ReactElement {

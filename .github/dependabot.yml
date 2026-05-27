@@ -1,0 +1,71 @@
+# Dependabot configuration for facturador-stacknetic-cm.
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Scope:
+#   - npm (pnpm workspace) at the repo root — covers all apps/* + packages/*
+#     via the workspace manifest. Dependabot reads pnpm-lock.yaml.
+#   - Dockerfiles for each app under apps/*.
+#   - GitHub Actions used in .github/workflows/.
+#
+# Cadence:
+#   - npm: weekly (Mondays). Security updates always.
+#   - docker: monthly (base-image cadence is conservative).
+#   - actions: weekly (small surface area).
+#
+# All PRs target `main` and are grouped by ecosystem where it makes sense to
+# keep review load manageable.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "ecosystem:npm"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/api"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ecosystem:docker"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/sri-core"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ecosystem:docker"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/web"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ecosystem:docker"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ecosystem:github-actions"

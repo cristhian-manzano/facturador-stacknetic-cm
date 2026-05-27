@@ -11,9 +11,10 @@
  *   - Cleans the DOM after each test so Testing Library doesn't bleed
  *     state across cases.
  */
-import { afterEach, beforeAll, expect } from "vitest";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
+import { afterEach, beforeAll, expect } from "vitest";
+
 import { mswServer } from "./msw/server.js";
 
 expect.extend(matchers);

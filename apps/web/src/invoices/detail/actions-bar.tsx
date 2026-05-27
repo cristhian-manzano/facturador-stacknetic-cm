@@ -30,12 +30,14 @@
  */
 import { useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Action } from "@facturador/utils/rbac";
-import type { InvoiceDetail } from "@facturador/contracts/invoices";
 
-import { ApiError } from "../../lib/api.js";
+import type { InvoiceDetail } from "@facturador/contracts/invoices";
+import type { Action } from "@facturador/utils/rbac";
+
 import { useAuth } from "../../auth/context.js";
+import { INVOICE_ACTION_PERMISSIONS } from "../../auth/permissions.js";
 import { t } from "../../i18n/es.js";
+import { ApiError } from "../../lib/api.js";
 import { deleteInvoice, emitInvoice, refreshInvoice, reissueInvoice } from "../api.js";
 
 /** True if a previous emission failed. */
@@ -188,12 +190,16 @@ export function ActionsBar({
 
   // ----- visibility matrix ----------------------------------------------
 
+  // Permission gates pulled from INVOICE_ACTION_PERMISSIONS so the web map
+  // stays the single source of truth (REVIEW-0044 §6). Combined with the
+  // domain rules (estado / prior failure) to compute the visible set.
   const buttons: readonly ButtonSpec[] = [
     {
       key: "retry",
       label: t("invoice.detail.actions.retryEmit"),
       onClick: onRetryEmit,
-      visible: isBorrador && hadPriorFailure(detail) && has("invoice.emit"),
+      visible:
+        isBorrador && hadPriorFailure(detail) && has(INVOICE_ACTION_PERMISSIONS.retryEmit),
       testId: "action-retry-emit",
       variant: "primary",
       busy: pending === "retry",
@@ -203,7 +209,7 @@ export function ActionsBar({
       key: "edit",
       label: t("invoice.detail.actions.edit"),
       onClick: onEdit,
-      visible: isBorrador && has("invoice.create"),
+      visible: isBorrador && has(INVOICE_ACTION_PERMISSIONS.edit),
       testId: "action-edit",
       disabled: pending !== null,
     },
@@ -211,7 +217,7 @@ export function ActionsBar({
       key: "delete",
       label: t("invoice.detail.actions.delete"),
       onClick: onDelete,
-      visible: isBorrador && has("invoice.create"),
+      visible: isBorrador && has(INVOICE_ACTION_PERMISSIONS.delete),
       testId: "action-delete",
       variant: "danger",
       busy: pending === "delete",
@@ -221,7 +227,7 @@ export function ActionsBar({
       key: "reissue",
       label: t("invoice.detail.actions.reissue"),
       onClick: onReissue,
-      visible: isReissueAllowed(detail) && has("invoice.reissue"),
+      visible: isReissueAllowed(detail) && has(INVOICE_ACTION_PERMISSIONS.reissue),
       testId: "action-reissue",
       variant: "primary",
       busy: pending === "reissue",
@@ -234,7 +240,7 @@ export function ActionsBar({
           ? t("invoice.detail.actions.refreshing")
           : t("invoice.detail.actions.refresh"),
       onClick: onRefresh,
-      visible: canRefresh && has("invoice.read"),
+      visible: canRefresh && has(INVOICE_ACTION_PERMISSIONS.refresh),
       testId: "action-refresh",
       busy: pending === "refresh",
       disabled: pending !== null,
@@ -243,14 +249,14 @@ export function ActionsBar({
       key: "download-xml",
       label: t("invoice.detail.actions.downloadXml"),
       onClick: onDownloadXml,
-      visible: isAutorizado && has("invoice.read"),
+      visible: isAutorizado && has(INVOICE_ACTION_PERMISSIONS.downloadXml),
       testId: "action-download-xml",
     },
     {
       key: "print-ride",
       label: t("invoice.detail.actions.printRide"),
       onClick: onPrintRide,
-      visible: isAutorizado && has("invoice.read"),
+      visible: isAutorizado && has(INVOICE_ACTION_PERMISSIONS.printRide),
       testId: "action-print-ride",
     },
   ];

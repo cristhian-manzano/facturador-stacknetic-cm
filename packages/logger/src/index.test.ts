@@ -9,7 +9,9 @@
  * untouched fields verbatim.
  */
 import { Writable } from "node:stream";
+
 import { describe, expect, it } from "vitest";
+
 import { createLogger, withRequest, REDACT_PATHS } from "./index.js";
 
 interface CapturedLine {
@@ -92,6 +94,19 @@ describe("createLogger — REDACT_PATHS enforcement", () => {
     expect(nested.passwordHash).toBe("[REDACTED]");
     expect(nested.privateKey).toBe("[REDACTED]");
     expect(nested.ok).toBe(1);
+  });
+
+  it("redacts csrfToken on the root and nested under any object", () => {
+    const { sink, lines } = captureSink();
+    const log = createLogger({ service: "api", env: "test", destination: sink });
+    log.info({ csrfToken: "abc", body: { csrfToken: "xyz", ok: 1 } }, "csrf");
+    const [line] = lines();
+    expect(line).toBeDefined();
+    if (!line) return;
+    expect(line.csrfToken).toBe("[REDACTED]");
+    const body = line.body as Record<string, unknown>;
+    expect(body.csrfToken).toBe("[REDACTED]");
+    expect(body.ok).toBe(1);
   });
 
   it("redacts Authorization / Cookie headers when an Express req is logged", () => {

@@ -11,8 +11,9 @@
  * cheap (≤ 1.5 s on a cold cache).
  */
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 const SRI_CORE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

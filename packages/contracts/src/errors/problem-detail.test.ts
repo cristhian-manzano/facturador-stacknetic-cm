@@ -2,6 +2,7 @@
  * Tests for `ProblemDetailSchema`. Per TASKS-0005 §8.1 + SPEC-0006 §AC-1.
  */
 import { describe, expect, it } from "vitest";
+
 import { ProblemDetailSchema } from "./problem-detail.js";
 
 describe("ProblemDetailSchema", () => {

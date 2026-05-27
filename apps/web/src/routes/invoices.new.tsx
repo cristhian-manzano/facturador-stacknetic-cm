@@ -8,8 +8,8 @@
 import type { ReactElement } from "react";
 
 import { RequirePermission } from "../auth/RequirePermission.js";
-import { InvoiceForm } from "../invoices/form/invoice-form.js";
 import { t } from "../i18n/es.js";
+import { InvoiceForm } from "../invoices/form/invoice-form.js";
 
 export function InvoicesNewPage(): ReactElement {
   return (

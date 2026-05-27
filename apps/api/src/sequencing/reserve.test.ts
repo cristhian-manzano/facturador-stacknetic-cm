@@ -9,7 +9,9 @@
  * verify the retry budget without the Postgres cost.
  */
 import { describe, it, expect, vi } from "vitest";
+
 import { ConflictError } from "@facturador/utils/errors";
+
 import { reserveSecuencial, type ReserveSecuencialDeps } from "./reserve.js";
 
 interface FakePrismaOptions {

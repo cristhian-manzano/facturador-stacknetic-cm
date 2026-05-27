@@ -13,6 +13,7 @@
 import type { ReactElement } from "react";
 
 import { useAuth } from "../auth/context.js";
+
 import { SignOutButton } from "./SignOutButton.js";
 
 export function UserMenu(): ReactElement | null {

@@ -29,11 +29,12 @@
  *   - On `network_error` we expose "Reintentar".
  */
 import { useCallback, useEffect, useReducer, useRef, type ReactElement } from "react";
+
 import type { EmitInvoiceResponse } from "@facturador/contracts/invoices";
 import type { SriMensaje } from "@facturador/contracts/sri";
 
-import { ApiError } from "../../lib/api.js";
 import { t } from "../../i18n/es.js";
+import { ApiError } from "../../lib/api.js";
 
 // ---------------------------------------------------------------------------
 // Reducer state machine

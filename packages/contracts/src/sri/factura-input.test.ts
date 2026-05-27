@@ -9,6 +9,7 @@
  *   - `tipoEmision` and `codDoc` are literal-pinned.
  */
 import { describe, it, expect } from "vitest";
+
 import { FacturaXmlInputSchema } from "./factura-input.js";
 
 // `baseInput` is typed as `z.input` (pre-parse) so we don't need to mint

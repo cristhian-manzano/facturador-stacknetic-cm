@@ -6,9 +6,10 @@
  * Usage:
  *   pnpm --filter @facturador/sri-core exec tsx scripts/smoke-emit.ts
  */
-import { mintServiceJwt } from "@facturador/utils/service-jwt";
-import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
 import { ulid } from "ulid";
+
+import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
+import { mintServiceJwt } from "@facturador/utils/service-jwt";
 
 const BASE_URL = process.env.SRI_CORE_URL ?? "http://localhost:3100";
 const SECRET = process.env.SERVICE_JWT_SECRET;

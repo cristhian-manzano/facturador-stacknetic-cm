@@ -175,6 +175,13 @@ export function assertSafeKey(key: string): void {
 export class InMemoryBlobStore implements BlobStore {
   private readonly map = new Map<string, string>();
 
+  // NB: the `async` keyword on these synchronous-bodied methods is load-
+  // bearing: callers `.catch()` on the returned Promise expecting that the
+  // safe-key check rejects rather than throws synchronously (see
+  // blob-store.test.ts "rejects path-traversal keys"). Removing `async`
+  // would turn the throw into a synchronous error that escapes the Promise
+  // chain and breaks the test contract.
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async put(key: string, data: Buffer | string): Promise<BlobStorePutResult> {
     assertSafeKey(key);
     const text = typeof data === "string" ? data : data.toString("utf8");
@@ -184,11 +191,13 @@ export class InMemoryBlobStore implements BlobStore {
     return { key, bytes, sha256 };
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async get(key: string): Promise<string | null> {
     assertSafeKey(key);
     return this.map.get(key) ?? null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async remove(key: string): Promise<void> {
     assertSafeKey(key);
     this.map.delete(key);

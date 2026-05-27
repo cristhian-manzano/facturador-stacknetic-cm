@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { SignedXml } from "xadesjs";
+
 import { ensureXadesEngine, __resetWebcryptoSetupForTests } from "./webcrypto-setup.js";
 
 describe("ensureXadesEngine", () => {

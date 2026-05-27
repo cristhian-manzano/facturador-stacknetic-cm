@@ -2,6 +2,7 @@
  * Tests for `TipoIdentificacionSchema`. Per TASKS-0005 §2.12.
  */
 import { describe, expect, it } from "vitest";
+
 import { TipoIdentificacionSchema } from "./tipo-identificacion.js";
 
 describe("TipoIdentificacionSchema", () => {

@@ -15,12 +15,11 @@
  *   - Toast hint surfaces the placeholder actions
  *     ("Próximamente" / "Acción completada" / "Error").
  */
+import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 
 import { RequirePermission } from "../auth/RequirePermission.js";
-import { ApiError } from "../lib/api.js";
 import { t } from "../i18n/es.js";
 import { getInvoiceDetail } from "../invoices/api.js";
 import { ActionsBar } from "../invoices/detail/actions-bar.js";
@@ -29,14 +28,15 @@ import { CustomerPanel } from "../invoices/detail/customer-panel.js";
 import { Header } from "../invoices/detail/header.js";
 import { LinesPanel } from "../invoices/detail/lines-panel.js";
 import { PaymentsPanel } from "../invoices/detail/payments-panel.js";
-import { SriTimeline } from "../invoices/detail/sri-timeline.js";
-import { DetailTotalsPanel } from "../invoices/detail/totals-panel.js";
-import { useToast } from "../invoices/detail/useToast.js";
 import {
   POLL_INTERVAL_MS,
   POLL_MAX_DURATION_MS,
   isPollableEstado,
 } from "../invoices/detail/polling.js";
+import { SriTimeline } from "../invoices/detail/sri-timeline.js";
+import { DetailTotalsPanel } from "../invoices/detail/totals-panel.js";
+import { useToast } from "../invoices/detail/useToast.js";
+import { ApiError } from "../lib/api.js";
 
 // Re-export so consumers (and tests) can find the chip via the route module
 // without reaching into the panels folder. Voided locally to avoid unused
@@ -113,7 +113,6 @@ function InvoicesDetailInner({ id }: { readonly id: string }): ReactElement {
     return elapsed < POLL_MAX_DURATION_MS;
     // We deliberately depend on `query.data` so the indicator re-evaluates
     // after each refetch tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.data]);
 
   if (query.status === "pending") {

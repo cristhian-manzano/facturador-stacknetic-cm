@@ -7,19 +7,26 @@
  */
 
 import { prisma } from "@facturador/db";
-import { createApp } from "./server.js";
-import { env } from "./env.js";
-import { logger } from "./logger.js";
-import { startExpiryJob } from "./certificates/expiry-job.js";
-import { AutorizacionClient } from "./soap/index.js";
-import { FilesystemBlobStore } from "./blobs/blob-store.js";
-import { startPollingScheduler } from "./jobs/scheduler.js";
 
-const app = createApp();
+import { FilesystemBlobStore } from "./blobs/blob-store.js";
+import { startExpiryJob } from "./certificates/expiry-job.js";
+import { env } from "./env.js";
+import { getDefaultPollingHealth } from "./jobs/polling-health.js";
+import { startPollingScheduler } from "./jobs/scheduler.js";
+import { logger } from "./logger.js";
+import { createApp } from "./server.js";
+import { AutorizacionClient } from "./soap/index.js";
+import { warmXsdValidator } from "./xml/warm.js";
+
+const app = createApp({ pollingHealth: getDefaultPollingHealth() });
 
 app.listen(env.SRI_CORE_PORT, () => {
   // eslint-disable-next-line no-console -- bootstrap log; pino arrives in SPEC-0006
   console.log(`[sri-core] listening on :${String(env.SRI_CORE_PORT)}`);
+  // Warm the XSD validator after the listener is up so the boot log
+  // line lands before the warmer's. The warm is best-effort and
+  // never blocks the server from accepting requests.
+  void warmXsdValidator(logger);
 });
 
 // SPEC-0021 §6.7 + TASKS-0021 §7.2: schedule the daily expiry check.
@@ -54,6 +61,9 @@ if (env.NODE_ENV !== "test") {
         maxBackoffMs: env.SRI_POLL_MAX_BACKOFF_MS,
       },
       logger,
+      // Wire the same shared polling-health state passed to createApp
+      // so `/readyz` reflects the live scheduler's last batch timestamp.
+      pollingHealth: getDefaultPollingHealth(),
     });
   }
 }

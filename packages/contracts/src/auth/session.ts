@@ -6,6 +6,7 @@
  * member of `companyId` and rotates the CSRF cookie.
  */
 import { z } from "zod";
+
 import { UlidSchema } from "../primitives/ulid.js";
 
 export const SessionTenantSwitchSchema = z.object({

@@ -12,9 +12,11 @@
  * The harness migration is idempotent so the schema we create exposes the
  * same `SELECT 1` semantics as the dev/prod database.
  */
-import { describe, expect, it } from "vitest";
 import request from "supertest";
+import { describe, expect, it } from "vitest";
+
 import { useTestSchema } from "@facturador/db/test-harness";
+
 import { createTestApp } from "./factory.js";
 
 describe("createTestApp — Supertest smoke", () => {

@@ -35,6 +35,7 @@ import {
   type UpdateInvoice,
 } from "@facturador/contracts/invoices";
 import { BusinessError, ValidationError } from "@facturador/utils/errors";
+
 import { isIvaCodeValidFor } from "./tax-rates.js";
 
 /**
@@ -54,9 +55,11 @@ export function parseFechaEmision(s: string): Date {
       ],
     });
   }
-  const y = Number.parseInt(m[1]!, 10);
-  const mo = Number.parseInt(m[2]!, 10);
-  const d = Number.parseInt(m[3]!, 10);
+  // Capture groups m[1..3] are guaranteed by the regex match above.
+  const [, yStr, moStr, dStr] = m as unknown as [string, string, string, string];
+  const y = Number.parseInt(yStr, 10);
+  const mo = Number.parseInt(moStr, 10);
+  const d = Number.parseInt(dStr, 10);
   const utc = Date.UTC(y, mo - 1, d);
   const dt = new Date(utc);
   // Round-trip the components to catch out-of-range dates like 2024-02-30.
@@ -180,7 +183,7 @@ function assertTarifasMatchFecha(
       if (imp.codigo !== "2") continue;
       if (!isIvaCodeValidFor(imp.codigoPorcentaje, fechaEmision)) {
         throw new BusinessError(
-          `IVA codigoPorcentaje "${imp.codigoPorcentaje}" is not valid for fechaEmision (line ${idx + 1})`,
+          `IVA codigoPorcentaje "${imp.codigoPorcentaje}" is not valid for fechaEmision (line ${String(idx + 1)})`,
           "invoice.tarifa_iva_invalida",
         );
       }

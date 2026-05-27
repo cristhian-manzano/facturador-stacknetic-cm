@@ -4,8 +4,8 @@
  * Lives outside the AppLayout because we want to render even when no
  * tenant context is available (e.g. typo'd URL while logged out).
  */
-import { Link } from "react-router-dom";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 
 import { t } from "../i18n/es.js";
 

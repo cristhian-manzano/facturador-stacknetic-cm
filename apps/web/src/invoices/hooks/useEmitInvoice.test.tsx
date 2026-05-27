@@ -4,11 +4,15 @@
  * layer — this test pins the wrapper's behaviour and CSRF presence via the
  * MSW-based integration test in invoice-form.test.tsx).
  */
-import { describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
+import { describe, expect, it, vi } from "vitest";
 
+// Intra-workspace test helper — the workspace package alias does not
+// expose `test/msw`, so the relative path is correct here.
+// eslint-disable-next-line no-restricted-imports
 import { mswServer } from "../../../test/msw/server.js";
+
 import { useEmitInvoice } from "./useEmitInvoice.js";
 
 describe("useEmitInvoice", () => {

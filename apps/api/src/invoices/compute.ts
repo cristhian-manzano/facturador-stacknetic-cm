@@ -296,7 +296,7 @@ export function assertPaymentsMatchTotal(
 ): void {
   if (!result.paymentsBalanced) {
     throw new Error(
-      `Payments do not match importeTotal (delta=${result.paymentsDelta}, total=${result.importeTotal})`,
+      `Payments do not match importeTotal (delta=${String(result.paymentsDelta)}, total=${String(result.importeTotal)})`,
     );
   }
 }

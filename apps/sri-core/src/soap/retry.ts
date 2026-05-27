@@ -27,6 +27,7 @@
  * fast-forward time without burning real ms.
  */
 import { SriClientError, SriRetryBudgetExceededError } from "./errors.js";
+import { recordCircuitOutcome } from "./http.js";
 
 /** Default backoff schedule in milliseconds. Re-exported for the docs/test suite. */
 export const DEFAULT_RETRY_SCHEDULE_MS: readonly number[] = Object.freeze([
@@ -120,6 +121,11 @@ export async function withRetry<T>(
         delayMs: 0,
         elapsedMs: now() - startedAt,
       });
+      // Circuit-breaker bookkeeping: a successful response closes the
+      // breaker. We only record here (and not after every individual
+      // retry slot) because the breaker only cares about ultimate
+      // outcomes per `withRetry` call.
+      recordCircuitOutcome("success", now());
       return value;
     } catch (err) {
       lastError = err;
@@ -149,6 +155,10 @@ export async function withRetry<T>(
           cause: err,
         });
         options.onAttempt?.({ attempt, ok: false, delayMs, elapsedMs, error: budgetErr });
+        // Feed the breaker; the audit punchlist asks us to fail-fast
+        // after 10 consecutive budget-exceeded outcomes in a 60s
+        // window. The breaker enforces that policy.
+        recordCircuitOutcome("budget_exceeded", now());
         throw budgetErr;
       }
 
@@ -158,5 +168,6 @@ export async function withRetry<T>(
   }
 
   // Defensive — the loop only exits via return/throw above.
-  throw lastError ?? new Error("withRetry: exhausted without resolution");
+  if (lastError !== undefined) throw lastError as Error;
+  throw new Error("withRetry: exhausted without resolution");
 }

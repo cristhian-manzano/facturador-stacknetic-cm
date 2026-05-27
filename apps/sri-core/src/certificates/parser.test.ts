@@ -14,7 +14,9 @@
  *   - re-encoded fingerprint stable across calls.
  */
 import { describe, expect, it, beforeAll } from "vitest";
+
 import { generateSyntheticP12 } from "../../test/fixtures/synthetic-cert.js";
+
 import { BadPassphraseError, ExpiredCertificateError, ParseError } from "./errors.js";
 import { parseP12 } from "./parser.js";
 

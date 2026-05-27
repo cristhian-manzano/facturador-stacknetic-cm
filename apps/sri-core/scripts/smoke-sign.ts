@@ -11,11 +11,13 @@
  * Usage:
  *   pnpm --filter @facturador/sri-core exec tsx scripts/smoke-sign.ts
  */
+import { generateKeyPairSync } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateKeyPairSync } from "node:crypto";
+
 import forge from "node-forge";
+
 import { buildFacturaXml } from "../src/xml/factura.js";
 import { signFacturaXml } from "../src/xml/sign.js";
 import { verifySignedXml } from "../src/xml/verify.js";

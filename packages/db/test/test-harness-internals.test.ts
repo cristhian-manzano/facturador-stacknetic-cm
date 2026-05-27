@@ -18,8 +18,9 @@
  *     temporarily in an isolated branch.
  *   - `dropTestSchema` swallowing a pre-disconnected client.
  */
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+
 import {
   createTestSchema,
   dropTestSchema,
@@ -36,7 +37,7 @@ describe("test-harness — useTestSchema (happy path)", () => {
     expect(schema).toMatch(/^test_[0-9a-z]{26}$/);
     // The client must be reachable — a SELECT 1 verifies the schema migration
     // ran and the connection is live.
-    const rows = (await prisma.$queryRawUnsafe("SELECT 1 AS ok"));
+    const rows = await prisma.$queryRawUnsafe<{ ok: number }[]>("SELECT 1 AS ok");
     expect(rows[0]?.ok).toBe(1);
   });
 });
@@ -69,8 +70,9 @@ describe("test-harness — internals", () => {
     // Build a client that we never `$connect()` and then never use.  The
     // helper must NOT throw — the `try/catch` guard in `dropTestSchema`
     // is the path under test.
+    const dbUrl = process.env.DATABASE_URL ?? "";
     const orphan = new PrismaClient({
-      datasources: { db: { url: process.env.DATABASE_URL! } },
+      datasources: { db: { url: dbUrl } },
       log: ["warn", "error"],
     });
     const fakeSchema = newTestSchemaName();

@@ -2,6 +2,7 @@
  * Tests for `SriEventSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { SriEtapaSchema, SriEventSchema } from "./event.js";
 
 const ULID = "01HX8K0PYFA9B7Y1M2N3P4Q5R6";

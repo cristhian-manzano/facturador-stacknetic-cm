@@ -6,10 +6,11 @@
  * Monetary cells right-aligned + `formatMoney` (es-EC, two decimals).
  */
 import type { ReactElement } from "react";
+
 import type { Invoice } from "@facturador/contracts/invoices";
 
-import { formatMoney } from "../money.js";
 import { t } from "../../i18n/es.js";
+import { formatMoney } from "../money.js";
 
 export interface LinesPanelProps {
   readonly invoice: Invoice;
@@ -45,7 +46,7 @@ export function LinesPanel({ invoice }: LinesPanelProps): ReactElement {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {invoice.lines.map((l, idx) => (
-              <tr key={`${idx}-${l.descripcion}`} data-testid={`line-detail-${idx}`}>
+              <tr key={`${String(idx)}-${l.descripcion}`} data-testid={`line-detail-${String(idx)}`}>
                 <td className="px-2 py-1 text-slate-800">{l.descripcion}</td>
                 <td className="px-2 py-1 text-right text-slate-700">{l.cantidad}</td>
                 <td className="px-2 py-1 text-right text-slate-700">

@@ -10,9 +10,11 @@
  *     with `allowSelfLoop` it is accepted.
  *   - Race: a stale `from` snapshot loses with `sri.transition_race`.
  */
-import { describe, expect, it } from "vitest";
-import { useTestSchema } from "@facturador/db/test-harness";
 import { ulid } from "ulid";
+import { describe, expect, it } from "vitest";
+
+import { useTestSchema } from "@facturador/db/test-harness";
+
 import { recordEvent } from "../src/lifecycle/events.js";
 
 async function seedPendingDoc(

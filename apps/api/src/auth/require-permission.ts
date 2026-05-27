@@ -27,8 +27,29 @@
  */
 
 import type { RequestHandler } from "express";
+
 import { ForbiddenError } from "@facturador/utils/errors";
 import { can, type Action } from "@facturador/utils/rbac";
+
+import { env } from "../env.js";
+
+/**
+ * Server-side overrides on top of the pure RBAC matrix. The matrix in
+ * `@facturador/utils/rbac` is OWNER-only for `tenant.update`; setting
+ * `RBAC_ADMIN_CAN_UPDATE_TENANT=true` flips that one bit for ADMIN.
+ *
+ * We do NOT push this override into `@facturador/utils/rbac` so the
+ * matrix stays pure (no env / no I/O) — the SPA imports the same matrix
+ * and must not depend on the server's runtime env. UIs that want ADMIN
+ * to see the "Rename tenant" button anyway can read the same env flag
+ * through the auth `/me` endpoint (future work).
+ */
+function isAllowedByOverride(role: string, action: Action): boolean {
+  if (action === "tenant.update" && env.RBAC_ADMIN_CAN_UPDATE_TENANT && role === "ADMIN") {
+    return true;
+  }
+  return false;
+}
 
 export function requirePermission(action: Action): RequestHandler {
   return function requirePermissionMw(req, _res, next) {
@@ -40,7 +61,7 @@ export function requirePermission(action: Action): RequestHandler {
       next(new ForbiddenError("Forbidden", "forbidden_action"));
       return;
     }
-    if (!can(role, action)) {
+    if (!can(role, action) && !isAllowedByOverride(role, action)) {
       next(new ForbiddenError("Forbidden", "forbidden_action"));
       return;
     }

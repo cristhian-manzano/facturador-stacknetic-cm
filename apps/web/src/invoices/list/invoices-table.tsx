@@ -23,10 +23,12 @@
  */
 import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import type { InvoiceListItem } from "@facturador/contracts/invoices";
 
-import { formatMoney } from "../money.js";
 import { t } from "../../i18n/es.js";
+import { formatMoney } from "../money.js";
+
 import { EstadoBadge, SriEstadoBadge } from "./estado-badge.js";
 
 /** Format an ISO date string as Spanish-Ecuadorian `DD/MM/YYYY`. */

@@ -48,6 +48,61 @@ const EnvSchema = z.object({
    * every outbound document call goes through this URL.
    */
   SRI_CORE_URL: z.string().url().default("http://localhost:3100"),
+  /**
+   * When `true`, `/readyz` issues a best-effort `GET /healthz` to sri-core
+   * (with a short timeout) and reports `sriCore: "down"` + 503 on failure.
+   * Disabled by default so the api's readiness gate stays decoupled from
+   * sri-core in tests / local dev.
+   */
+  READYZ_PING_SRI_CORE: z
+    .union([z.literal("true"), z.literal("false")])
+    .default("false")
+    .transform((v) => v === "true"),
+  /**
+   * Express `trust proxy` setting. Accepts the special strings
+   * `"loopback"` (default; ::1 + 127.0.0.0/8) and `"true"`, or a numeric
+   * hop count when the api sits behind one or more reverse proxies. Set
+   * to `1` for a single nginx/ALB in front; `2` for nested proxies; etc.
+   *
+   * The rate limiter inspects `app.get("trust proxy")` to resolve the
+   * caller IP — a misconfigured value lets a hostile client spoof
+   * `X-Forwarded-For` to evade per-IP throttling.
+   */
+  TRUST_PROXY_HOPS: z.string().optional(),
+  /**
+   * RBAC override: if `true`, ADMIN role retains `tenant.update`. Default
+   * (unset / `false`) restricts that action to OWNER only per SPEC-0011
+   * §FR-5. Documented escape hatch — set with explicit operator
+   * sign-off only.
+   */
+  RBAC_ADMIN_CAN_UPDATE_TENANT: z
+    .union([z.literal("true"), z.literal("false")])
+    .default("false")
+    .transform((v) => v === "true"),
+  /**
+   * Maximum number of retries on `reserveSecuencial` (Serializable txn
+   * retry budget). Default `3` mirrors the existing in-code default —
+   * exposed as an env knob so operators can dial it down for noisy
+   * environments without redeploying. Documented in `apps/api/README.md`.
+   */
+  SECUENCIAL_RESERVE_MAX_RETRIES: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(20)
+    .default(3),
+  /**
+   * Per-session rate limit for tenant CRUD writes (POST /api/v1/tenants
+   * and member writes). Default 30/min. The integration test suite sets
+   * a high ceiling via env so it can exercise dozens of writes per
+   * session. Documented in `apps/api/README.md`.
+   */
+  TENANT_WRITE_RATE_PER_MIN: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(10_000)
+    .default(30),
 });
 
 export type ApiEnv = z.infer<typeof EnvSchema>;

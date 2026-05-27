@@ -2,6 +2,7 @@
  * Tests for `PasaporteSchema`. Per TASKS-0005 §2.5.
  */
 import { describe, expect, it } from "vitest";
+
 import { PasaporteSchema } from "./pasaporte.js";
 
 describe("PasaporteSchema", () => {

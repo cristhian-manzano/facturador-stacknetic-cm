@@ -2,12 +2,13 @@
  * `PaymentRow` — single payment line in the invoice form
  * (SPEC-0042 §FR-6 / TASKS-0042 §2.3).
  */
-import { useFormContext } from "react-hook-form";
 import type { ReactElement } from "react";
+import { useFormContext } from "react-hook-form";
 
+import { t } from "../../i18n/es.js";
 import { parseMoney } from "../money.js";
 import { FORMA_PAGO_TABLE } from "../tax-rates.js";
-import { t } from "../../i18n/es.js";
+
 import type { InvoiceFormValues } from "./types.js";
 
 export interface PaymentRowProps {

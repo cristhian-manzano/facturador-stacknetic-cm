@@ -29,9 +29,11 @@
  * downstream.
  */
 
-import rateLimit, { type Options } from "express-rate-limit";
 import type { Request, RequestHandler } from "express";
+import rateLimit, { type Options } from "express-rate-limit";
+
 import { RateLimitError } from "@facturador/utils/errors";
+
 import { env } from "../env.js";
 
 const WINDOW_MS = 60_000;

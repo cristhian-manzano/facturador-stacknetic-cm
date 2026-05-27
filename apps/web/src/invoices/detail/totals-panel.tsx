@@ -7,10 +7,11 @@
  * IVA display since v1 invoices typically have a single rate.
  */
 import type { ReactElement } from "react";
+
 import type { Invoice } from "@facturador/contracts/invoices";
 
-import { formatMoney } from "../money.js";
 import { t } from "../../i18n/es.js";
+import { formatMoney } from "../money.js";
 
 export interface DetailTotalsPanelProps {
   readonly invoice: Invoice;

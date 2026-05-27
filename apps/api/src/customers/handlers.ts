@@ -29,13 +29,16 @@
  *     the dedicated `/customers/consumidor-final` endpoint is the only path.
  */
 import type { Request, RequestHandler } from "express";
-import { Prisma } from "@facturador/db";
-import type { Customer, PrismaClient } from "@facturador/db";
-import { newId } from "@facturador/db";
-import { AuthError, ConflictError, NotFoundError, ValidationError } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
-import type { Logger } from "@facturador/logger";
 import { z } from "zod";
+
+import type { Customer, PrismaClient } from "@facturador/db";
+import { Prisma } from "@facturador/db";
+import { newId } from "@facturador/db";
+import type { Logger } from "@facturador/logger";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import { AuthError, ConflictError, NotFoundError, ValidationError } from "@facturador/utils/errors";
+
+
 import { ensureConsumidorFinal } from "./ensure-consumidor-final.js";
 import { validateCreate, validateUpdate } from "./validate.js";
 
@@ -312,13 +315,25 @@ export function buildCustomerHandlers(deps: CustomerHandlerDeps): CustomerHandle
         );
       }
 
+      // Defence-in-depth: include `companyId` in the WHERE so an attacker
+      // who forged a known `id` from another tenant cannot reach this
+      // update path even if the upstream tenant check is bypassed.
       const updated = await prisma.customer.update({
-        where: { id },
+        where: { id, companyId },
         data: updateData,
       });
 
-      // Audit payload lists the *names* of changed fields, not their values,
-      // so we don't accidentally surface PII (email/telefono/direccion).
+      // Audit payload: list of changed field NAMES plus a `before`/`after`
+      // snapshot of those fields (the redaction walker in audit() runs
+      // on the way to the DB so PII like `email` / `telefono` is masked
+      // automatically — both objects pass through `redactPayload`).
+      const changedKeys = Object.keys(updateData);
+      const before: Record<string, unknown> = {};
+      const after: Record<string, unknown> = {};
+      for (const k of changedKeys) {
+        before[k] = (existing as unknown as Record<string, unknown>)[k] ?? null;
+        after[k] = (updated as unknown as Record<string, unknown>)[k] ?? null;
+      }
       await audit(
         { prisma: auditAdapter(prisma), logger },
         {
@@ -329,7 +344,11 @@ export function buildCustomerHandlers(deps: CustomerHandlerDeps): CustomerHandle
           companyId,
           ip: readIp(req),
           userAgent: readUserAgent(req),
-          payloadJson: { changed: Object.keys(updateData) },
+          payloadJson: {
+            changed: changedKeys,
+            before,
+            after,
+          },
         },
       );
 
@@ -363,8 +382,10 @@ export function buildCustomerHandlers(deps: CustomerHandlerDeps): CustomerHandle
         );
       }
 
+      // Defence-in-depth: `companyId` in the WHERE prevents cross-tenant
+      // soft-deletes even if the prior `findFirst` guard is ever bypassed.
       await prisma.customer.update({
-        where: { id },
+        where: { id, companyId },
         data: { deletedAt: new Date() },
       });
 

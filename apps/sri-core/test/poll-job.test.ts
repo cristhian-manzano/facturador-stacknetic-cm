@@ -17,11 +17,13 @@
  *   - Cap policy — a doc with `pollAttempts >= maxPollAttempts` is left
  *     alone (not re-selected, not bumped).
  */
-import { describe, expect, it } from "vitest";
 import { ulid } from "ulid";
-import { useTestSchema } from "@facturador/db/test-harness";
+import { describe, expect, it } from "vitest";
+
 import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
 import type { SriMensaje } from "@facturador/contracts/sri";
+import { useTestSchema } from "@facturador/db/test-harness";
+
 import { InMemoryBlobStore } from "../src/blobs/blob-store.js";
 
 /** Build a valid 49-digit claveAcceso with the right check digit. */

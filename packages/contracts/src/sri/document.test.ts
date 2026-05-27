@@ -2,6 +2,7 @@
  * Tests for `SriEstadoSchema` and `SriDocumentSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { SriDocumentSchema, SriEstadoSchema } from "./document.js";
 
 const ULID = "01HX8K0PYFA9B7Y1M2N3P4Q5R6";

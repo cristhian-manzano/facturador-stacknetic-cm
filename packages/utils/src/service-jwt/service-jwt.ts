@@ -208,7 +208,8 @@ export async function verifyServiceJwt(
 }
 
 function classifyError(err: unknown): VerifyFailureReason {
-  const name = (err as { code?: string; name?: string }).code ?? (err as Error).name ?? "";
+  const errAsAny = err as { code?: string; name?: string };
+  const name = errAsAny.code ?? errAsAny.name ?? "";
   if (name.includes("ERR_JWT_EXPIRED")) return "expired";
   if (name.includes("ERR_JWT_CLAIM_VALIDATION_FAILED")) {
     const claim = (err as { claim?: string }).claim;

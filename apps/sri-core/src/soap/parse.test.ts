@@ -18,17 +18,19 @@
  *   - PLAN-0025 §4 Phase 3.
  *   - TASKS-0025 §3 validation block.
  */
-import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+import { SriClientError } from "./errors.js";
 import {
   parseRecepcionResponse,
   parseAutorizacionResponse,
   MENSAJE_CLAVE_ACCESO_REGISTRADA,
   normaliseAutorizacionEstado,
 } from "./parse.js";
-import { SriClientError } from "./errors.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -130,6 +132,19 @@ describe("parseAutorizacionResponse", () => {
         <soap:Body><RespuestaAutorizacionComprobante/></soap:Body>
       </soap:Envelope>`;
     expect(() => parseAutorizacionResponse(xml)).toThrow(/missing/);
+  });
+
+  it("extracts the inner <factura> when SRI ships it inline (no CDATA wrapper)", () => {
+    // Defensive: some SRI test boxes have been observed shipping the
+    // inner factura as an inline element. `textContent` returns "" in
+    // that case — we must serialise the first element child instead.
+    const out = parseAutorizacionResponse(read("autorizacion-autorizado-inline.xml"));
+    expect(out.estado).toBe("AUTORIZADO");
+    expect(out.ambiente).toBe("PRUEBAS");
+    expect(out.autorizadoXml).toBeDefined();
+    expect(out.autorizadoXml).toContain("<factura");
+    expect(out.autorizadoXml).toContain('id="comprobante"');
+    expect(out.autorizadoXml).toContain("ACME-INLINE");
   });
 });
 

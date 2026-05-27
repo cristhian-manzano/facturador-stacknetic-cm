@@ -2,6 +2,7 @@
  * Tests for `CurrencyCodeSchema`. Per TASKS-0005 §2.9.
  */
 import { describe, expect, it } from "vitest";
+
 import { CurrencyCodeSchema } from "./currency-code.js";
 
 describe("CurrencyCodeSchema", () => {

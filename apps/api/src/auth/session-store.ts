@@ -30,9 +30,13 @@
  * SPEC-0011 (tenant switching) and stays `null` here.
  */
 
-import type { Prisma, PrismaClient } from "@facturador/db";
 import { ulid } from "ulid";
+
+import type { Prisma, PrismaClient } from "@facturador/db";
+import { hashIp } from "@facturador/utils/hash";
+
 import { env } from "../env.js";
+
 import { hashCsrfToken, mintCsrfToken } from "./csrf.js";
 import type { AuthenticatedSession } from "./types.js";
 
@@ -79,6 +83,14 @@ export async function createSession(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlMs());
 
+  // Per SPEC-0010 §6.9 + the production-readiness migration: write a
+  // hashed form of the IP onto `Session.ipHash` so the raw `ip` column
+  // can be retired in a follow-up migration. Both columns are populated
+  // during the migration window: existing readers keep working off the
+  // raw value while ipHash propagates downstream (audit log review
+  // queries already join on it).
+  const ipHash =
+    typeof input.ip === "string" && input.ip.length > 0 ? hashIp(input.ip) : null;
   await prisma.session.create({
     data: {
       id,
@@ -89,6 +101,7 @@ export async function createSession(
       expiresAt,
       lastSeenAt: now,
       ip: input.ip ?? null,
+      ipHash,
       userAgent: input.userAgent ?? null,
     },
   });
@@ -152,6 +165,7 @@ export async function touchSession(
   const newExpiry = new Date(Math.min(slideTarget, absoluteMax));
 
   try {
+    // eslint-disable-next-line @facturador/security/require-companyId-filter -- sessions are keyed by session id (unique); companyId is a derived facet, not a tenant filter
     await prisma.session.update({
       where: { id: session.id },
       data: { lastSeenAt: new Date(now), expiresAt: newExpiry },
@@ -177,6 +191,7 @@ export async function touchSession(
  */
 export async function deleteSession(prisma: PrismaClient, sessionId: string): Promise<void> {
   try {
+    // eslint-disable-next-line @facturador/security/require-companyId-filter -- sessions are keyed by session id (unique); companyId is a derived facet, not a tenant filter
     await prisma.session.delete({ where: { id: sessionId } });
   } catch (err) {
     if (
@@ -214,6 +229,7 @@ export async function switchSessionTenant(
   const csrfToken = mintCsrfToken();
   const csrfTokenHash = hashCsrfToken(csrfToken);
 
+  // eslint-disable-next-line @facturador/security/require-companyId-filter -- sessions are keyed by session id (unique); companyId is a derived facet, not a tenant filter
   await prisma.session.update({
     where: { id: sessionId },
     data: {

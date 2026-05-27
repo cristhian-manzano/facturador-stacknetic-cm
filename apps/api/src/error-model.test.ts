@@ -21,10 +21,13 @@
  * and run assertions on it.
  */
 import { Writable } from "node:stream";
-import { describe, expect, it } from "vitest";
+
 import request from "supertest";
+import { describe, expect, it } from "vitest";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
 import { createLogger } from "@facturador/logger";
+
 import { createApp } from "./server.js";
 
 interface CapturedLine {
@@ -82,7 +85,7 @@ const SENSITIVE_LITERALS = [
 const buildApp = () => {
   const { sink, lines } = captureSink();
   const logger = createLogger({ service: "api", env: "test", destination: sink });
-  const app = createApp({ prisma: stubPrisma(), logger });
+  const app = createApp({ prisma: stubPrisma(), logger, disableOriginCheck: true });
   return { app, lines };
 };
 

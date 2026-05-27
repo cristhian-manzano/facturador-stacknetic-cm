@@ -15,9 +15,12 @@
  * Source of truth: SPEC-0007 §6.4 + TASKS-0007 §3.5.
  */
 import { Writable } from "node:stream";
+
 import type { Express } from "express";
+
 import type { PrismaClient } from "@facturador/db";
 import { createLogger, type Logger } from "@facturador/logger";
+
 import { createApp } from "../src/server.js";
 
 export interface TestAppHandle {
@@ -93,6 +96,11 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestAppHandle
     ...(options.serviceJwtSecret === undefined
       ? {}
       : { serviceJwtSecret: options.serviceJwtSecret }),
+    // Supertest doesn't set the `Origin` header on in-process requests,
+    // so the defence-in-depth originCheckMiddleware would 403 every
+    // POST. Disable it for the test factory; production server.ts keeps
+    // it on.
+    disableOriginCheck: true,
   });
 
   return {

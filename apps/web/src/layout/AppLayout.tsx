@@ -33,14 +33,15 @@
  *   - The tenant switcher (`TenantSwitcher`) rotates CSRF via the API
  *     and ALSO clears the cache (tenant-scoped data must not leak).
  */
-import { NavLink, Outlet } from "react-router-dom";
 import { useMemo, type ReactElement } from "react";
+import { NavLink, Outlet } from "react-router-dom";
 
 import type { Action } from "@facturador/utils/rbac";
 
 import { useAuth } from "../auth/context.js";
-import { cn } from "../lib/cn.js";
 import { t } from "../i18n/es.js";
+import { cn } from "../lib/cn.js";
+
 import { TenantSwitcher } from "./TenantSwitcher.js";
 import { UserMenu } from "./UserMenu.js";
 

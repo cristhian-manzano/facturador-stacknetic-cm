@@ -8,6 +8,7 @@
  * `expiresAt` defaults to now + 8h, matching SESSION_TTL_MIN in `.env.example`.
  */
 import { createHash, randomBytes } from "node:crypto";
+
 import { newId } from "./_ids.js";
 
 export interface SessionFixture {

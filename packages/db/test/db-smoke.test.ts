@@ -16,11 +16,12 @@
  *
  * Synthetic data only: RUCs prefixed `9999`, emails under `@facturador.test`.
  */
-import { describe, expect, it } from "vitest";
-import argon2 from "argon2";
 import { Role } from "@prisma/client";
-import { useTestSchema } from "../src/test-harness.js";
+import argon2 from "argon2";
+import { describe, expect, it } from "vitest";
+
 import { newId } from "../src/index.js";
+import { useTestSchema } from "../src/test-harness.js";
 
 const SMOKE_RUC = "9999000034001";
 const SMOKE_EMAIL = "smoke@facturador.test";

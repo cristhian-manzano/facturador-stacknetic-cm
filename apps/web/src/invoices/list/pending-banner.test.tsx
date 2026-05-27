@@ -10,9 +10,10 @@
  *   - `runWithConcurrency` swallows per-task errors (one bad row never
  *     starves the others).
  */
-import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
 import type { InvoiceListItem } from "@facturador/contracts/invoices";
 
 import {
@@ -85,6 +86,35 @@ describe("<PendingBanner /> batch refresh", () => {
     resolve();
     await waitFor(() => {
       expect(onBatchDone).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("shows a per-row spinner for each pending invoice while its refresh is in flight", async () => {
+    const items = [
+      row("aaaaaa", "EN_PROCESO"),
+      row("bbbbbb", "EN_PROCESO"),
+      row("cccccc", "EN_PROCESO"),
+    ];
+    // Hold all three refresh calls open until the assertions on the
+    // spinners run. We capture the resolvers per call.
+    const resolvers: (() => void)[] = [];
+    const refreshFn = vi.fn(
+      (): Promise<void> => new Promise<void>((r) => resolvers.push(r)),
+    );
+    const user = userEvent.setup();
+    render(<PendingBanner items={items} refreshFn={refreshFn} />);
+    await user.click(screen.getByTestId("pending-banner-refresh"));
+    // While the calls are in flight, 3 spinners render.
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/pending-row-spinner-/)).toHaveLength(3);
+    });
+    expect(screen.getByTestId("pending-row-spinner-aaaaaa")).toBeInTheDocument();
+    expect(screen.getByTestId("pending-row-spinner-bbbbbb")).toBeInTheDocument();
+    expect(screen.getByTestId("pending-row-spinner-cccccc")).toBeInTheDocument();
+    // Resolve all three; spinners clear.
+    resolvers.forEach((r) => r());
+    await waitFor(() => {
+      expect(screen.queryAllByTestId(/pending-row-spinner-/)).toHaveLength(0);
     });
   });
 });

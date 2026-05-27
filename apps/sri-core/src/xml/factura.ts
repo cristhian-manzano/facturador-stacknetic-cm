@@ -30,8 +30,10 @@
  * IVA `codigoPorcentaje` against the docs whitelist because Zod is too
  * permissive (XSD allows `[0-9]{1,4}` but SRI only honours a known set).
  */
-import { FacturaXmlInputSchema, type FacturaXmlInput } from "@facturador/contracts/sri";
 import type { ZodError } from "zod";
+
+import { FacturaXmlInputSchema, type FacturaXmlInput } from "@facturador/contracts/sri";
+
 import { cleanDescripcion, cleanSingleLineText, escapeXml } from "./sanitise.js";
 
 /* -------------------------------------------------------------------------- */

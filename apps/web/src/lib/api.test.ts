@@ -19,11 +19,12 @@
  *   - GET does NOT attach CSRF header even if cookie present
  *   - Network failure → ApiError("network.unexpected")
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { mswServer } from "../../test/msw/server.js";
+
 import { ApiError, AUTH_EVENT_FORBIDDEN, AUTH_EVENT_UNAUTHORIZED, apiFetch } from "./api.js";
 
 // `env.VITE_API_BASE_URL` defaults to "" in the test env, so apiFetch passes

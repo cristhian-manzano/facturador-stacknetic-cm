@@ -2,6 +2,7 @@
  * Tests for `CreateCustomerSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { CreateCustomerSchema } from "./create-customer.js";
 
 describe("CreateCustomerSchema", () => {

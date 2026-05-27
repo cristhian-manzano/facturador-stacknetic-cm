@@ -3,6 +3,7 @@
  * `payloadJson` before persistence.
  */
 import { describe, expect, it } from "vitest";
+
 import { redactPayload, SENSITIVE_KEYS } from "./redact.js";
 
 describe("SENSITIVE_KEYS", () => {
@@ -52,10 +53,10 @@ describe("redactPayload", () => {
       user: { email: "user@example.com", name: "ok" },
       cert: { privateKey: "PEM", p12: "bytes" },
     }) as Record<string, Record<string, unknown>>;
-    expect(out.user!.email).toBe("[REDACTED]");
-    expect(out.user!.name).toBe("ok");
-    expect(out.cert!.privateKey).toBe("[REDACTED]");
-    expect(out.cert!.p12).toBe("[REDACTED]");
+    expect(out.user?.email).toBe("[REDACTED]");
+    expect(out.user?.name).toBe("ok");
+    expect(out.cert?.privateKey).toBe("[REDACTED]");
+    expect(out.cert?.p12).toBe("[REDACTED]");
   });
 
   it("redacts inside arrays of objects", () => {

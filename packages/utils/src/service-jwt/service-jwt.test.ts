@@ -16,9 +16,10 @@
  *
  * No `process.env` access here — secrets are passed as strings.
  */
-import { describe, expect, it } from "vitest";
 import { SignJWT } from "jose";
 import { ulid } from "ulid";
+import { describe, expect, it } from "vitest";
+
 import {
   SERVICE_JWT_AUDIENCE,
   SERVICE_JWT_ISSUER,

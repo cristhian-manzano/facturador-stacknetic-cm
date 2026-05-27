@@ -7,6 +7,7 @@
  * already benefits from the global redaction list.
  */
 import type { RequestHandler } from "express";
+
 import { withRequest, type Logger } from "@facturador/logger";
 
 export const createRequestLogger = (rootLogger: Logger): RequestHandler => {

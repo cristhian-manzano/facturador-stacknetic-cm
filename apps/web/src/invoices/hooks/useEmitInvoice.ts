@@ -13,6 +13,7 @@
  *     wrapper around `emitInvoice` keeps the indirection low.
  */
 import { useCallback, useRef } from "react";
+
 import type { EmitInvoiceResponse } from "@facturador/contracts/invoices";
 
 import { emitInvoice } from "../api.js";

@@ -25,10 +25,11 @@
  *   - Cleanup on unmount cancels the in-flight request.
  */
 import { useEffect, useRef, useState } from "react";
+
 import type { CreateInvoice, PreviewTotalsResponse } from "@facturador/contracts/invoices";
 
-import { previewInvoiceTotals } from "../api.js";
 import { ApiError } from "../../lib/api.js";
+import { previewInvoiceTotals } from "../api.js";
 
 export interface UseDebouncedTotalsOptions {
   readonly delayMs?: number;

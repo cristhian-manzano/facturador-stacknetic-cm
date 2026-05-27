@@ -18,10 +18,13 @@ import userEvent from "@testing-library/user-event";
 afterEach(() => {
   vi.useRealTimers();
 });
-import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { http, HttpResponse } from "msw";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
 
+// Intra-workspace test helper — the workspace package alias does not
+// expose `test/msw`, so the relative path is correct here.
+// eslint-disable-next-line no-restricted-imports
 import { mswServer } from "../../../test/msw/server.js";
 import { AuthProvider } from "../../auth/context.js";
 import { InvoicesEditPage } from "../../routes/invoices.$id.edit.js";
@@ -390,7 +393,9 @@ describe("<InvoiceForm /> autosave + new customer dialog", () => {
       { expect(screen.queryByTestId("new-customer-dialog")).not.toBeInTheDocument(); },
     );
     // Customer combobox now displays the new customer's razon social.
-    expect((screen.getByTestId("customer-search-input")).value).toContain(
+    // tsc + eslint disagree on whether the cast is needed (see filters-bar.test.tsx).
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    expect((screen.getByTestId("customer-search-input") as HTMLInputElement).value).toContain(
       "Otra Persona",
     );
   }, 15000);

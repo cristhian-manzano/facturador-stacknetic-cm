@@ -25,10 +25,14 @@
  *   - `ConflictError(sri.transition_race)` when the WHERE clause guard
  *     ("estado = expected") fails — i.e. a concurrent writer beat us.
  */
+import { ulid } from "ulid";
+
+import type { SriMensaje } from "@facturador/contracts/errors";
 import type { PrismaClient, Prisma, SriDocument, SriEstado, SriEtapa } from "@facturador/db";
 import { ConflictError, NotFoundError } from "@facturador/utils/errors";
-import type { SriMensaje } from "@facturador/contracts/errors";
-import { ulid } from "ulid";
+
+import { sriDocumentTransitionsTotal, sriStepDurationMs } from "../metrics.js";
+
 import { canTransition } from "./transitions.js";
 
 /**
@@ -134,6 +138,15 @@ export async function recordEvent(
         mensajesJson: mensajes as unknown as Prisma.InputJsonValue,
       },
     });
+
+    // Observability — record the transition + step duration. Metric
+    // increments happen inside the tx; the tx itself is bound to the
+    // outer caller, so a rollback never double-counts a successful
+    // transition. Counters are best-effort by design (a thrown after
+    // this point still doesn't roll back the metric); the
+    // operator-facing dashboard accepts that small slop.
+    sriDocumentTransitionsTotal.inc({ from: existing.estado, to: input.estado });
+    sriStepDurationMs.observe({ step: input.etapa }, durationMs);
 
     const refreshed = await db.sriDocument.findUniqueOrThrow({
       where: { id: input.documentId },

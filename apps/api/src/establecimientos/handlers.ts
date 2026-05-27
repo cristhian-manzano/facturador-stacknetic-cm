@@ -32,12 +32,14 @@
  */
 import type { Request, RequestHandler } from "express";
 import { ulid } from "ulid";
+import { z } from "zod";
+
 import { Prisma } from "@facturador/db";
 import type { PrismaClient } from "@facturador/db";
-import { AuthError, ConflictError, NotFoundError } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import type { Logger } from "@facturador/logger";
-import { z } from "zod";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import { AuthError, ConflictError, NotFoundError } from "@facturador/utils/errors";
+
 import {
   CreateEmissionPointSchema,
   CreateEstablecimientoSchema,
@@ -233,8 +235,10 @@ export function buildEstablecimientoHandlers(
       if (body.direccion !== undefined) updateData.direccion = body.direccion;
       if (body.isMatriz !== undefined) updateData.isMatriz = body.isMatriz;
 
+      // Defence-in-depth: include `companyId` in the WHERE so a forged
+      // `id` from another tenant cannot reach this update path.
       const updated = await prisma.establecimiento.update({
-        where: { id },
+        where: { id, companyId },
         data: updateData,
       });
 
@@ -274,8 +278,10 @@ export function buildEstablecimientoHandlers(
       });
       if (existing === null) throw new NotFoundError("establecimiento");
 
+      // Defence-in-depth: `companyId` in the WHERE prevents cross-tenant
+      // soft-deletes even if the prior `findFirst` guard is ever bypassed.
       await prisma.establecimiento.update({
-        where: { id },
+        where: { id, companyId },
         data: { deletedAt: new Date() },
       });
 
@@ -350,8 +356,16 @@ export function buildEstablecimientoHandlers(
         created = await prisma.$transaction(async (tx) => {
           if (body.isDefault === true) {
             // Flip every active sibling off before inserting the new row.
+            // Filtering by `companyId` (in addition to `establecimientoId`,
+            // which itself implies a tenant) is defence-in-depth — keeps
+            // the tenant boundary visible at the SQL surface.
             await tx.emissionPoint.updateMany({
-              where: { establecimientoId, deletedAt: null, isDefault: true },
+              where: {
+                companyId,
+                establecimientoId,
+                deletedAt: null,
+                isDefault: true,
+              },
               data: { isDefault: false },
             });
           }
@@ -425,8 +439,11 @@ export function buildEstablecimientoHandlers(
 
       const updated = await prisma.$transaction(async (tx) => {
         if (body.isDefault === true) {
+          // Defence-in-depth: scope sibling flip by `companyId` so the
+          // tenant boundary is explicit at the SQL surface.
           await tx.emissionPoint.updateMany({
             where: {
+              companyId,
               establecimientoId: existing.establecimientoId,
               deletedAt: null,
               isDefault: true,
@@ -435,7 +452,11 @@ export function buildEstablecimientoHandlers(
             data: { isDefault: false },
           });
         }
-        return tx.emissionPoint.update({ where: { id }, data: updateData });
+        // Defence-in-depth: `companyId` on the target update too.
+        return tx.emissionPoint.update({
+          where: { id, companyId },
+          data: updateData,
+        });
       });
 
       await audit(
@@ -472,8 +493,10 @@ export function buildEstablecimientoHandlers(
       });
       if (existing === null) throw new NotFoundError("emission_point");
 
+      // Defence-in-depth: `companyId` in the WHERE prevents cross-tenant
+      // soft-deletes even if the prior `findFirst` guard is ever bypassed.
       await prisma.emissionPoint.update({
-        where: { id },
+        where: { id, companyId },
         data: { deletedAt: new Date() },
       });
 

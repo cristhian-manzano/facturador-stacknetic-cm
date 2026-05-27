@@ -4,9 +4,9 @@
  *   - Permission missing → redirects to `/forbidden`.
  *   - Permission present → renders children.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "./context.js";
 import { RequirePermission } from "./RequirePermission.js";

@@ -19,11 +19,12 @@
  *     announce a status, not just colour.
  */
 import type { ReactElement } from "react";
+
 import type { InvoiceEstado } from "@facturador/contracts/invoices";
 import type { SriEstado } from "@facturador/contracts/sri";
 
-import { cn } from "../../lib/cn.js";
 import { t, type I18nKey } from "../../i18n/es.js";
+import { cn } from "../../lib/cn.js";
 
 interface BadgeStyle {
   readonly cls: string;

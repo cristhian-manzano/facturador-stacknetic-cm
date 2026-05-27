@@ -12,13 +12,14 @@
  * drifted and the orchestrator (SPEC-0033) won't link.
  */
 import { describe, expect, it } from "vitest";
+
+import { ClaveAccesoSchema } from "@facturador/contracts/primitives";
 import {
   BuildClaveAccesoError,
   buildClaveAcceso,
   generateCodigoNumerico,
   isValidClaveAcceso,
 } from "@facturador/utils/sri";
-import { ClaveAccesoSchema } from "@facturador/contracts/primitives";
 
 describe("@facturador/utils/sri consumer smoke", () => {
   it("buildClaveAcceso produces a 49-digit clave from a known good input", () => {

@@ -35,14 +35,19 @@
  *   - TASKS-0025 §5.1, §6.1, §7.1.
  */
 import { createHash } from "node:crypto";
+
 import type { Dispatcher } from "undici";
-import type { Logger } from "@facturador/logger";
+
 import type { SriMensaje } from "@facturador/contracts/sri";
+import type { Logger } from "@facturador/logger";
+
+import { sriRequestTotal, sriRequestDurationSeconds } from "../metrics.js";
+
 import { buildRecepcionEnvelope } from "./envelopes.js";
+import { SriClientError } from "./errors.js";
 import { httpPostXml } from "./http.js";
 import { parseRecepcionResponse, type RecepcionEstadoParsed } from "./parse.js";
 import { withRetry, type WithRetryOptions } from "./retry.js";
-import { SriClientError } from "./errors.js";
 
 /**
  * Ambiente codes used by the SRI ficha técnica — `1` = PRUEBAS,
@@ -135,6 +140,7 @@ export class RecepcionClient {
     });
 
     const started = Date.now();
+    const endTimer = sriRequestDurationSeconds.startTimer({ ambiente });
     const post = async (attempt: number) => {
       const result = await httpPostXml({
         url,
@@ -176,7 +182,16 @@ export class RecepcionClient {
       return result;
     };
 
-    const httpResult = await withRetry(post, this.retry ?? {});
+    let httpResult: Awaited<ReturnType<typeof httpPostXml>>;
+    try {
+      httpResult = await withRetry(post, this.retry ?? {});
+    } catch (err) {
+      // Record an "error" outcome for the metric, then re-throw — the
+      // caller still owns the error-handling path.
+      sriRequestTotal.inc({ ambiente, outcome: "error" });
+      endTimer();
+      throw err;
+    }
     const parsed = parseRecepcionResponse(httpResult.text);
 
     const durationMs = Date.now() - started;
@@ -189,6 +204,15 @@ export class RecepcionClient {
       reclassifiedFromDevuelta: parsed.reclassifiedFromDevuelta,
       ...(parsed.claveAcceso === undefined ? {} : { claveAcceso: parsed.claveAcceso }),
     };
+
+    // Metric — outcome label is the parsed estado (or "reclassified"
+    // when a DEVUELTA was reclassified to RECIBIDA via mensaje 43).
+    const outcomeLabel =
+      parsed.reclassifiedFromDevuelta
+        ? "reclassified"
+        : (parsed.estado.toLowerCase() as "recibida" | "devuelta");
+    sriRequestTotal.inc({ ambiente, outcome: outcomeLabel });
+    endTimer();
 
     // PII-safe log line — identifiers + tipos only.
     // `claveAcceso` is REDACTED by the centralised REDACT_PATHS even though

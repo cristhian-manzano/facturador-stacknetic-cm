@@ -9,10 +9,12 @@
  *     in either side would crash the handler and surface as a test failure.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   EmitDocumentResponseSchema,
   DocumentStatusResponseSchema,
 } from "@facturador/contracts/sri";
+
 import { mswServer } from "./server.js";
 import { sriCoreEmitHandlers, SRI_CORE_BASE_URL } from "./sri-handlers.js";
 

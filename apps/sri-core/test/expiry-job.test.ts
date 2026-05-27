@@ -14,15 +14,20 @@
  *       day  3 → `cert.expiry_warning` audit row.
  *       day  0 → `cert.expiry_warning` audit row.
  */
-import { describe, expect, it, beforeAll } from "vitest";
-import { ulid } from "ulid";
-import { useTestSchema } from "@facturador/db/test-harness";
-import { newId } from "@facturador/db";
-import { createLogger } from "@facturador/logger";
 import { Writable } from "node:stream";
-import { encryptP12 } from "../src/crypto/envelope.js";
-import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
+
+import { ulid } from "ulid";
+import { describe, expect, it, beforeAll } from "vitest";
+
+import { newId } from "@facturador/db";
+import { useTestSchema } from "@facturador/db/test-harness";
+import { createLogger } from "@facturador/logger";
+
+
 import { runExpiryCheck } from "../src/certificates/expiry-job.js";
+import { encryptP12 } from "../src/crypto/envelope.js";
+
+import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
 
 const DAY_MS = 86_400_000;
 const PASSPHRASE = "expiry-test-pass";

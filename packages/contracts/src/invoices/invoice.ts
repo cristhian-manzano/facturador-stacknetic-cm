@@ -10,11 +10,12 @@
  * glossary.md` and the project hard rule.
  */
 import { z } from "zod";
+
+import { ClaveAccesoSchema } from "../primitives/clave-acceso.js";
 import { CurrencyCodeSchema } from "../primitives/currency-code.js";
+import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "../primitives/establecimiento.js";
 import { IsoDateSchema } from "../primitives/iso-date.js";
 import { MoneyQtySchema, MoneySchema } from "../primitives/money.js";
-import { EstabSchema, PtoEmiSchema, SecuencialSchema } from "../primitives/establecimiento.js";
-import { ClaveAccesoSchema } from "../primitives/clave-acceso.js";
 import { UlidSchema } from "../primitives/ulid.js";
 
 /**

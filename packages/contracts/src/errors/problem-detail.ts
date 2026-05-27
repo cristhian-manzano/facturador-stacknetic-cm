@@ -16,6 +16,7 @@
  * redactions) and they NEVER reach this schema.
  */
 import { z } from "zod";
+
 import { SriMensajeSchema } from "../sri/mensaje.js";
 
 export const ProblemDetailSchema = z.object({

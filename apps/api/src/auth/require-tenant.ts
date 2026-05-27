@@ -30,6 +30,7 @@
  */
 
 import type { Request, RequestHandler } from "express";
+
 import type { PrismaClient } from "@facturador/db";
 import { ForbiddenError, PreconditionRequiredError } from "@facturador/utils/errors";
 import type { Role } from "@facturador/utils/rbac";
@@ -72,8 +73,18 @@ export function buildRequireTenant(deps: RequireTenantDeps): RequestHandler {
       }
 
       // Re-load on every request (security trade-off documented above).
-      const row = await prisma.membership.findUnique({
-        where: { userId_companyId: { userId: session.userId, companyId } },
+      // The unique lookup returns any matching membership, but we also
+      // require `acceptedAt IS NOT NULL` so an unaccepted invitation
+      // cannot be selected as the active tenant. We use `findFirst`
+      // with the additional predicate instead of `findUnique` because
+      // the `userId_companyId` composite is enough to guarantee at most
+      // one row regardless of the acceptance state.
+      const row = await prisma.membership.findFirst({
+        where: {
+          userId: session.userId,
+          companyId,
+          acceptedAt: { not: null },
+        },
       });
 
       if (row === null) {

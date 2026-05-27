@@ -16,8 +16,8 @@
  * know the user is loaded. Calling this guard on `loading` returns the
  * spinner from `RequireAuth` (we never get here in that state).
  */
-import { Navigate, Outlet } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
+import { Navigate, Outlet } from "react-router-dom";
 
 import type { Action } from "@facturador/utils/rbac";
 

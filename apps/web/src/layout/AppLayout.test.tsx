@@ -5,12 +5,13 @@
  *   - OWNER role: all gated entries visible.
  *   - Topbar exposes the tenant chip with the current company name.
  */
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "../auth/context.js";
+
 import { AppLayout } from "./AppLayout.js";
 
 const VIEWER_ME = {

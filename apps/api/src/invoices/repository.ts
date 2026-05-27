@@ -22,7 +22,6 @@
  *   - Customer existence is validated by the handler BEFORE this module is
  *     called (we never insert with a customerId from another tenant).
  */
-import { Prisma } from "@facturador/db";
 import type {
   Invoice,
   InvoiceAdicional,
@@ -31,7 +30,9 @@ import type {
   InvoicePayment,
   PrismaClient,
 } from "@facturador/db";
+import { Prisma } from "@facturador/db";
 import { newId } from "@facturador/db";
+
 import type { ComputeInvoiceResult, TaxBucket } from "./compute.js";
 
 /**
@@ -193,7 +194,14 @@ export async function replaceInvoiceDraft(
       updateData.fechaEmisionLocal = args.fechaEmisionLocal;
     }
 
-    await tx.invoice.update({ where: { id: args.id }, data: updateData });
+    // Defence-in-depth: include `companyId` in the WHERE so a forged id
+    // from another tenant cannot reach this update path even if the
+    // upstream handler check is ever bypassed. Prisma uses `id` for the
+    // unique lookup and applies `companyId` as an additional filter.
+    await tx.invoice.update({
+      where: { id: args.id, companyId: args.companyId },
+      data: updateData,
+    });
     await insertChildren(
       tx,
       args.id,
@@ -217,8 +225,10 @@ export async function softDeleteDraft(
   prisma: PrismaClient,
   args: { id: string; companyId: string },
 ): Promise<void> {
+  // Defence-in-depth: include `companyId` in the WHERE so a forged id
+  // from another tenant cannot reach this update path.
   await prisma.invoice.update({
-    where: { id: args.id },
+    where: { id: args.id, companyId: args.companyId },
     data: { deletedAt: new Date() },
   });
 }
@@ -354,8 +364,8 @@ export async function listInvoices(
     importeTotal: r.importeTotal,
     createdAt: r.createdAt,
   }));
-  const nextCursor =
-    hasMore && items.length > 0 ? slice[slice.length - 1]!.id : null;
+  const lastSlice = slice[slice.length - 1];
+  const nextCursor = hasMore && items.length > 0 && lastSlice !== undefined ? lastSlice.id : null;
   return { items, nextCursor };
 }
 

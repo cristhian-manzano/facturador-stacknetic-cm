@@ -9,7 +9,9 @@
  *   - master-key length validation (32 bytes hex / 64 hex chars).
  */
 import { randomBytes } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
+
 import {
   CIPHER_ALGORITHM,
   GCM_NONCE_BYTES,
@@ -50,21 +52,21 @@ describe("envelope.encrypt/decrypt", () => {
   it("fails decryption when the tag is tampered", () => {
     const env = encryptEnvelope(Buffer.from("secret bytes"), KEY);
     const badTag = Buffer.from(env.tag);
-    badTag[0] = badTag[0]! ^ 0xff;
+    badTag[0] = (badTag[0] ?? 0) ^ 0xff;
     expect(() => decryptEnvelope({ ...env, tag: badTag }, KEY)).toThrow();
   });
 
   it("fails decryption when the ciphertext is tampered", () => {
     const env = encryptEnvelope(Buffer.from("secret bytes"), KEY);
     const badCt = Buffer.from(env.ciphertext);
-    badCt[0] = badCt[0]! ^ 0x01;
+    badCt[0] = (badCt[0] ?? 0) ^ 0x01;
     expect(() => decryptEnvelope({ ...env, ciphertext: badCt }, KEY)).toThrow();
   });
 
   it("fails decryption when the nonce is tampered", () => {
     const env = encryptEnvelope(Buffer.from("secret bytes"), KEY);
     const badNonce = Buffer.from(env.nonce);
-    badNonce[0] = badNonce[0]! ^ 0x01;
+    badNonce[0] = (badNonce[0] ?? 0) ^ 0x01;
     expect(() => decryptEnvelope({ ...env, nonce: badNonce }, KEY)).toThrow();
   });
 

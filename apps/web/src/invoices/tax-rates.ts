@@ -1,70 +1,25 @@
 /**
- * Client-side mirror of the API's IVA selector (SPEC-0032 §FR-6).
+ * Web-side tax-rates barrel.
  *
- * Kept INTENTIONALLY small (and deduped against `apps/api/src/invoices/
- * tax-rates.ts`): the UI only needs the default rate for the IVA selector
- * dropdown and the catalog row labels. The server is the authority on
- * `validFrom` / `validTo` enforcement.
+ * IVA bits (table + selector + helpers) are RE-EXPORTED from
+ * `@facturador/contracts/sri` so the api and web share the SINGLE source
+ * of truth (REVIEW-0042 §2). Web-specific catalogs that have no api
+ * counterpart (forma de pago, tipo identificación for the customer
+ * dialog) stay here.
  *
- * Why we don't import from `apps/api`: cross-app imports would couple the
- * web bundle to Express types. The few constants below are stable per
- * SPEC-0032 and tested for parity in `tax-rates.test.ts`.
+ * If you find yourself adding an IVA helper here, add it to
+ * `packages/contracts/src/sri/iva.ts` and re-export below instead.
  */
 
-export const IVA_CODIGO = "2";
-
-export interface IvaCatalogRow {
-  readonly codigo: typeof IVA_CODIGO;
-  readonly codigoPorcentaje: string;
-  readonly tarifa: number | null;
-  readonly label: string;
-}
-
-/**
- * Catalog rows the UI surfaces. Order matches the dropdown rendering
- * (default rate first, then the historical / exempt ones).
- */
-export const IVA_TABLE: readonly IvaCatalogRow[] = [
-  { codigo: IVA_CODIGO, codigoPorcentaje: "4", tarifa: 15, label: "15%" },
-  { codigo: IVA_CODIGO, codigoPorcentaje: "2", tarifa: 12, label: "12% (histórico)" },
-  { codigo: IVA_CODIGO, codigoPorcentaje: "0", tarifa: 0, label: "0%" },
-  { codigo: IVA_CODIGO, codigoPorcentaje: "6", tarifa: 0, label: "No objeto IVA" },
-  { codigo: IVA_CODIGO, codigoPorcentaje: "7", tarifa: 0, label: "Exento" },
-  { codigo: IVA_CODIGO, codigoPorcentaje: "5", tarifa: 5, label: "5% construcción" },
-];
-
-export const IVA_15_EFFECTIVE_FROM = "2024-04-01";
-
-export interface PickIvaCodeResult {
-  readonly codigo: typeof IVA_CODIGO;
-  readonly codigoPorcentaje: string;
-  readonly tarifa: number;
-}
-
-/**
- * Default IVA row for an ISO date string (`YYYY-MM-DD`). Pure: no clock,
- * no I/O. Used to populate the IVA selector on new line addition.
- *
- *   - `< 2024-04-01` → 12% (codigoPorcentaje "2").
- *   - `>= 2024-04-01` → 15% (codigoPorcentaje "4").
- */
-export function pickIvaCode(fechaEmision: string): PickIvaCodeResult {
-  // Lexicographic compare on `YYYY-MM-DD` is total + correct for the
-  // calendar-day question the boundary asks (same trick the API uses).
-  if (fechaEmision >= IVA_15_EFFECTIVE_FROM) {
-    return { codigo: IVA_CODIGO, codigoPorcentaje: "4", tarifa: 15 };
-  }
-  return { codigo: IVA_CODIGO, codigoPorcentaje: "2", tarifa: 12 };
-}
-
-/**
- * Look up a row by `codigoPorcentaje`. Returns `undefined` for unknown
- * codes; the form layer rejects unknown selections via the Zod schema
- * before they ever reach the server.
- */
-export function getIvaRow(codigoPorcentaje: string): IvaCatalogRow | undefined {
-  return IVA_TABLE.find((r) => r.codigoPorcentaje === codigoPorcentaje);
-}
+export {
+  IVA_CODIGO,
+  IVA_15_EFFECTIVE_FROM,
+  IVA_TABLE,
+  pickIvaCode,
+  getIvaRow,
+  type IvaCatalogRow,
+  type PickIvaCodeResult,
+} from "@facturador/contracts/sri";
 
 /**
  * Payment method (forma de pago) catalog — SRI catalog values. The values

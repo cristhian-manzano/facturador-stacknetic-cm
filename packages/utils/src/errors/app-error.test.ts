@@ -5,6 +5,7 @@
  * must hold for downstream type narrowing.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   AppError,
   AuthError,

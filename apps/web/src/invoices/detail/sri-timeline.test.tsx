@@ -8,8 +8,9 @@
  *   - Mensajes with `tipo === "ERROR"` styled red (rose-700 text).
  *   - Empty events array → "Sin eventos registrados".
  */
-import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
 import type { SriEvent } from "@facturador/contracts/sri";
 
 import { SriTimeline, sortEventsAsc } from "./sri-timeline.js";

@@ -18,9 +18,10 @@
  *
  * Synthetic-only data — no PII, no real-world identifiers.
  */
-import { describe, it } from "vitest";
-import fc from "fast-check";
 import { Decimal } from "decimal.js";
+import fc from "fast-check";
+import { describe, it } from "vitest";
+
 import {
   computeInvoice,
   type ComputeInvoiceInput,
@@ -246,10 +247,10 @@ describe("pickIvaCode — deterministic IVA selection", () => {
       fc.property(fechaArb, (fechaEmision) => {
         const a = pickIvaCode(fechaEmision);
         const b = pickIvaCode(fechaEmision);
+        // `a.codigo` is the literal "2" so a direct `a.codigo === b.codigo`
+        // would be flagged by lint; compare the result objects holistically.
         return (
-          a.codigo === b.codigo &&
-          a.codigoPorcentaje === b.codigoPorcentaje &&
-          a.tarifa === b.tarifa
+          JSON.stringify({ ...a }) === JSON.stringify({ ...b })
         );
       }),
       { numRuns: 100 },
@@ -259,7 +260,7 @@ describe("pickIvaCode — deterministic IVA selection", () => {
   it("dates < 2024-04-01 always yield 12%; ≥ 2024-04-01 always yield 15%", () => {
     fc.assert(
       fc.property(fechaArb, (fechaEmision) => {
-        const dayKey = `${fechaEmision.getUTCFullYear()}-${String(
+        const dayKey = `${String(fechaEmision.getUTCFullYear())}-${String(
           fechaEmision.getUTCMonth() + 1,
         ).padStart(2, "0")}-${String(fechaEmision.getUTCDate()).padStart(2, "0")}`;
         const r = pickIvaCode(fechaEmision);

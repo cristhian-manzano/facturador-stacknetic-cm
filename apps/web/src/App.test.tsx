@@ -6,8 +6,8 @@
  * exercise the wiring (QueryClient + Auth + RouterProvider) — not to
  * re-test the underlying components.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { App } from "./App.js";
 import { createTestRouter } from "./routes/router.js";

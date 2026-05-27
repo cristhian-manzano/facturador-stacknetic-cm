@@ -11,15 +11,17 @@
  * ERROR_RED recovery test seeds the document in ERROR_RED and uses a
  * programmable RecepcionClient + AutorizacionClient.
  */
-import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { ulid } from "ulid";
+import { describe, expect, it } from "vitest";
+
+import { ProblemDetailSchema } from "@facturador/contracts/errors";
+import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
+import type { SriEstado } from "@facturador/db";
 import { useTestSchema } from "@facturador/db/test-harness";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
-import { computeClaveAccesoCheckDigit } from "@facturador/contracts/primitives";
-import { ProblemDetailSchema } from "@facturador/contracts/errors";
-import type { SriEstado } from "@facturador/db";
-import { createTestApp } from "./factory.js";
+
+
 import type {
   AutorizacionClient,
   AutorizacionResult,
@@ -28,6 +30,8 @@ import type {
   RecepcionResult,
   SendRecepcionInput,
 } from "../src/soap/index.js";
+
+import { createTestApp } from "./factory.js";
 
 const SECRET = "resend-test-service-jwt-secret-32-chars-of-entropy_padding";
 

@@ -32,17 +32,20 @@
  */
 
 import type { Request, RequestHandler, Response } from "express";
-import type { PrismaClient } from "@facturador/db";
+
 import {
   LoginRequestSchema,
   LoginResponseSchema,
   MeResponseSchema,
 } from "@facturador/contracts/auth";
 import type { LoginResponse, MeResponse } from "@facturador/contracts/auth";
-import { AuthError } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
-import { actionsForRole, type Role } from "@facturador/utils/rbac";
+import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import { AuthError } from "@facturador/utils/errors";
+import { hashEmail } from "@facturador/utils/hash";
+import { actionsForRole, type Role } from "@facturador/utils/rbac";
+
 import { clearSessionCookies, setSessionCookies } from "./cookies.js";
 import { DUMMY_HASH, verifyPassword } from "./password.js";
 import { createSession, deleteSession } from "./session-store.js";
@@ -153,6 +156,11 @@ export function buildAuthHandlers(deps: AuthHandlerDeps): AuthHandlers {
         // Audit the failure WITHOUT the password and WITHOUT the email.
         // Even the email is sensitive (it would leak which addresses are
         // probed). We record the IP + a non-identifying reason.
+        //
+        // `subjectHash` is sha256(lowercase trimmed email): a deterministic
+        // PII identifier per SPEC-0010 §FR-8 that lets ops query
+        // `SELECT … WHERE subjectHash = ? ORDER BY createdAt DESC` for
+        // brute-force review without ever persisting the raw address.
         await audit(
           { prisma: auditAdapter(prisma), logger },
           {
@@ -162,18 +170,21 @@ export function buildAuthHandlers(deps: AuthHandlerDeps): AuthHandlers {
             companyId: null,
             ip: readIp(req),
             userAgent: readUserAgent(req),
+            subjectHash: hashEmail(email),
             payloadJson: { reason: "bad_credentials" },
           },
         );
         throw genericLoginFailure();
       }
 
-      // Active memberships only: revokedAt was added in SPEC-0011 but is
-      // not yet in this baseline schema (see prisma/schema.prisma). The
-      // baseline `Membership` model has no `revokedAt` column, so all
-      // membership rows are considered active.
+      // Active memberships only: filter on `acceptedAt: { not: null }`.
+      // An invitation that has been issued but not accepted does not
+      // grant tenant access (SPEC-0050 invitation lifecycle); existing
+      // memberships were backfilled with `acceptedAt = createdAt` so
+      // this is a no-op for production data today.
+      // eslint-disable-next-line @facturador/security/require-companyId-filter -- /me lists ALL memberships of the authenticated user across tenants; companyId scoping would be wrong
       const memberships = await prisma.membership.findMany({
-        where: { userId: user.id },
+        where: { userId: user.id, acceptedAt: { not: null } },
         include: { company: true },
         orderBy: { createdAt: "asc" },
       });
@@ -258,8 +269,9 @@ export function buildAuthHandlers(deps: AuthHandlerDeps): AuthHandlers {
       if (user === undefined) {
         throw new AuthError();
       }
+      // eslint-disable-next-line @facturador/security/require-companyId-filter -- /me lists ALL memberships of the authenticated user across tenants; companyId scoping would be wrong
       const memberships = await prisma.membership.findMany({
-        where: { userId: user.id },
+        where: { userId: user.id, acceptedAt: { not: null } },
         include: { company: true },
         orderBy: { createdAt: "asc" },
       });

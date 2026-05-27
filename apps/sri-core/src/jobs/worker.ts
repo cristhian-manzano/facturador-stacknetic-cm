@@ -17,10 +17,12 @@
  * operator can spin up N polling-only pods that share locks via Postgres.
  */
 import { prisma } from "@facturador/db";
+
+import { FilesystemBlobStore } from "../blobs/blob-store.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { AutorizacionClient } from "../soap/index.js";
-import { FilesystemBlobStore } from "../blobs/blob-store.js";
+
 import { runPollBatch } from "./poll-en-proceso.js";
 import { startPollingScheduler } from "./scheduler.js";
 

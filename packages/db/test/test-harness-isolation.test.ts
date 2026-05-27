@@ -19,19 +19,20 @@
  * Synthetic data only (TASKS-0007 §5 / security policy): RUCs prefixed with
  * `9999`, all emails under `@facturador.test`.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Role } from "@prisma/client";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { newId } from "../src/index.js";
 import {
   createTestSchema,
   dropTestSchema,
   newTestSchemaName,
   type TestSchema,
 } from "../src/test-harness.js";
-import { newId } from "../src/index.js";
 
 describe("test-harness — cross-schema isolation (intra-file)", () => {
-  let a: TestSchema;
-  let b: TestSchema;
+  let a: TestSchema | undefined;
+  let b: TestSchema | undefined;
 
   beforeAll(async () => {
     [a, b] = await Promise.all([createTestSchema(), createTestSchema()]);
@@ -48,8 +49,16 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
     // Insert one synthetic Company into each schema, with the SAME RUC.
     // If they truly are isolated, both inserts succeed.  If they collide on
     // a single schema, the second insert raises a unique-constraint error.
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    // Non-null assertions: the `toBeDefined` calls above narrow at runtime
+    // but TS still sees `TestSchema | undefined` here.
+     
+    const ha = a!;
+     
+    const hb = b!;
     const ruc = "9999000000001";
-    await a.prisma.company.create({
+    await ha.prisma.company.create({
       data: {
         id: newId(),
         ruc,
@@ -59,7 +68,7 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
         direccionMatriz: "Av. Isolation 1",
       },
     });
-    await b.prisma.company.create({
+    await hb.prisma.company.create({
       data: {
         id: newId(),
         ruc, // same RUC, different schema — must succeed
@@ -71,21 +80,28 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
     });
 
     const [countA, countB] = await Promise.all([
-      a.prisma.company.count(),
-      b.prisma.company.count(),
+      ha.prisma.company.count(),
+      hb.prisma.company.count(),
     ]);
     expect(countA).toBe(1);
     expect(countB).toBe(1);
 
-    const inA = await a.prisma.company.findFirst({ where: { ruc } });
-    const inB = await b.prisma.company.findFirst({ where: { ruc } });
+    const inA = await ha.prisma.company.findFirst({ where: { ruc } });
+    const inB = await hb.prisma.company.findFirst({ where: { ruc } });
     expect(inA?.razonSocial).toBe("ISOLATION TENANT A");
     expect(inB?.razonSocial).toBe("ISOLATION TENANT B");
-    expect(a.schema).not.toBe(b.schema);
+    expect(ha.schema).not.toBe(hb.schema);
   });
 
   it("subsequent inserts in each schema only affect their own row count", async () => {
-    await a.prisma.user.create({
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    // Non-null assertions: see comment in the test above.
+     
+    const ha = a!;
+     
+    const hb = b!;
+    await ha.prisma.user.create({
       data: {
         id: newId(),
         email: "alice@facturador.test",
@@ -93,7 +109,7 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
         displayName: "Alice (A)",
       },
     });
-    const uB = await b.prisma.user.create({
+    const uB = await hb.prisma.user.create({
       data: {
         id: newId(),
         email: "bob@facturador.test",
@@ -101,20 +117,20 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
         displayName: "Bob (B)",
       },
     });
-    await b.prisma.membership.create({
+    await hb.prisma.membership.create({
       data: {
         id: newId(),
         userId: uB.id,
-        companyId: (await b.prisma.company.findFirstOrThrow()).id,
+        companyId: (await hb.prisma.company.findFirstOrThrow()).id,
         role: Role.OWNER,
       },
     });
 
-    const [usersA, usersB] = await Promise.all([a.prisma.user.count(), b.prisma.user.count()]);
+    const [usersA, usersB] = await Promise.all([ha.prisma.user.count(), hb.prisma.user.count()]);
     expect(usersA).toBe(1);
     expect(usersB).toBe(1);
-    expect(await a.prisma.membership.count()).toBe(0);
-    expect(await b.prisma.membership.count()).toBe(1);
+    expect(await ha.prisma.membership.count()).toBe(0);
+    expect(await hb.prisma.membership.count()).toBe(1);
   });
 });
 

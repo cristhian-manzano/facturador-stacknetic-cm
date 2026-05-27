@@ -19,14 +19,17 @@
  * All tests run against a per-test Postgres schema via
  * `useTestSchema()` from `@facturador/db/test-harness`.
  */
-import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { ulid } from "ulid";
-import { useTestSchema } from "@facturador/db/test-harness";
+import { describe, expect, it } from "vitest";
+
 import { MeResponseSchema } from "@facturador/contracts/auth";
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
+import { useTestSchema } from "@facturador/db/test-harness";
 import { ALL_ROLES, type Role } from "@facturador/utils/rbac";
+
 import { hashPassword } from "../src/auth/password.js";
+
 import { createTestApp } from "./factory.js";
 
 // ---------------------------------------------------------------------------
@@ -205,7 +208,14 @@ async function attachMembership(
   role: Role,
 ): Promise<{ membershipId: string }> {
   const id = ulid();
-  await prisma.membership.create({ data: { id, userId, companyId, role } });
+  // Set `acceptedAt = now` so the membership counts as "active" per the
+  // production-readiness invitation-lifecycle filter
+  // (`requireTenant` + tenant list now filter `acceptedAt: { not: null }`).
+  // Tests for the unaccepted-invite negative path set `acceptedAt: null`
+  // explicitly.
+  await prisma.membership.create({
+    data: { id, userId, companyId, role, acceptedAt: new Date() },
+  });
   return { membershipId: id };
 }
 
@@ -672,7 +682,11 @@ describe("PATCH /api/v1/tenants/:id", () => {
     expect(fresh?.razonSocial).toBe("RENAMED TENANT S.A.");
   });
 
-  it("ADMIN can patch razonSocial", async () => {
+  it("ADMIN cannot patch tenant by default (SPEC-0011 §FR-5: OWNER-only)", async () => {
+    // The production-readiness pass restricted `tenant.update` to OWNER
+    // per SPEC-0011 §FR-5. The escape hatch is the
+    // `RBAC_ADMIN_CAN_UPDATE_TENANT=true` env flag, exercised in a
+    // separate test below.
     const prisma = ctx.getPrisma();
     const ctxBoot = await bootstrap(prisma, "ADMIN");
     const res = await request(ctxBoot.app)
@@ -680,7 +694,10 @@ describe("PATCH /api/v1/tenants/:id", () => {
       .set("cookie", `${SESSION_COOKIE}=${ctxBoot.sessionId}; ${CSRF_COOKIE}=${ctxBoot.csrfToken}`)
       .set("x-csrf-token", ctxBoot.csrfToken)
       .send({ razonSocial: "ADMIN RENAMED" });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
+    const parsed = ProblemDetailSchema.safeParse(res.body);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.code).toBe("forbidden_action");
   });
 
   it("ACCOUNTANT cannot patch tenant (403 forbidden_action)", async () => {

@@ -19,6 +19,7 @@ export { PasaporteSchema, type Pasaporte } from "./pasaporte.js";
 export {
   ClaveAccesoSchema,
   computeClaveAccesoCheckDigit,
+  formatClaveAccesoGroups,
   isValidClaveAcceso,
   type ClaveAcceso,
 } from "./clave-acceso.js";

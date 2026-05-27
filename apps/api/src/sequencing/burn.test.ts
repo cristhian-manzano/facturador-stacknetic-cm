@@ -4,8 +4,10 @@
  * `prisma.$transaction` callback.
  */
 import { describe, it, expect, vi } from "vitest";
+
 import { Prisma } from "@facturador/db";
 import { ConflictError } from "@facturador/utils/errors";
+
 import { burnSecuencial, type BurnSecuencialTx } from "./burn.js";
 
 function makeStubTx(): {

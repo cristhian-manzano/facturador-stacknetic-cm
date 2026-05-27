@@ -28,22 +28,24 @@
  *         previous attempt stopped.
  */
 import { Router, type Request, type Response } from "express";
-import type { PrismaClient, SriEstado } from "@facturador/db";
-import { newId } from "@facturador/db";
+import { z } from "zod";
+
 import { ClaveAccesoSchema } from "@facturador/contracts/primitives";
 import {
   EmitDocumentRequestSchema,
   type EmitDocumentResponse,
   type DocumentStatusResponse,
 } from "@facturador/contracts/sri";
-import { BusinessError, ForbiddenError, NotFoundError } from "@facturador/utils/errors";
-import { z } from "zod";
+import type { PrismaClient, SriEstado } from "@facturador/db";
+import { newId } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
-import { validateBody, validateParams } from "../middleware/validate.js";
+import { BusinessError, ForbiddenError, NotFoundError } from "@facturador/utils/errors";
+
 import type { BlobStore } from "../blobs/blob-store.js";
-import type { AutorizacionClient, RecepcionClient } from "../soap/index.js";
 import { emitFactura, type EmitFacturaDeps } from "../lifecycle/emit-factura.js";
 import { REISSUE_REQUIRED_ESTADOS, isTerminal } from "../lifecycle/transitions.js";
+import { validateBody, validateParams } from "../middleware/validate.js";
+import type { AutorizacionClient, RecepcionClient } from "../soap/index.js";
 
 export interface BuildDocumentsRouterDeps {
   readonly prisma: PrismaClient;
@@ -143,6 +145,9 @@ function toStatusResponse(
       documentId: e.documentId as DocumentStatusResponse["events"][number]["documentId"],
       etapa: e.etapa as DocumentStatusResponse["events"][number]["etapa"],
       estado: e.estado,
+      // Defensive: `mensajesJson` is non-null per the Prisma schema but old
+      // rows in production may have null literals.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       mensajes: (e.mensajesJson as DocumentStatusResponse["events"][number]["mensajes"]) ?? [],
       durationMs: e.durationMs,
       createdAt: e.createdAt.toISOString(),
@@ -339,6 +344,61 @@ export function buildDocumentsRouter(deps: BuildDocumentsRouterDeps): Router {
         documentId: doc.id,
       });
       res.json(toEmitResponse(result.document));
+    },
+  );
+
+  // ---------- Manual retry-polling for stuck EN_PROCESO documents ------
+  // Audit punchlist Item 13 (REVIEW-0026 §8): the polling job caps at 60
+  // attempts (~2 hours) before leaving an EN_PROCESO row untouched.
+  // Operators / UI need an affordance to reset pollAttempts + nextPollAt
+  // so the scheduler picks the row up again on its next tick. Service-
+  // JWT gated (the mount in server.ts ensures that).
+  router.post(
+    "/:claveAcceso/retry-polling",
+    validateParams(ClaveAccesoParamsSchema),
+    async (req: Request, res: Response) => {
+      const callerCompanyId = req.service?.companyId;
+      if (callerCompanyId === undefined) {
+        throw new ForbiddenError("Service token missing");
+      }
+      const { claveAcceso } = req.params as unknown as { claveAcceso: string };
+      const doc = await prisma.sriDocument.findFirst({
+        where: { claveAcceso, companyId: callerCompanyId },
+      });
+      if (doc === null) {
+        throw new NotFoundError("sri_document");
+      }
+      // Only meaningful for EN_PROCESO documents — the polling job
+      // only inspects rows in that state. For other states the reset
+      // is a no-op; refuse with a 422 so the caller doesn't silently
+      // "succeed" while leaving the document unchanged.
+      if (doc.estado !== "EN_PROCESO") {
+        throw new BusinessError(
+          `retry-polling only applies to EN_PROCESO documents (current: ${doc.estado})`,
+          "retry_polling_not_applicable",
+        );
+      }
+      const updated = await prisma.sriDocument.update({
+        where: { id: doc.id },
+        data: {
+          pollAttempts: 0,
+          nextPollAt: new Date(),
+        },
+      });
+      req.log?.info(
+        {
+          event: "sri.retry_polling_requested",
+          companyId: callerCompanyId,
+          documentId: doc.id,
+        },
+        "polling retry requested",
+      );
+      res.json({
+        claveAcceso: updated.claveAcceso,
+        estado: updated.estado,
+        pollAttempts: updated.pollAttempts,
+        nextPollAt: updated.nextPollAt?.toISOString() ?? null,
+      });
     },
   );
 

@@ -9,5 +9,13 @@
     "rootDir": "src"
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**", "src/**/__fixtures__/**"]
+  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**", "src/**/__fixtures__/**"],
+  // utils depends on contracts + logger at the type level (it re-exports
+  // contracts schemas and uses the logger types). Listing them as
+  // references lets `tsc --build` rebuild upstream before utils.
+  "references": [
+    { "path": "../contracts/tsconfig.build.json" },
+    { "path": "../db/tsconfig.build.json" },
+    { "path": "../logger/tsconfig.build.json" }
+  ]
 }

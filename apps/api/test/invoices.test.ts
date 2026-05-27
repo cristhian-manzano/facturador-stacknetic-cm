@@ -28,14 +28,17 @@
  * cédulas + customer RUCs are deterministic test vectors with valid
  * checksums (módulo 10/11). No real RUC, email, phone, or address appears.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { http, HttpResponse } from "msw";
 import request from "supertest";
 import { ulid } from "ulid";
-import { http, HttpResponse } from "msw";
-import { useTestSchema } from "@facturador/db/test-harness";
+import { afterEach, describe, expect, it } from "vitest";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
+import { useTestSchema } from "@facturador/db/test-harness";
 import type { Role } from "@facturador/utils/rbac";
+
 import { hashPassword } from "../src/auth/password.js";
+
 import { createTestApp } from "./factory.js";
 import { mswServer } from "./msw/server.js";
 
@@ -147,7 +150,11 @@ async function attachMembership(
   role: Role,
 ): Promise<void> {
   const id = ulid();
-  await prisma.membership.create({ data: { id, userId, companyId, role } });
+  // Active membership: production-readiness invitation lifecycle requires
+  // `acceptedAt` non-null for `requireTenant` to pass.
+  await prisma.membership.create({
+    data: { id, userId, companyId, role, acceptedAt: new Date() },
+  });
 }
 
 async function loginAndGetCookies(
@@ -520,7 +527,7 @@ describe("GET /api/v1/invoices — list + detail + cross-tenant", () => {
     expect(p1.nextCursor).not.toBeNull();
 
     const page2 = await request(app)
-      .get(`/api/v1/invoices?limit=20&cursor=${p1.nextCursor!}`)
+      .get(`/api/v1/invoices?limit=20&cursor=${p1.nextCursor ?? ""}`)
       .set("cookie", authCookieHeader(auth.sessionId, auth.csrf));
     expect(page2.status).toBe(200);
     const p2 = page2.body as { items: { id: string }[]; nextCursor: string | null };
@@ -755,11 +762,14 @@ describe("POST /api/v1/invoices/:id/emit — orchestrator", () => {
 
     // Captured call has a Bearer token (the service JWT, redacted from logs).
     expect(capture.length).toBe(1);
-    expect(capture[0]!.authorization).toMatch(/^Bearer /);
+    const firstCall = capture[0];
+    expect(firstCall).toBeDefined();
+    expect(firstCall?.authorization).toMatch(/^Bearer /);
     // JWT payload contains the companyId in `sub`.
-    const token = capture[0]!.authorization!.replace(/^Bearer /, "");
+    const token = (firstCall?.authorization ?? "").replace(/^Bearer /, "");
     const [, payloadB64] = token.split(".");
-    const payload = JSON.parse(Buffer.from(payloadB64!, "base64").toString("utf-8")) as {
+    expect(payloadB64).toBeDefined();
+    const payload = JSON.parse(Buffer.from(payloadB64 ?? "", "base64").toString("utf-8")) as {
       sub: string;
       iss: string;
       aud: string;

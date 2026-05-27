@@ -10,15 +10,16 @@
  *   - "Cargar más" appends page 2.
  *   - VIEWER role still sees the list (read), but no Crear button.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mswServer } from "../../test/msw/server.js";
 import { AuthProvider } from "../auth/context.js";
+
 import { InvoicesIndexPage } from "./invoices.index.js";
 
 afterEach(() => {
@@ -152,7 +153,7 @@ describe("/invoices — filter to URL + API", () => {
     await screen.findByTestId("filters-bar");
 
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByTestId("filter-estado"), "EMITIDO");
+    await user.click(screen.getByTestId("filter-estado-EMITIDO"));
 
     // The URL contains ?estado=EMITIDO (visible via the row that
     // appears under the matched filter).

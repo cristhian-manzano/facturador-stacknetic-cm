@@ -1,0 +1,17 @@
+# Normalise line endings across platforms.
+# Reference: https://git-scm.com/docs/gitattributes
+* text=auto eol=lf
+*.bat text eol=crlf
+*.sh text eol=lf
+
+# Binary files — never CRLF/LF translated.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.p12 binary
+*.pfx binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

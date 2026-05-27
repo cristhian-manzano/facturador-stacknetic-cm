@@ -19,14 +19,14 @@
  *   - Filter changes RESET the cursor (handled by FiltersBar).
  *   - Never poll the list page; only the detail page polls.
  */
+import { useInfiniteQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useCallback, useMemo, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useInfiniteQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
+
 import type { InvoiceListItem, InvoiceListResponse } from "@facturador/contracts/invoices";
 
-import { RequirePermission } from "../auth/RequirePermission.js";
 import { useAuth } from "../auth/context.js";
-import { ApiError } from "../lib/api.js";
+import { RequirePermission } from "../auth/RequirePermission.js";
 import { t } from "../i18n/es.js";
 import {
   buildInvoiceListSearchParams,
@@ -37,10 +37,15 @@ import { EmptyState } from "../invoices/list/empty-state.js";
 import { FiltersBar } from "../invoices/list/filters-bar.js";
 import { InvoicesTable } from "../invoices/list/invoices-table.js";
 import { PendingBanner } from "../invoices/list/pending-banner.js";
+import { ApiError } from "../lib/api.js";
 
 /**
  * Read filters from the URL `URLSearchParams`. Pure: exported for the
  * unit test.
+ *
+ * Estado accepts BOTH shapes (REVIEW-0044 §5 multi-select chips):
+ *   - Comma-separated (canonical) — `?estado=EMITIDO,AUTORIZADO`
+ *   - Repeated (legacy)           — `?estado=EMITIDO&estado=AUTORIZADO`
  */
 export function filtersFromSearchParams(search: URLSearchParams): InvoiceListFilters {
   const out: {
@@ -49,13 +54,27 @@ export function filtersFromSearchParams(search: URLSearchParams): InvoiceListFil
     to?: string;
     q?: string;
   } = {};
-  const estado = search.getAll("estado");
-  if (estado.length > 0) {
-    const valid = estado.filter(
-      (e): e is "BORRADOR" | "EMITIDO" | "ANULADO" =>
-        e === "BORRADOR" || e === "EMITIDO" || e === "ANULADO",
-    );
-    if (valid.length > 0) out.estado = valid;
+  // Flatten comma-form into individual entries so both shapes work.
+  const estadoRaw = search.getAll("estado").flatMap((v) => v.split(","));
+  if (estadoRaw.length > 0) {
+    const valid = estadoRaw
+      .map((e) => e.trim())
+      .filter(
+        (e): e is "BORRADOR" | "EMITIDO" | "ANULADO" =>
+          e === "BORRADOR" || e === "EMITIDO" || e === "ANULADO",
+      );
+    if (valid.length > 0) {
+      // De-dupe while preserving order.
+      const seen = new Set<"BORRADOR" | "EMITIDO" | "ANULADO">();
+      const dedup: ("BORRADOR" | "EMITIDO" | "ANULADO")[] = [];
+      for (const v of valid) {
+        if (!seen.has(v)) {
+          seen.add(v);
+          dedup.push(v);
+        }
+      }
+      out.estado = dedup;
+    }
   }
   const from = search.get("from");
   if (from !== null && from !== "") out.from = from;

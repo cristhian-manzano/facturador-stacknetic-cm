@@ -15,16 +15,20 @@
  * status.
  */
 import { generateKeyPairSync } from "node:crypto";
-import { ulid } from "ulid";
 import { Writable } from "node:stream";
-import { mintServiceJwt } from "@facturador/utils/service-jwt";
-import { createLogger } from "@facturador/logger";
-import { prisma } from "@facturador/db";
-import forge from "node-forge";
-import { createApp } from "../src/server.js";
-import { env } from "../src/env.js";
 
-async function generateP12(passphrase: string): Promise<Buffer> {
+import forge from "node-forge";
+import { ulid } from "ulid";
+
+import { prisma } from "@facturador/db";
+import { createLogger } from "@facturador/logger";
+import { mintServiceJwt } from "@facturador/utils/service-jwt";
+
+
+import { env } from "../src/env.js";
+import { createApp } from "../src/server.js";
+
+function generateP12(passphrase: string): Buffer {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
   const forgeKey = forge.pki.privateKeyFromPem(pem);
@@ -83,7 +87,7 @@ async function main(): Promise<void> {
 
   try {
     const passphrase = "smoke-test-pass";
-    const p12 = await generateP12(passphrase);
+    const p12 = generateP12(passphrase);
 
     // Upload via real HTTP using global fetch (Node 22).
     const form = new FormData();
@@ -93,7 +97,7 @@ async function main(): Promise<void> {
       "smoke.p12",
     );
     form.append("alias", "smoke");
-    const uploadRes = await fetch(`http://127.0.0.1:${port}/v1/certificates`, {
+    const uploadRes = await fetch(`http://127.0.0.1:${String(port)}/v1/certificates`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -117,7 +121,7 @@ async function main(): Promise<void> {
 
     // GET metadata.
     const getRes = await fetch(
-      `http://127.0.0.1:${port}/v1/certificates/${uploadBody.id}`,
+      `http://127.0.0.1:${String(port)}/v1/certificates/${uploadBody.id}`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     if (getRes.status !== 200) {
@@ -141,7 +145,7 @@ async function main(): Promise<void> {
 
     // Activate.
     const actRes = await fetch(
-      `http://127.0.0.1:${port}/v1/certificates/${uploadBody.id}/activate`,
+      `http://127.0.0.1:${String(port)}/v1/certificates/${uploadBody.id}/activate`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

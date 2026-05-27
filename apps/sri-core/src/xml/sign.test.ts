@@ -18,11 +18,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
+
+import { makeTestCert } from "../../test/fixtures/test-keypair.js";
+
 import { buildFacturaXml } from "./factura.js";
 import { signFacturaXml, XmlSignError } from "./sign.js";
 import { verifySignedXml } from "./verify.js";
-import { makeTestCert } from "../../test/fixtures/test-keypair.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

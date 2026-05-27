@@ -1,12 +1,13 @@
 /**
  * `CustomerCombobox` tests (SPEC-0042 §FR-3 / TASKS-0042 §2.5).
  */
-import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+import type { CustomerListItem, CustomerListResponse } from "../api.js";
 
 import { CustomerCombobox } from "./customer-combobox.js";
-import type { CustomerListItem, CustomerListResponse } from "../api.js";
 
 function makeItem(idx: number): CustomerListItem {
   return {
@@ -125,5 +126,31 @@ describe("<CustomerCombobox>", () => {
     );
     await user.type(screen.getByRole("combobox"), "abcdef");
     await waitFor(() => { expect(searcher).toHaveBeenCalledTimes(1); });
+  });
+
+  it("input aria-activedescendant matches the highlighted option id (REVIEW-0044 §9)", async () => {
+    const items = [makeItem(1), makeItem(2), makeItem(3)];
+    const searcher = vi.fn(async () => ({ items, nextCursor: null }) as CustomerListResponse);
+    const user = userEvent.setup();
+    render(
+      <CustomerCombobox
+        value=""
+        selectedLabel=""
+        onSelect={() => undefined}
+        onCreateNewRequested={() => undefined}
+        searcher={searcher}
+        debounceMs={5}
+      />,
+    );
+    await user.type(screen.getByRole("combobox"), "ac");
+    // Wait for the listbox to render.
+    const opt1 = await screen.findByTestId(`customer-option-${items[0]?.id ?? ""}`);
+    const optionId = opt1.id;
+    expect(optionId).not.toBe("");
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-activedescendant", optionId);
+    // ArrowDown advances the highlight; aria-activedescendant follows.
+    await user.keyboard("{ArrowDown}");
+    const opt2 = screen.getByTestId(`customer-option-${items[1]?.id ?? ""}`);
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-activedescendant", opt2.id);
   });
 });

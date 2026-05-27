@@ -26,24 +26,30 @@
  *     estado, totals summary.
  */
 import type { Request, RequestHandler } from "express";
-import { Prisma } from "@facturador/db";
-import type { Customer, PrismaClient } from "@facturador/db";
 import { z } from "zod";
+
 import {
   PreviewTotalsRequestSchema,
   type CreateInvoice,
   type UpdateInvoice,
 } from "@facturador/contracts/invoices";
-import { AuthError, BusinessError, NotFoundError, ValidationError } from "@facturador/utils/errors";
-import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import type { DocumentStatusResponse } from "@facturador/contracts/sri";
+import type { Customer, PrismaClient } from "@facturador/db";
+import { newId } from "@facturador/db";
+import { Prisma } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
-import { computeInvoice, type ComputeInvoiceInput } from "./compute.js";
+import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import {
-  validateCreatePayload,
-  validateUpdatePayload,
-  formatFechaEmisionLocal,
-  parseFechaEmision,
-} from "./validate.js";
+  AuthError,
+  BusinessError,
+  NotFoundError,
+  UpstreamError,
+  ValidationError,
+} from "@facturador/utils/errors";
+
+import { sriCoreFetch } from "../sri/client.js";
+
+import { computeInvoice, type ComputeInvoiceInput } from "./compute.js";
 import {
   createInvoiceDraft,
   findInvoiceById,
@@ -55,6 +61,12 @@ import {
   type PersistableLine,
   type PersistablePayment,
 } from "./repository.js";
+import {
+  validateCreatePayload,
+  validateUpdatePayload,
+  formatFechaEmisionLocal,
+  parseFechaEmision,
+} from "./validate.js";
 
 const auditAdapter = (prisma: PrismaClient): AuditPrismaClient =>
   prisma as unknown as AuditPrismaClient;
@@ -71,17 +83,38 @@ function readUserAgent(req: Request): string | null {
 
 const IdParam = z.object({ id: z.string().min(1) });
 
+/**
+ * Estado filter accepts three URL shapes (REVIEW-0044 §5):
+ *   1. Single value           — `?estado=EMITIDO`
+ *   2. Repeated array         — `?estado=A&estado=B`
+ *   3. Comma-separated string — `?estado=A,B`
+ *
+ * Express's `qs` parser hands us shape (1) as `string`, shape (2) as
+ * `string[]`, shape (3) as the literal `"A,B"` string. We pre-process the
+ * single-string case so a comma-form input splits into an array before
+ * Zod runs the enum check.
+ */
+const EstadoEnum = z.enum(["BORRADOR", "EMITIDO", "ANULADO"]);
+
+const EstadoFilterSchema = z
+  .union([EstadoEnum, z.array(EstadoEnum).min(1).max(3), z.string()])
+  .transform((v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.includes(",")) {
+      // Split + trim + drop empties so trailing commas don't break the enum.
+      const parts = v
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s !== "");
+      return parts;
+    }
+    return v;
+  })
+  .pipe(z.union([EstadoEnum, z.array(EstadoEnum).min(1).max(3)]));
+
 const ListQuerySchema = z
   .object({
-    estado: z
-      .union([
-        z.enum(["BORRADOR", "EMITIDO", "ANULADO"]),
-        z
-          .array(z.enum(["BORRADOR", "EMITIDO", "ANULADO"]))
-          .min(1)
-          .max(3),
-      ])
-      .optional(),
+    estado: EstadoFilterSchema.optional(),
     q: z.string().min(1).max(100).optional(),
     from: z
       .string()
@@ -99,6 +132,16 @@ const ListQuerySchema = z
 export interface InvoiceHandlerDeps {
   prisma: PrismaClient;
   logger: Logger;
+  /**
+   * Override the sri-core base URL when the invoice detail handler needs to
+   * fetch a SriDocument + events to populate the wrapped response. Tests
+   * pass the MSW base URL here.
+   */
+  sriCoreBaseUrl?: string;
+  /** Override the fetch impl (tests inject an MSW-fitted fetch). */
+  fetchImpl?: typeof fetch;
+  /** Override the service-JWT secret for tests. */
+  serviceJwtSecret?: string;
 }
 
 export interface InvoiceHandlers {
@@ -179,6 +222,10 @@ interface InvoiceDetailWire {
   sriEstado: string | null;
   numeroAutorizacion: string | null;
   fechaAutorizacion: string | null;
+  /** Soft FK to sri-core's SriDocument.id; null until refresh observes it. */
+  sriDocumentId: string | null;
+  /** Original invoice id when this row was created by /reissue. */
+  replacesInvoiceId: string | null;
   emittedAt: string | null;
   mensajes: readonly unknown[] | null;
   lines: InvoiceLineWire[];
@@ -186,6 +233,119 @@ interface InvoiceDetailWire {
   adicionales: InvoiceAdicionalWire[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Wire shape of an `InvoiceLine` per `InvoiceSchema` — optional fields are
+ * OMITTED (not `null`) so the Zod schemas using `.optional()` parse cleanly.
+ */
+interface InvoiceLineWireForContract {
+  orden: number;
+  codigoPrincipal?: string;
+  codigoAuxiliar?: string;
+  descripcion: string;
+  unidadMedida?: string;
+  cantidad: number;
+  precioUnitario: number;
+  descuento: number;
+  precioTotalSinImpuesto: number;
+  impuestos: readonly {
+    codigo: string;
+    codigoPorcentaje: string;
+    tarifa: number;
+    baseImponible: number;
+    valor: number;
+  }[];
+}
+
+interface InvoicePaymentWireForContract {
+  formaPago: string;
+  total: number;
+  plazo?: number;
+  unidadTiempo?: string;
+}
+
+interface InvoiceAdicionalWireForContract {
+  nombre: string;
+  valor: string;
+}
+
+/**
+ * Wire shape of an `InvoiceSchema`-conformant invoice. This is what the
+ * `InvoiceDetailSchema.invoice` field expects (SPEC-0043 §6.2).
+ *
+ * Differences from `InvoiceDetailWire` above:
+ *   - `fechaEmision` is `YYYY-MM-DD` (IsoDateSchema), not ISO 8601.
+ *   - Drops SRI-mirror fields (sriEstado, numeroAutorizacion, fechaAutorizacion,
+ *     mensajes, emittedAt, fechaEmisionLocal). Those live on `sriDocument`.
+ *   - Optional fields are OMITTED, not `null`, so `.optional()` Zod fields
+ *     parse cleanly.
+ */
+interface InvoiceWireForContract {
+  id: string;
+  companyId: string;
+  customerId: string;
+  emissionPointId: string;
+  estado: string;
+  codDoc: "01";
+  estab: string;
+  ptoEmi: string;
+  secuencial: string | null;
+  claveAcceso: string | null;
+  fechaEmision: string;
+  moneda: string;
+  obligadoContabilidad: boolean;
+  contribuyenteEspecial: string | null;
+  totalSinImpuestos: number;
+  totalDescuento: number;
+  totalConImpuestos: readonly {
+    codigo: string;
+    codigoPorcentaje: string;
+    tarifa: number;
+    baseImponible: number;
+    valor: number;
+  }[];
+  propina: number;
+  importeTotal: number;
+  lines: InvoiceLineWireForContract[];
+  payments: InvoicePaymentWireForContract[];
+  adicionales: InvoiceAdicionalWireForContract[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Wire shape of a `CustomerSchema`-conformant customer. The contract is a
+ * discriminated union over `tipoIdentificacion`; we project the DB row's
+ * flat columns into the same shape every branch shares (the union itself
+ * narrows on the literal `tipoIdentificacion`).
+ */
+interface CustomerWire {
+  id: string;
+  companyId: string;
+  tipoIdentificacion: "04" | "05" | "06" | "07" | "08";
+  identificacion: string;
+  razonSocial: string;
+  nombreComercial?: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+/**
+ * Wrapped detail response — matches `InvoiceDetailSchema` from
+ * `@facturador/contracts/invoices`. The wrapper shape is fixed; the
+ * `sriDocument` slot is `null` until an emit has been attempted.
+ */
+interface WrappedInvoiceDetailWire {
+  invoice: InvoiceWireForContract;
+  customer: CustomerWire;
+  sriDocument: DocumentStatusResponse["document"] | null;
+  sriEvents: DocumentStatusResponse["events"];
 }
 
 function dec(value: unknown): number {
@@ -199,10 +359,132 @@ function isoOrNull(d: Date | null | undefined): string | null {
   return d === null || d === undefined ? null : d.toISOString();
 }
 
+/**
+ * Convert a Date to `YYYY-MM-DD` (the format `IsoDateSchema` brand expects).
+ * We slice the ISO string at UTC; `fechaEmision` is persisted at UTC midnight
+ * of the local calendar day so the slice is exact.
+ */
+function toIsoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Project an `InvoiceWithChildren` into the `InvoiceSchema`-conformant shape
+ * (the `invoice` field of `InvoiceDetailSchema`).
+ *
+ * MUST NOT include SRI mirror columns; those belong on `sriDocument`.
+ */
+export function toInvoiceWire(row: InvoiceWithChildren): InvoiceWireForContract {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    customerId: row.customerId,
+    emissionPointId: row.emissionPointId,
+    estado: row.estado,
+    codDoc: row.codDoc as "01",
+    estab: row.estab,
+    ptoEmi: row.ptoEmi,
+    secuencial: row.secuencial,
+    claveAcceso: row.claveAcceso,
+    fechaEmision: toIsoDate(row.fechaEmision),
+    moneda: row.moneda,
+    obligadoContabilidad: row.obligadoContabilidad,
+    contribuyenteEspecial: row.contribuyenteEspecial,
+    totalSinImpuestos: dec(row.totalSinImpuestos),
+    totalDescuento: dec(row.totalDescuento),
+    totalConImpuestos: (row.totalsJson ?? []) as unknown as readonly {
+      codigo: string;
+      codigoPorcentaje: string;
+      tarifa: number;
+      baseImponible: number;
+      valor: number;
+    }[],
+    propina: dec(row.propina),
+    importeTotal: dec(row.importeTotal),
+    lines: row.lines
+      .slice()
+      .sort((a, b) => a.orden - b.orden)
+      .map((l) => {
+        const out: InvoiceLineWireForContract = {
+          orden: l.orden,
+          descripcion: l.descripcion,
+          cantidad: dec(l.cantidad),
+          precioUnitario: dec(l.precioUnitario),
+          descuento: dec(l.descuento),
+          precioTotalSinImpuesto: dec(l.precioTotalSinImpuesto),
+          impuestos: (l.impuestosJson ?? []) as unknown as readonly {
+            codigo: string;
+            codigoPorcentaje: string;
+            tarifa: number;
+            baseImponible: number;
+            valor: number;
+          }[],
+        };
+        // Optional fields: emit only when populated so `.optional()` Zod
+        // schemas don't trip on `null`.
+        if (l.codigoPrincipal !== null) out.codigoPrincipal = l.codigoPrincipal;
+        if (l.codigoAuxiliar !== null) out.codigoAuxiliar = l.codigoAuxiliar;
+        if (l.unidadMedida !== null) out.unidadMedida = l.unidadMedida;
+        return out;
+      }),
+    payments: row.payments
+      .slice()
+      .sort((a, b) => a.orden - b.orden)
+      .map((p) => {
+        const out: InvoicePaymentWireForContract = {
+          formaPago: p.formaPago,
+          total: dec(p.total),
+        };
+        if (p.plazo !== null) out.plazo = dec(p.plazo);
+        if (p.unidadTiempo !== null) out.unidadTiempo = p.unidadTiempo;
+        return out;
+      }),
+    adicionales: row.adicionales
+      .slice()
+      .sort((a, b) => a.orden - b.orden)
+      .map((a) => ({ nombre: a.nombre, valor: a.valor })),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Project a DB `Customer` row into the `CustomerSchema`-conformant shape.
+ * The contract is a discriminated union over `tipoIdentificacion`, but every
+ * branch shares the same set of fields we emit here. Cast to the literal
+ * union type is safe because the write path validates the discriminator
+ * upstream.
+ */
+export function toCustomerWire(row: Customer): CustomerWire {
+  const tipo = row.tipoIdentificacion as CustomerWire["tipoIdentificacion"];
+  const out: CustomerWire = {
+    id: row.id,
+    companyId: row.companyId,
+    tipoIdentificacion: tipo,
+    identificacion: row.identificacion,
+    razonSocial: row.razonSocial,
+    isActive: row.isActive,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    deletedAt: row.deletedAt === null ? null : row.deletedAt.toISOString(),
+  };
+  if (row.nombreComercial !== null) out.nombreComercial = row.nombreComercial;
+  if (row.email !== null) out.email = row.email;
+  if (row.telefono !== null) out.telefono = row.telefono;
+  if (row.direccion !== null) out.direccion = row.direccion;
+  return out;
+}
+
 export function toInvoiceDetailWire(row: InvoiceWithChildren): InvoiceDetailWire {
-  const sriDocLike = row as InvoiceWithChildren & {
+  // After the production-readiness migration these columns live directly
+  // on Invoice. We still narrow through an Indexed read so the function
+  // stays compatible with mock rows that omit them (e.g. unit tests
+  // built before the migration).
+  const rowAny = row as InvoiceWithChildren & {
     numeroAutorizacion?: string | null;
     fechaAutorizacion?: Date | null;
+    sriDocumentId?: string | null;
+    replacesInvoiceId?: string | null;
   };
   return {
     id: row.id,
@@ -234,8 +516,10 @@ export function toInvoiceDetailWire(row: InvoiceWithChildren): InvoiceDetailWire
     propina: dec(row.propina),
     importeTotal: dec(row.importeTotal),
     sriEstado: row.sriEstado ?? null,
-    numeroAutorizacion: sriDocLike.numeroAutorizacion ?? null,
-    fechaAutorizacion: isoOrNull(sriDocLike.fechaAutorizacion ?? null),
+    numeroAutorizacion: rowAny.numeroAutorizacion ?? null,
+    fechaAutorizacion: isoOrNull(rowAny.fechaAutorizacion ?? null),
+    sriDocumentId: rowAny.sriDocumentId ?? null,
+    replacesInvoiceId: rowAny.replacesInvoiceId ?? null,
     emittedAt: isoOrNull(row.emittedAt),
     mensajes: (row.mensajesJson as readonly unknown[] | null) ?? null,
     lines: row.lines
@@ -542,15 +826,80 @@ export function buildInvoiceHandlers(deps: InvoiceHandlerDeps): InvoiceHandlers 
 
   /**
    * `GET /api/v1/invoices/:id` — detail.
+   *
+   * Returns the wrapped shape `{ invoice, customer, sriDocument, sriEvents }`
+   * that matches `InvoiceDetailSchema` from `@facturador/contracts/invoices`.
+   * When the invoice has been emitted (claveAcceso present) we hydrate the
+   * SriDocument + events from sri-core; failures degrade gracefully to
+   * `sriDocument: null` so the detail page still renders.
    */
   const getInvoice: RequestHandler = async (req, res, next) => {
     try {
       const companyId = req.companyId;
       if (companyId === undefined) throw new AuthError();
       const { id } = IdParam.parse(req.params);
-      const row = await findInvoiceById(prisma, { id, companyId });
-      if (row === null) throw new NotFoundError("invoice");
-      res.status(200).json(toInvoiceDetailWire(row));
+
+      const invoiceRow = await findInvoiceById(prisma, { id, companyId });
+      if (invoiceRow === null) throw new NotFoundError("invoice");
+
+      // Customer is a soft join (no Prisma relation on Invoice). Scope by
+      // `companyId` so a tenant-crossing customerId rewrite (which can't
+      // happen via our validated write paths) still returns 404 instead of
+      // leaking PII from another tenant. We deliberately do NOT filter on
+      // `deletedAt` here: the detail page must still render a historical
+      // emission's customer even after the catalog entry is soft-deleted.
+      const customer = await prisma.customer.findFirst({
+        where: { id: invoiceRow.customerId, companyId },
+      });
+      if (customer === null) throw new NotFoundError("invoice");
+
+      // Hydrate SriDocument + events from sri-core when the invoice has been
+      // emitted. Best-effort: a network failure or a 404 (document not yet
+      // persisted in the race window between reserve + first persist) degrades
+      // to `sriDocument: null` rather than failing the whole detail render.
+      let sriDocument: DocumentStatusResponse["document"] | null = null;
+      let sriEvents: DocumentStatusResponse["events"] = [];
+      if (invoiceRow.claveAcceso !== null) {
+        try {
+          const result = await sriCoreFetch<DocumentStatusResponse>(
+            `/v1/documents/${invoiceRow.claveAcceso}/status`,
+            {
+              method: "GET",
+              companyId,
+              requestId: req.id ?? newId(),
+              ...(deps.sriCoreBaseUrl === undefined
+                ? {}
+                : { baseUrl: deps.sriCoreBaseUrl }),
+              ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
+              ...(deps.serviceJwtSecret === undefined
+                ? {}
+                : { serviceJwtSecret: deps.serviceJwtSecret }),
+              serviceJwtTtlSeconds: 60,
+            },
+          );
+          sriDocument = result.body.document;
+          sriEvents = result.body.events;
+        } catch (err) {
+          // 404 from sri-core just means the document isn't persisted yet
+          // — leave `sriDocument` null and continue. Any other error is
+          // also non-fatal for detail rendering; log it via req.log.
+          if (err instanceof UpstreamError) {
+            req.log?.warn(
+              { event: "invoice.detail.sri_fetch_failed", invoiceId: id },
+              "sri-core document status fetch failed",
+            );
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      res.status(200).json({
+        invoice: toInvoiceWire(invoiceRow),
+        customer: toCustomerWire(customer),
+        sriDocument,
+        sriEvents,
+      } satisfies WrappedInvoiceDetailWire);
     } catch (err) {
       next(err);
     }

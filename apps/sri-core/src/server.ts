@@ -20,8 +20,10 @@
  */
 import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { z } from "zod";
+
 import { prisma as defaultPrisma } from "@facturador/db";
 import type { PrismaClient } from "@facturador/db";
+import type { Logger } from "@facturador/logger";
 import {
   AuthError,
   BusinessError,
@@ -32,19 +34,22 @@ import {
   UpstreamError,
   ValidationError,
 } from "@facturador/utils/errors";
-import type { Logger } from "@facturador/logger";
-import { env as defaultEnv } from "./env.js";
-import { logger as defaultLogger } from "./logger.js";
-import { requestIdMiddleware } from "./middleware/request-id.js";
-import { createRequestLogger } from "./middleware/request-logger.js";
-import { errorHandler } from "./middleware/error-handler.js";
-import { validateBody } from "./middleware/validate.js";
-import { buildRequireServiceJwt } from "./auth/service-jwt.js";
-import { buildHealthRouter } from "./routes/health.js";
-import { buildDocumentsRouter } from "./routes/documents.js";
-import { buildCertificatesRouter, multerErrorHandler } from "./routes/certificates.js";
+
+import { buildRequireServiceJwt, type JtiDenyList } from "./auth/service-jwt.js";
 import type { BlobStore } from "./blobs/blob-store.js";
 import { FilesystemBlobStore } from "./blobs/blob-store.js";
+import { env as defaultEnv } from "./env.js";
+import type { PollingHealthState } from "./jobs/polling-health.js";
+import { logger as defaultLogger } from "./logger.js";
+import { errorHandler } from "./middleware/error-handler.js";
+import { buildDocumentsRateLimiter } from "./middleware/rate-limit-documents.js";
+import { requestIdMiddleware } from "./middleware/request-id.js";
+import { createRequestLogger } from "./middleware/request-logger.js";
+import { validateBody } from "./middleware/validate.js";
+import { buildCertificatesRouter, multerErrorHandler } from "./routes/certificates.js";
+import { buildDocumentsRouter } from "./routes/documents.js";
+import { buildHealthRouter } from "./routes/health.js";
+import { buildMetricsRouter } from "./routes/metrics.js";
 import { AutorizacionClient, RecepcionClient } from "./soap/index.js";
 
 export interface HealthBody {
@@ -83,6 +88,26 @@ export interface CreateAppOptions {
    */
   recepcionClient?: RecepcionClient;
   autorizacionClient?: AutorizacionClient;
+  /**
+   * Optional override for the documents rate limiter. Tests pass a
+   * limiter with a tiny `max` so they can exercise the 429 branch
+   * without spinning 100 requests. Production uses the defaults.
+   */
+  documentsRateLimit?: { max?: number; windowMs?: number };
+  /**
+   * Optional override for the polling-health state surface. Tests can
+   * pass a hand-built state so they can drive `/readyz` deterministically.
+   * Production reads from a singleton shared with the polling scheduler.
+   */
+  pollingHealth?: PollingHealthState;
+  /**
+   * Optional jti deny-list. When omitted, production uses the module-
+   * default LRU. Tests pass a per-app fresh instance so existing token
+   * re-use patterns don't trigger the replay guard between unrelated
+   * test cases (the dedicated replay test in
+   * `src/auth/service-jwt.test.ts` exercises the actual policy).
+   */
+  jtiDenyList?: JtiDenyList;
 }
 
 // Local Zod schema for the diagnostic echo. Lives here because sri-core has
@@ -146,15 +171,31 @@ export function createApp(options: CreateAppOptions = {}): Express {
   });
 
   // Readiness + healthz (SPEC-0020 §FR-7).
-  app.use(buildHealthRouter({ prisma }));
+  app.use(
+    buildHealthRouter({
+      prisma,
+      ...(options.pollingHealth === undefined ? {} : { pollingHealth: options.pollingHealth }),
+    }),
+  );
+
+  // ---------------- Metrics (Prometheus text format, no auth) -----------
+  // The scraper firewall is responsible for restricting access. We do
+  // NOT proxy it through requireServiceJwt because Prometheus does not
+  // mint service tokens.
+  app.use(buildMetricsRouter());
 
   // ---------------- Service JWT gate (every /v1/* below) -----------------
-  const requireServiceJwt = buildRequireServiceJwt({ secret: serviceJwtSecret });
+  const requireServiceJwt = buildRequireServiceJwt({
+    secret: serviceJwtSecret,
+    ...(options.jtiDenyList === undefined ? {} : { jtiDenyList: options.jtiDenyList }),
+  });
 
   // ---------------- Documents API (SPEC-0020 §6.5 + SPEC-0026) -----------
   app.use(
     "/v1/documents",
     requireServiceJwt,
+    // Rate limit AFTER the JWT gate so the keyer can read `req.service.companyId`.
+    buildDocumentsRateLimiter(options.documentsRateLimit ?? {}),
     buildDocumentsRouter({
       prisma,
       stubMode,

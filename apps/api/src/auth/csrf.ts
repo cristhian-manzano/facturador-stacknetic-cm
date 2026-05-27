@@ -25,8 +25,11 @@
  */
 
 import crypto from "node:crypto";
+
 import type { RequestHandler } from "express";
+
 import { ForbiddenError } from "@facturador/utils/errors";
+
 import { readCsrfCookie } from "./cookies.js";
 
 /** Mint a 32-byte random CSRF token encoded as base64url (43 chars, no padding). */

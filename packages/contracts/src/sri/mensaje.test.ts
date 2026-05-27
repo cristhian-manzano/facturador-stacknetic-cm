@@ -2,6 +2,7 @@
  * Tests for `SriMensajeSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { SriMensajeSchema } from "./mensaje.js";
 
 describe("SriMensajeSchema", () => {

@@ -61,9 +61,12 @@
  * iteration possible without a real .p12 + sandbox SRI endpoint.
  */
 import type { PrismaClient, SriDocument } from "@facturador/db";
-import { ConflictError, NotFoundError } from "@facturador/utils/errors";
 import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
+import { ConflictError, NotFoundError } from "@facturador/utils/errors";
+
+import type { BlobStore } from "../blobs/blob-store.js";
+import { authorizedXmlKey } from "../blobs/blob-store.js";
 import {
   AutorizacionClient,
   RecepcionClient,
@@ -71,12 +74,12 @@ import {
   type Ambiente,
 } from "../soap/index.js";
 import { buildFacturaXml, XmlBuildError } from "../xml/factura.js";
-import { runSignStep } from "./sign-step.js";
-import { recordEvent } from "./events.js";
-import type { BlobStore } from "../blobs/blob-store.js";
-import { authorizedXmlKey } from "../blobs/blob-store.js";
-import { isTerminal } from "./transitions.js";
 import type { SignAlgo } from "../xml/sign.js";
+
+import { recordEvent } from "./events.js";
+import { runSignStep } from "./sign-step.js";
+import { isTerminal } from "./transitions.js";
+
 
 /* -------------------------------------------------------------------------- */
 /*                                 Public API                                 */

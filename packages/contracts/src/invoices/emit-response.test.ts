@@ -2,6 +2,7 @@
  * Tests for `EmitInvoiceResponseSchema`.
  */
 import { describe, expect, it } from "vitest";
+
 import { EmitInvoiceResponseSchema } from "./emit-response.js";
 
 const CLAVE = "1905202601179001234400110010010000001231234567812";

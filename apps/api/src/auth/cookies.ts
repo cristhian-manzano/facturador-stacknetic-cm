@@ -37,6 +37,7 @@
  */
 
 import type { Request, Response, CookieOptions } from "express";
+
 import { env } from "../env.js";
 
 const PROD_SESSION_NAME = "__Host-facturador_session";

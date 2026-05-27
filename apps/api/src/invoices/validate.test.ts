@@ -18,7 +18,9 @@
  * Synthetic-only fixtures — uses ULIDs from a stable test alphabet, no PII.
  */
 import { describe, expect, it } from "vitest";
+
 import { BusinessError, ValidationError } from "@facturador/utils/errors";
+
 import {
   formatFechaEmisionLocal,
   parseFechaEmision,

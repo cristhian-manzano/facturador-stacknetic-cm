@@ -2,6 +2,7 @@
  * Tests for `EmailSchema`. Per TASKS-0005 §2.2 + PROMPT-0005 §6 (security).
  */
 import { describe, expect, it } from "vitest";
+
 import { EmailSchema } from "./email.js";
 
 describe("EmailSchema", () => {

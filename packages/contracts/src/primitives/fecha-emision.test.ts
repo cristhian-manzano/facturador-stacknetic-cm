@@ -2,6 +2,7 @@
  * Tests for `FechaEmisionSchema` — the SRI `dd/mm/aaaa` shape.
  */
 import { describe, expect, it } from "vitest";
+
 import { FechaEmisionSchema } from "./fecha-emision.js";
 
 describe("FechaEmisionSchema", () => {

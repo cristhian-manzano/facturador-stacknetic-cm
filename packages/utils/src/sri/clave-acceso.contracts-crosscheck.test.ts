@@ -11,20 +11,22 @@
  *
  * Required by TASKS-0022 §4.1 / SPEC-0022 AC-7.
  */
-import { describe, expect, it } from "vitest";
 import fc from "fast-check";
+import { describe, expect, it } from "vitest";
+
 import {
   ClaveAccesoSchema,
   computeClaveAccesoCheckDigit,
   isValidClaveAcceso as contractsIsValid,
 } from "@facturador/contracts/primitives";
+
+import { CLAVE_FIXTURES, CLAVE_SPECIAL_CASES } from "./clave-acceso.fixtures.js";
 import {
   buildClaveAcceso,
   computeModulo11,
   isValidClaveAcceso as utilsIsValid,
   type BuildClaveAccesoInput,
 } from "./clave-acceso.js";
-import { CLAVE_FIXTURES, CLAVE_SPECIAL_CASES } from "./clave-acceso.fixtures.js";
 
 /* -------------------------------------------------------------------------- */
 /*                              Static fixtures                               */

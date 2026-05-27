@@ -6,5 +6,13 @@
   },
   // Typecheck + ESLint use this superset. The build target lives in
   // `tsconfig.build.json` and excludes `*.test.ts` / configs.
-  "include": ["src/**/*", "vitest.config.ts"]
+  "include": ["src/**/*", "vitest.config.ts"],
+  // Project references mirror the build config — keeps the editor happy
+  // when navigating between workspaces and lets `tsc --build` schedule
+  // upstream compilations.
+  "references": [
+    { "path": "../contracts/tsconfig.build.json" },
+    { "path": "../db/tsconfig.build.json" },
+    { "path": "../logger/tsconfig.build.json" }
+  ]
 }

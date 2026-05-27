@@ -28,15 +28,18 @@
  */
 
 import { Router } from "express";
+
+import { LoginRequestSchema } from "@facturador/contracts/auth";
 import type { PrismaClient } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
-import { LoginRequestSchema } from "@facturador/contracts/auth";
-import { validateBody } from "../middleware/validate.js";
+
 import { env } from "../env.js";
-import { buildAuthHandlers } from "./handlers.js";
-import { buildRequireSession } from "./require-session.js";
+import { validateBody } from "../middleware/validate.js";
+
 import { assertCsrf } from "./csrf.js";
+import { buildAuthHandlers } from "./handlers.js";
 import { buildLoginEmailRateLimiter, buildLoginIpRateLimiter } from "./rate-limit.js";
+import { buildRequireSession } from "./require-session.js";
 
 export interface AuthRouterDeps {
   prisma: PrismaClient;

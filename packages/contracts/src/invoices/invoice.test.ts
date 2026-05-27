@@ -2,6 +2,7 @@
  * Tests for `InvoiceSchema` and its building blocks.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   InvoiceEstadoSchema,
   InvoiceImpuestoSchema,

@@ -6,13 +6,14 @@
  * workers share `public` would surface as a unique-constraint failure.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestSchema, dropTestSchema, type TestSchema } from "../src/test-harness.js";
+
 import { newId } from "../src/index.js";
+import { createTestSchema, dropTestSchema, type TestSchema } from "../src/test-harness.js";
 
 const SHARED_RUC = "9999333333001";
 
 describe("test-harness — cross-file isolation (worker B)", () => {
-  let handle: TestSchema;
+  let handle: TestSchema | undefined;
 
   beforeAll(async () => {
     handle = await createTestSchema();
@@ -23,7 +24,12 @@ describe("test-harness — cross-file isolation (worker B)", () => {
   });
 
   it("inserts SHARED_RUC and sees count = 1 in its schema", async () => {
-    await handle.prisma.company.create({
+    expect(handle).toBeDefined();
+    // Non-null assertion: `expect(handle).toBeDefined()` above narrows for
+    // the runtime, but TS sees `handle: TestSchema | undefined` here.
+     
+    const h = handle!;
+    await h.prisma.company.create({
       data: {
         id: newId(),
         ruc: SHARED_RUC,
@@ -33,7 +39,7 @@ describe("test-harness — cross-file isolation (worker B)", () => {
         direccionMatriz: "Guayaquil",
       },
     });
-    const count = await handle.prisma.company.count({ where: { ruc: SHARED_RUC } });
+    const count = await h.prisma.company.count({ where: { ruc: SHARED_RUC } });
     expect(count).toBe(1);
   });
 });

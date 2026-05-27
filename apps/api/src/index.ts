@@ -6,8 +6,8 @@
  * access happens outside `env.ts`.
  */
 
-import { createApp } from "./server.js";
 import { env } from "./env.js";
+import { createApp } from "./server.js";
 
 const app = createApp();
 

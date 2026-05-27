@@ -32,15 +32,25 @@
  *   - TASKS-0025 §5.2, §6.1, §7.1.
  */
 import { createHash } from "node:crypto";
+
 import type { Dispatcher } from "undici";
-import type { Logger } from "@facturador/logger";
+
 import type { SriMensaje } from "@facturador/contracts/sri";
+import type { Logger } from "@facturador/logger";
+
+import {
+  sriRequestTotal,
+  sriRequestDurationSeconds,
+  type SriRequestOutcome,
+} from "../metrics.js";
+
 import { buildAutorizacionEnvelope } from "./envelopes.js";
+import { SriClientError } from "./errors.js";
 import { httpPostXml } from "./http.js";
 import { parseAutorizacionResponse, type AutorizacionEstadoParsed } from "./parse.js";
-import { withRetry, type WithRetryOptions } from "./retry.js";
-import { SriClientError } from "./errors.js";
 import type { Ambiente } from "./recepcion-client.js";
+import { withRetry, type WithRetryOptions } from "./retry.js";
+
 
 export interface AutorizacionClientEnv {
   readonly SRI_AUTORIZACION_URL_PRUEBAS: string;
@@ -106,6 +116,7 @@ export class AutorizacionClient {
     const envelope = buildAutorizacionEnvelope({ claveAcceso });
 
     const started = Date.now();
+    const endTimer = sriRequestDurationSeconds.startTimer({ ambiente });
     const post = async (attempt: number) => {
       const result = await httpPostXml({
         url,
@@ -142,9 +153,27 @@ export class AutorizacionClient {
       return result;
     };
 
-    const httpResult = await withRetry(post, this.retry ?? {});
+    let httpResult: Awaited<ReturnType<typeof httpPostXml>>;
+    try {
+      httpResult = await withRetry(post, this.retry ?? {});
+    } catch (err) {
+      sriRequestTotal.inc({ ambiente, outcome: "error" });
+      endTimer();
+      throw err;
+    }
     const parsed = parseAutorizacionResponse(httpResult.text);
     const durationMs = Date.now() - started;
+    // Map parsed estado → metric outcome label.
+    const outcomeLabel: SriRequestOutcome =
+      parsed.estado === "AUTORIZADO"
+        ? "autorizado"
+        : parsed.estado === "NO_AUTORIZADO"
+          ? "no_autorizado"
+          : parsed.estado === "EN_PROCESO"
+            ? "en_proceso"
+            : "desconocido";
+    sriRequestTotal.inc({ ambiente, outcome: outcomeLabel });
+    endTimer();
 
     const result: AutorizacionResult = {
       estado: parsed.estado,

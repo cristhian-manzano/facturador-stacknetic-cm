@@ -16,8 +16,11 @@
  *   - docs/sri-facturacion-electronica-ecuador.md §4 (algorithm).
  *   - ai/specs/0022-clave-acceso-generator.md (functional contract).
  */
-import { describe, expect, it } from "vitest";
 import fc from "fast-check";
+import { describe, expect, it } from "vitest";
+
+import { CLAVE_FIXTURES, CLAVE_SPECIAL_CASES } from "./clave-acceso.fixtures.js";
+import type { ClaveAccesoFixture } from "./clave-acceso.fixtures.js";
 import {
   BuildClaveAccesoError,
   buildClaveAcceso,
@@ -28,8 +31,6 @@ import {
   validateClaveAcceso,
   type BuildClaveAccesoInput,
 } from "./clave-acceso.js";
-import { CLAVE_FIXTURES, CLAVE_SPECIAL_CASES } from "./clave-acceso.fixtures.js";
-import type { ClaveAccesoFixture } from "./clave-acceso.fixtures.js";
 
 /**
  * Type-safe accessor for the first fixture — keeps the test code free of

@@ -6,9 +6,11 @@
  * SRI document and ordered event timeline.
  */
 import { z } from "zod";
+
 import { CustomerSchema } from "../customers/customer.js";
 import { SriDocumentSchema } from "../sri/document.js";
 import { SriEventSchema } from "../sri/event.js";
+
 import { InvoiceSchema } from "./invoice.js";
 
 export const InvoiceDetailSchema = z.object({

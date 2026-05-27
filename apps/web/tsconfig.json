@@ -6,5 +6,12 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "node", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src/**/*", "test/**/*", "vite.config.ts", "vitest.config.ts", "tailwind.config.ts"]
+  "include": ["src/**/*", "test/**/*", "vite.config.ts", "vitest.config.ts", "tailwind.config.ts"],
+  // Project references — wire upstream package builds so `tsc --build`
+  // at the repo root (via `pnpm typecheck:project`) compiles them in
+  // dependency order. apps/web only consumes contracts + utils.
+  "references": [
+    { "path": "../../packages/contracts/tsconfig.build.json" },
+    { "path": "../../packages/utils/tsconfig.build.json" }
+  ]
 }

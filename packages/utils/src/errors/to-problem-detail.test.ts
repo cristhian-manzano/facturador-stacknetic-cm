@@ -6,7 +6,11 @@
  */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
+
+import { toProblemDetail } from "./to-problem-detail.js";
+
 import {
   AuthError,
   BusinessError,
@@ -17,7 +21,6 @@ import {
   UpstreamError,
   ValidationError,
 } from "./index.js";
-import { toProblemDetail } from "./to-problem-detail.js";
 
 describe("toProblemDetail — AppError mapping", () => {
   it("AuthError → 401 / auth.unauthenticated; parses through ProblemDetailSchema", () => {

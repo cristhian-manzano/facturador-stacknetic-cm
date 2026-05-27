@@ -28,9 +28,10 @@
  *     do not accidentally pick up a polyfill.
  */
 import { webcrypto } from "node:crypto";
+
 import { DOMParser, XMLSerializer, DOMImplementation } from "@xmldom/xmldom";
-import * as xpath from "xpath";
 import { Application, setNodeDependencies } from "xadesjs";
+import * as xpath from "xpath";
 
 /**
  * Guard flag — set to `true` after a successful initialisation. Module

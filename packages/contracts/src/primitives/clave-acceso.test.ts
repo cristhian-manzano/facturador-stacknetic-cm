@@ -16,9 +16,11 @@
  * was computed offline with the algorithm in SPEC-0022 §6.2.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   ClaveAccesoSchema,
   computeClaveAccesoCheckDigit,
+  formatClaveAccesoGroups,
   isValidClaveAcceso,
 } from "./clave-acceso.js";
 
@@ -69,5 +71,47 @@ describe("computeClaveAccesoCheckDigit", () => {
     const base = "190520260117900123440011001001000000123000000091";
     expect(computeClaveAccesoCheckDigit(base)).toBe("1");
     expect(isValidClaveAcceso(`${base}1`)).toBe(true);
+  });
+});
+
+describe("formatClaveAccesoGroups", () => {
+  it("groups the 49-digit fixture in blocks of 4 (default)", () => {
+    // 49 / 4 = 12 r 1 → 12 groups of 4 + a single trailing digit
+    // ("2" — the check digit). Total spaces = 12.
+    const formatted = formatClaveAccesoGroups(VALID);
+    expect(formatted).toBe(
+      "1905 2026 0117 9001 2344 0011 0010 0100 0000 1231 2345 6781 2",
+    );
+    // Spot-check the structure:
+    expect(formatted.split(" ")).toHaveLength(13);
+    expect(formatted.replace(/ /g, "")).toBe(VALID);
+  });
+
+  it("returns the empty string for empty input", () => {
+    expect(formatClaveAccesoGroups("")).toBe("");
+  });
+
+  it("respects a custom groupSize", () => {
+    expect(formatClaveAccesoGroups("0123456789", 5)).toBe("01234 56789");
+    expect(formatClaveAccesoGroups("0123456789", 3)).toBe("012 345 678 9");
+  });
+
+  it("keeps a short trailing group as-is when length is not divisible", () => {
+    expect(formatClaveAccesoGroups("0123456", 4)).toBe("0123 456");
+  });
+
+  it("falls back to groupSize = 1 for invalid sizes (defensive)", () => {
+    expect(formatClaveAccesoGroups("abc", 0)).toBe("a b c");
+    expect(formatClaveAccesoGroups("abc", -3)).toBe("a b c");
+  });
+
+  it("does NOT validate the input — accepts non-digit strings", () => {
+    // Documented behaviour: cosmetic formatter, not a guard.
+    expect(formatClaveAccesoGroups("hello world")).toBe("hell o wo rld");
+  });
+
+  it("returns the input untouched when length <= groupSize", () => {
+    expect(formatClaveAccesoGroups("12", 4)).toBe("12");
+    expect(formatClaveAccesoGroups("1234", 4)).toBe("1234");
   });
 });

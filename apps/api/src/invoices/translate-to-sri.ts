@@ -13,6 +13,7 @@
  * Zod so any drift in our shape surfaces as a 400 there rather than a
  * silently-broken XML downstream.
  */
+import type { EmitDocumentRequest } from "@facturador/contracts/sri";
 import { Prisma } from "@facturador/db";
 import type {
   Company,
@@ -24,7 +25,6 @@ import type {
   InvoicePayment,
   Invoice as InvoiceRow,
 } from "@facturador/db";
-import type { EmitDocumentRequest } from "@facturador/contracts/sri";
 
 function decNum(value: unknown): number {
   if (value instanceof Prisma.Decimal) return value.toNumber();

@@ -8,9 +8,9 @@
  *   - Authenticated + tenant → renders children.
  *   - Loading → centred spinner.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 
 import { AuthProvider, type AuthProviderProps } from "./context.js";
 import { RequireAuth } from "./RequireAuth.js";

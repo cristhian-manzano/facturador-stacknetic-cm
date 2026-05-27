@@ -1,8 +1,8 @@
 /**
  * Tests for `<EstadoBadge />` + `<SriEstadoBadge />`.
  */
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { EstadoBadge, SriEstadoBadge } from "./estado-badge.js";
 

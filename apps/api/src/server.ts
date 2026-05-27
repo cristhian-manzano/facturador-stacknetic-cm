@@ -30,12 +30,14 @@
  * and a stub logger.
  */
 
-import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import cookieParser from "cookie-parser";
+import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { z } from "zod";
+
+import { LoginRequestSchema } from "@facturador/contracts/auth";
 import { prisma as defaultPrisma } from "@facturador/db";
 import type { PrismaClient } from "@facturador/db";
-import { LoginRequestSchema } from "@facturador/contracts/auth";
+import type { Logger } from "@facturador/logger";
 import {
   AuthError,
   BusinessError,
@@ -46,17 +48,22 @@ import {
   UpstreamError,
   ValidationError,
 } from "@facturador/utils/errors";
-import type { Logger } from "@facturador/logger";
+
+import { buildAuthRouter } from "./auth/routes.js";
+import { scheduleSessionSweep } from "./auth/session-sweep.js";
+import { buildCertificateRouter } from "./certificates/routes.js";
+import { buildCustomerRouter } from "./customers/routes.js";
+import { env } from "./env.js";
+import { buildEstablecimientoRouter } from "./establecimientos/routes.js";
+import { buildInvoiceRouter } from "./invoices/routes.js";
 import { logger as defaultLogger } from "./logger.js";
+import { errorHandler } from "./middleware/error-handler.js";
+import { originCheckMiddleware } from "./middleware/origin-check.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createRequestLogger } from "./middleware/request-logger.js";
-import { errorHandler } from "./middleware/error-handler.js";
+import { securityHeadersMiddleware } from "./middleware/security-headers.js";
 import { validateBody } from "./middleware/validate.js";
-import { buildAuthRouter } from "./auth/routes.js";
 import { buildTenantRouter } from "./tenants/routes.js";
-import { buildEstablecimientoRouter } from "./establecimientos/routes.js";
-import { buildCustomerRouter } from "./customers/routes.js";
-import { buildInvoiceRouter } from "./invoices/routes.js";
 
 export interface HealthBody {
   status: "ok";
@@ -70,6 +77,18 @@ export interface HealthDbOkBody {
 
 export interface HealthDbErrorBody {
   db: "down";
+}
+
+export interface ReadyOkBody {
+  status: "ready";
+  db: "ok";
+  sriCore: "ok" | "skipped";
+}
+
+export interface ReadyErrorBody {
+  status: "down";
+  db?: "down" | "ok";
+  sriCore?: "down" | "ok" | "skipped";
 }
 
 export interface CreateAppOptions {
@@ -95,6 +114,13 @@ export interface CreateAppOptions {
    * when calling sri-core. Defaults to `env.SERVICE_JWT_SECRET`.
    */
   serviceJwtSecret?: string;
+  /**
+   * Disable the `originCheckMiddleware` (defence-in-depth CSRF guard).
+   * Defaults to `false`. Integration tests that exercise the full
+   * router via Supertest pass `true` because the test harness doesn't
+   * set the `Origin` header on in-process requests.
+   */
+  disableOriginCheck?: boolean;
 }
 
 export function createApp(options: CreateAppOptions = {}): Express {
@@ -104,13 +130,33 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.disable("x-powered-by");
 
-  // Trust the loopback proxy in tests + dev (Supertest connects via ::ffff:127.0.0.1).
-  // The rate-limit library inspects `app.get("trust proxy")` to decide how to
-  // resolve `req.ip`. We deliberately use the conservative "loopback" preset:
-  // in production behind a real proxy, set `TRUST_PROXY=1` and update here.
-  app.set("trust proxy", "loopback");
+  // Trust-proxy configuration. The rate-limit library inspects
+  // `app.get("trust proxy")` to decide how to resolve `req.ip`.
+  //
+  // Source: `env.TRUST_PROXY_HOPS` (defaults to `"loopback"`). Express
+  // accepts numeric hop counts ("1", "2", …), the string presets
+  // ("loopback", "linklocal", "uniquelocal"), boolean strings ("true"),
+  // and IP/subnet lists — we treat the env value as a hop count when it
+  // parses as a positive integer, and as a literal string otherwise.
+  // Production behind nginx/ALB: set `TRUST_PROXY_HOPS=1`. The
+  // `apps/api/README.md` documents the matrix.
+  const rawTrustProxy = env.TRUST_PROXY_HOPS ?? "loopback";
+  const parsedHops = Number.parseInt(rawTrustProxy, 10);
+  const trustProxy: string | number | boolean =
+    rawTrustProxy === "true"
+      ? true
+      : Number.isFinite(parsedHops) && parsedHops >= 0 && String(parsedHops) === rawTrustProxy
+        ? parsedHops
+        : rawTrustProxy;
+  app.set("trust proxy", trustProxy);
 
-  // -- 0) Cookie parser. MUST run before the auth middlewares that read
+  // -- 0a) Security headers (HSTS in prod, X-Frame-Options, X-Content-Type-
+  //        Options, Referrer-Policy, COOP, CORP). Runs EARLY so even error
+  //        responses carry the hardening. See `middleware/security-headers.ts`
+  //        for the rationale of each header.
+  app.use(securityHeadersMiddleware());
+
+  // -- 0b) Cookie parser. MUST run before the auth middlewares that read
   //       `req.cookies`. Cookies are not logged thanks to the project-wide
   //       redaction list in @facturador/logger.
   app.use(cookieParser());
@@ -124,9 +170,32 @@ export function createApp(options: CreateAppOptions = {}): Express {
   // -- 3) Body parser. After logger so a body parse error has a correlated id.
   app.use(express.json({ limit: "1mb" }));
 
+  // -- 4) Origin-header defence-in-depth CSRF guard. Runs BEFORE any route
+  //       so mutating verbs from a foreign origin are rejected before the
+  //       handler executes. Same-origin and explicit allowlist entries pass;
+  //       `/healthz` and `/readyz` are skipped (they are read-only probes).
+  //       Tests pass `disableOriginCheck: true` because Supertest doesn't
+  //       set `Origin` on in-process requests.
+  app.use(
+    originCheckMiddleware({
+      disabled: options.disableOriginCheck === true,
+    }),
+  );
+
   // ---------------- Routes ----------------------------------------------
 
   app.get("/health", (_req: Request, res: Response<HealthBody>) => {
+    res.json({
+      status: "ok",
+      service: "api",
+      uptimeSec: Math.floor(process.uptime()),
+    });
+  });
+
+  // `/healthz` — process-level liveness alias matching sri-core's pattern.
+  // Same semantics as `/health`; kept distinct so k8s-style probes and the
+  // existing `/health` consumers can coexist without renaming either side.
+  app.get("/healthz", (_req: Request, res: Response<HealthBody>) => {
     res.json({
       status: "ok",
       service: "api",
@@ -148,6 +217,50 @@ export function createApp(options: CreateAppOptions = {}): Express {
       }
     },
   );
+
+  // `/readyz` — readiness gate (DB ping + optional sri-core ping). Returns
+  // 503 if any downstream dependency is unreachable. The body NEVER carries
+  // an upstream error string — only short status tokens (security.md: log
+  // codes, not bodies).
+  app.get("/readyz", async (_req: Request, res: Response<ReadyOkBody | ReadyErrorBody>) => {
+    // 1. DB check (same query as `/health-db`).
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      res.status(503).json({ status: "down", db: "down" });
+      return;
+    }
+
+    // 2. Optional sri-core ping. Disabled by default so tests + simple
+    //    dev rigs aren't coupled to sri-core's availability. Operators
+    //    set `READYZ_PING_SRI_CORE=true` in environments where the api
+    //    must not advertise ready while sri-core is down.
+    if (env.READYZ_PING_SRI_CORE) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+          controller.abort();
+        }, 1500);
+        try {
+          const url = new URL("/healthz", env.SRI_CORE_URL).toString();
+          const resp = await fetch(url, { signal: controller.signal });
+          if (!resp.ok) {
+            res.status(503).json({ status: "down", db: "ok", sriCore: "down" });
+            return;
+          }
+        } finally {
+          clearTimeout(timer);
+        }
+      } catch {
+        res.status(503).json({ status: "down", db: "ok", sriCore: "down" });
+        return;
+      }
+      res.status(200).json({ status: "ready", db: "ok", sriCore: "ok" });
+      return;
+    }
+
+    res.status(200).json({ status: "ready", db: "ok", sriCore: "skipped" });
+  });
 
   // Zod-validated echo route used by Phase 6/7 Supertest assertions. Validates
   // through `LoginRequestSchema` (no auth side-effects) and echoes the parsed
@@ -259,6 +372,32 @@ export function createApp(options: CreateAppOptions = {}): Express {
         : { serviceJwtSecret: options.serviceJwtSecret }),
     }),
   );
+
+  // ---------------- Certificates proxy (production-readiness §14) -----
+  app.use(
+    "/api/v1",
+    buildCertificateRouter({
+      prisma,
+      logger: rootLogger,
+      ...(options.sriCoreBaseUrl === undefined
+        ? {}
+        : { sriCoreBaseUrl: options.sriCoreBaseUrl }),
+      ...(options.sriCoreFetchImpl === undefined
+        ? {}
+        : { fetchImpl: options.sriCoreFetchImpl }),
+      ...(options.serviceJwtSecret === undefined
+        ? {}
+        : { serviceJwtSecret: options.serviceJwtSecret }),
+    }),
+  );
+
+  // ---------------- Background expired-session sweep ------------------
+  // Schedules a daily node-cron tick that purges sessions whose
+  // `expiresAt` is older than 7 days. Skipped under NODE_ENV=test so the
+  // vitest runner doesn't accumulate long-lived timers across files.
+  if (env.NODE_ENV !== "test") {
+    scheduleSessionSweep({ prisma, logger: rootLogger });
+  }
 
   // ---------------- Terminal middleware (MUST be last) -------------------
   app.use(errorHandler);

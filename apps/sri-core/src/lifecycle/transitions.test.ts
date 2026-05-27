@@ -6,7 +6,9 @@
  * that `ERROR_RED` self-loop is allowed (retry bookkeeping).
  */
 import { describe, expect, it } from "vitest";
+
 import { SriEstado } from "@facturador/db";
+
 import { ALLOWED, TERMINAL_ESTADOS, canTransition, isTerminal } from "./transitions.js";
 
 const ESTADOS = Object.values(SriEstado);

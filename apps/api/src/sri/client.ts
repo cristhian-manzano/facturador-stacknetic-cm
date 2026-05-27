@@ -18,13 +18,31 @@
  * Note: this slice never logs the JWT, never logs the request body, and
  * never logs the response body — REDACT_PATHS already covers each of these.
  */
+import type { ZodTypeAny } from "zod";
+
+import { UpstreamError } from "@facturador/utils/errors";
 import {
   mintServiceJwt as mintServiceJwtPrimitive,
   SERVICE_JWT_AUDIENCE,
   SERVICE_JWT_ISSUER,
 } from "@facturador/utils/service-jwt";
-import { UpstreamError } from "@facturador/utils/errors";
+
 import { env } from "../env.js";
+
+/**
+ * Retry budget for transient upstream 5xx (502 / 503 / 504). Wait
+ * times in milliseconds — three attempts after the initial request.
+ * 4xx responses MUST NOT be retried (they're contract violations,
+ * not transient).
+ */
+const RETRY_BACKOFF_MS: readonly number[] = [100, 250, 500];
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 export interface MintServiceJwtArgs {
   readonly companyId: string;
@@ -61,6 +79,19 @@ export interface SriCoreFetchOptions {
   readonly serviceJwtTtlSeconds?: number;
   /** Inject a fetch implementation for tests. Defaults to globalThis.fetch. */
   readonly fetchImpl?: typeof fetch;
+  /**
+   * Optional Zod schema applied to the parsed JSON body. When provided
+   * the helper calls `schema.parse(json)` and throws `UpstreamError` on
+   * mismatch — this replaces the legacy `as T` cast at every call site.
+   * Existing callers that pass no schema keep the previous behaviour.
+   */
+  readonly schema?: ZodTypeAny;
+  /**
+   * Optional override of the retry backoff vector for transient 5xx
+   * responses (502 / 503 / 504). Default `[100, 250, 500]` ms. Set to
+   * `[]` to disable retries entirely (used by some tests).
+   */
+  readonly retryBackoffMs?: readonly number[];
 }
 
 export interface SriCoreFetchResult<T> {
@@ -99,16 +130,54 @@ export async function sriCoreFetch<T>(
     headers["X-Request-Id"] = options.requestId;
   }
 
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: options.method ?? "GET",
-      headers,
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-    });
-  } catch (cause) {
+  // Retry loop on transient 5xx (502/503/504). 4xx is a terminal
+  // contract violation — never retried. Connection failures count as
+  // transient and exhaust the budget exactly like a 503 would.
+  const backoff: readonly number[] = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
+  const maxAttempts = backoff.length + 1;
+  let response: Response | null = null;
+  let lastTransientCause: unknown = undefined;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      response = await fetchImpl(url, {
+        method: options.method ?? "GET",
+        headers,
+        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      });
+    } catch (cause) {
+      // Network-level failure: surface as transient. Retry until budget
+      // is exhausted, then throw UpstreamError.
+      lastTransientCause = cause;
+      response = null;
+      if (attempt < backoff.length) {
+        const ms = backoff[attempt];
+        if (ms !== undefined) await sleep(ms);
+        continue;
+      }
+      throw new UpstreamError("sri-core network failure", "sri.network", {
+        cause,
+      });
+    }
+
+    if (RETRYABLE_STATUSES.has(response.status) && attempt < backoff.length) {
+      // Drain the body so the connection can be reused and back off.
+      try {
+        await response.text();
+      } catch {
+        /* ignore drain errors */
+      }
+      lastTransientCause = { status: response.status };
+      const ms = backoff[attempt];
+      if (ms !== undefined) await sleep(ms);
+      continue;
+    }
+    // Either a 2xx, a 3xx, a non-retryable 4xx, or budget exhausted on
+    // a transient 5xx — fall through to the body-parse stage.
+    break;
+  }
+  if (response === null) {
     throw new UpstreamError("sri-core network failure", "sri.network", {
-      cause,
+      cause: lastTransientCause,
     });
   }
 
@@ -132,6 +201,26 @@ export async function sriCoreFetch<T>(
       // observability only.
       cause: parsed,
     });
+  }
+
+  // Optional Zod parse: replaces the legacy `as T` cast at every call
+  // site. Schema mismatch surfaces as a 502 UpstreamError so the caller
+  // doesn't have to distinguish between "sri-core returned a 5xx" and
+  // "sri-core returned a 2xx with a bogus body" — both are upstream
+  // contract violations from the api's perspective.
+  if (options.schema !== undefined) {
+    const result = options.schema.safeParse(parsed);
+    if (!result.success) {
+      throw new UpstreamError(
+        "sri-core response failed schema validation",
+        "sri.contract",
+        { cause: result.error },
+      );
+    }
+    return {
+      status: response.status,
+      body: result.data as T,
+    };
   }
 
   return { status: response.status, body: parsed as T };

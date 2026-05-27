@@ -25,14 +25,17 @@
  * the exact same parameters as production code (we delegate to the
  * `hashPassword` helper).
  */
-import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { ulid } from "ulid";
-import { useTestSchema } from "@facturador/db/test-harness";
+import { describe, expect, it } from "vitest";
+
 import { LoginResponseSchema, MeResponseSchema } from "@facturador/contracts/auth";
 import { ProblemDetailSchema } from "@facturador/contracts/errors";
-import { createApp } from "../src/server.js";
+import { useTestSchema } from "@facturador/db/test-harness";
+
 import { hashPassword } from "../src/auth/password.js";
+import { createApp } from "../src/server.js";
+
 import { createTestApp } from "./factory.js";
 
 // `Role` enum mirrored locally so tests don't need to add `@prisma/client`
@@ -108,7 +111,16 @@ async function seedAdmin(prisma: ReturnType<ReturnType<typeof useTestSchema>["ge
     },
   });
   await prisma.membership.create({
-    data: { id: ulid(), userId, companyId, role: Role.OWNER },
+    data: {
+      id: ulid(),
+      userId,
+      companyId,
+      role: Role.OWNER,
+      // Production-readiness invitation lifecycle: `acceptedAt` must be
+      // non-null for the membership to count as active. Seed it inline
+      // so the auth tests authenticate against an accepted invite.
+      acceptedAt: new Date(),
+    },
   });
   return { companyId, userId };
 }
@@ -477,8 +489,10 @@ describe("Constant-time login timing (sanity)", () => {
     await seedAdmin(prisma);
     // Create a vanilla Express app (no test-logger sink) so the timing
     // measurement reflects the production code path. A fresh app means
-    // fresh in-memory rate-limit buckets.
-    const app = createApp({ prisma });
+    // fresh in-memory rate-limit buckets. Origin check disabled because
+    // Supertest doesn't set the `Origin` header on in-process requests
+    // (production-readiness §5 added that middleware).
+    const app = createApp({ prisma, disableOriginCheck: true });
 
     // Budget: per-IP rate limit defaults to 5/min. We do exactly 4 login
     // attempts (2 wrong-password + 2 unknown-email), then stop. That keeps

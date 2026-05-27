@@ -8,8 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "dev": "vite",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
     "clean": "rm -rf dist"

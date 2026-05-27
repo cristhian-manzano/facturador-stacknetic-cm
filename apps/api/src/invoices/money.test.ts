@@ -14,6 +14,7 @@
  * Synthetic data only — no PII, no real-world totals.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   Decimal,
   MONEY_DP,

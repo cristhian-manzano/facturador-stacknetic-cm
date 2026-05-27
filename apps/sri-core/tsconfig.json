@@ -2,7 +2,23 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    // apps/sri-core runs on Node 22 with native ESM. Switch from the
+    // base `Bundler` resolver to `NodeNext` so the TS compiler enforces
+    // the `.js` suffix on relative imports that Node ESM requires at
+    // runtime. Source files already comply.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "test/**/*", "scripts/**/*", "vitest.config.ts"]
+  "include": ["src/**/*", "test/**/*", "scripts/**/*", "vitest.config.ts"],
+  // Project references — wire upstream package builds so `tsc --build`
+  // at the repo root (via `pnpm typecheck:project`) compiles them in
+  // dependency order. The default per-workspace `pnpm typecheck` is
+  // unchanged: it still runs `tsc -p tsconfig.json --noEmit` directly.
+  "references": [
+    { "path": "../../packages/contracts/tsconfig.build.json" },
+    { "path": "../../packages/db/tsconfig.build.json" },
+    { "path": "../../packages/logger/tsconfig.build.json" },
+    { "path": "../../packages/utils/tsconfig.build.json" }
+  ]
 }

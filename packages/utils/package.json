@@ -33,6 +33,22 @@
     "./sri": {
       "types": "./dist/sri/index.d.ts",
       "import": "./dist/sri/index.js"
+    },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "import": "./dist/context/index.js"
+    },
+    "./time": {
+      "types": "./dist/time/index.d.ts",
+      "import": "./dist/time/index.js"
+    },
+    "./hash": {
+      "types": "./dist/hash/index.d.ts",
+      "import": "./dist/hash/index.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "import": "./dist/db/index.js"
     }
   },
   "scripts": {
@@ -40,8 +56,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "test": "dotenv -e ../../.env -- vitest run --passWithNoTests",
-    "test:coverage": "dotenv -e ../../.env -- vitest run --coverage --passWithNoTests",
+    "test": "dotenv -e ../../.env -- vitest run",
+    "test:coverage": "dotenv -e ../../.env -- vitest run --coverage",
     "clean": "rm -rf dist"
   },
   "dependencies": {

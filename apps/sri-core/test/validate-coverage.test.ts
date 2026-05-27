@@ -6,13 +6,14 @@
  * meets its function-coverage threshold (TASKS-0007 §6.1, sri-core ≥ 85%
  * lines + ≥ 75% branches — function coverage rolls up the same way).
  */
-import { describe, expect, it } from "vitest";
 import express from "express";
 import request from "supertest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { validateParams, validateQuery } from "../src/middleware/validate.js";
-import { requestIdMiddleware } from "../src/middleware/request-id.js";
+
 import { errorHandler } from "../src/middleware/error-handler.js";
+import { requestIdMiddleware } from "../src/middleware/request-id.js";
+import { validateParams, validateQuery } from "../src/middleware/validate.js";
 
 function buildAppForValidator(mw: express.RequestHandler, route: string): express.Express {
   const app = express();

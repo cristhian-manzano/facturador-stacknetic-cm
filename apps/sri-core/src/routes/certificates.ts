@@ -24,8 +24,9 @@
  */
 import { Router, type Request, type Response } from "express";
 import multer, { type Multer } from "multer";
-import { z } from "zod";
 import { ulid } from "ulid";
+import { z } from "zod";
+
 import type { Certificate, PrismaClient } from "@facturador/db";
 import { newId } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
@@ -35,7 +36,8 @@ import {
   type AuditPrismaClient,
 } from "@facturador/utils/audit";
 import { ForbiddenError, NotFoundError, ValidationError } from "@facturador/utils/errors";
-import { encryptP12 } from "../crypto/envelope.js";
+
+import { clearActiveCertificateCache } from "../certificates/active.js";
 import {
   BadPassphraseError,
   CannotDeleteActiveError,
@@ -44,7 +46,7 @@ import {
   ParseError,
 } from "../certificates/errors.js";
 import { parseP12 } from "../certificates/parser.js";
-import { clearActiveCertificateCache } from "../certificates/active.js";
+import { encryptP12 } from "../crypto/envelope.js";
 
 /** Maximum multipart payload — TASKS-0021 §3.1. */
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -480,7 +482,7 @@ export function multerErrorHandler(
         status: 413,
         code: "certificate.too_large",
         type: "urn:facturador:error:certificate.too_large",
-        detail: `Max upload size is ${MAX_UPLOAD_BYTES} bytes.`,
+        detail: `Max upload size is ${String(MAX_UPLOAD_BYTES)} bytes.`,
         ...(typeof requestId === "string" && requestId.length > 0 ? { instance: requestId } : {}),
       });
       return;

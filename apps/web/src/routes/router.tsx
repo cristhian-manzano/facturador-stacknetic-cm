@@ -8,18 +8,23 @@
  *
  * Route tree:
  *
- *   /login              — public, placeholder for SPEC-0041 form.
- *   /forbidden          — public, 403 destination.
- *   /tenants/select     — public-after-login, RequireAuth + no tenant.
- *   /                   — RequireAuth + AppLayout (home page).
- *   /invoices           — RequireAuth + invoice.read.
- *   /customers          — RequireAuth + customer.read.
- *   /establecimientos   — RequireAuth + establecimiento.manage.
+ *   /login              — public, placeholder for SPEC-0041 form (EAGER).
+ *   /forbidden          — public, 403 destination (EAGER — small + always-needed).
+ *   /tenants/select     — public-after-login, RequireAuth + no tenant (LAZY).
+ *   /                   — RequireAuth + AppLayout (home page) (LAZY).
+ *   /invoices           — RequireAuth + invoice.read (LAZY).
+ *   /customers          — RequireAuth + customer.read (LAZY).
+ *   /establecimientos   — RequireAuth + establecimiento.manage (LAZY).
  *   /settings           — RequireAuth + any admin perm (configured per route).
  *   *                   — 404.
+ *
+ * Bundle-size policy (REVIEW-0044): every non-login route is lazy-loaded so
+ * `/login` ships with as little JavaScript as possible. The Suspense
+ * fallback is a tiny inline spinner — no extra dependencies. The target is
+ * a login chunk strictly smaller than the eager-loaded baseline.
  */
+import { lazy, Suspense, type ReactElement } from "react";
 import { createBrowserRouter, createMemoryRouter, type RouteObject } from "react-router-dom";
-import type { ReactElement } from "react";
 
 /**
  * Re-derived router type. `RouterProvider` consumes the return type of
@@ -30,16 +35,45 @@ export type AppRouter = ReturnType<typeof createBrowserRouter>;
 
 import { RequireAuth } from "../auth/RequireAuth.js";
 import { RequirePermission } from "../auth/RequirePermission.js";
-import { AppLayout } from "../layout/AppLayout.js";
 import { ForbiddenPage } from "../pages/ForbiddenPage.js";
-import { HomePage } from "../pages/HomePage.js";
 import { LoginPage } from "../pages/LoginPage.js";
 import { NotFoundPage } from "../pages/NotFoundPage.js";
-import { TenantSelectPage } from "../pages/TenantSelectPage.js";
-import { InvoicesNewPage } from "./invoices.new.js";
-import { InvoicesEditPage } from "./invoices.$id.edit.js";
-import { InvoicesIndexPage } from "./invoices.index.js";
-import { InvoicesDetailPage } from "./invoices.$id.js";
+
+// ---------------------------------------------------------------------------
+// Lazy-loaded route modules
+// ---------------------------------------------------------------------------
+// React.lazy expects a default export, so we adapt the named-export modules
+// via a thin promise transform. Every chunk is independent so navigating to
+// /invoices doesn't pull in /customers code.
+
+const AppLayout = lazy(async () => {
+  const mod = await import("../layout/AppLayout.js");
+  return { default: mod.AppLayout };
+});
+const HomePage = lazy(async () => {
+  const mod = await import("../pages/HomePage.js");
+  return { default: mod.HomePage };
+});
+const TenantSelectPage = lazy(async () => {
+  const mod = await import("../pages/TenantSelectPage.js");
+  return { default: mod.TenantSelectPage };
+});
+const InvoicesIndexPage = lazy(async () => {
+  const mod = await import("./invoices.index.js");
+  return { default: mod.InvoicesIndexPage };
+});
+const InvoicesNewPage = lazy(async () => {
+  const mod = await import("./invoices.new.js");
+  return { default: mod.InvoicesNewPage };
+});
+const InvoicesDetailPage = lazy(async () => {
+  const mod = await import("./invoices.$id.js");
+  return { default: mod.InvoicesDetailPage };
+});
+const InvoicesEditPage = lazy(async () => {
+  const mod = await import("./invoices.$id.edit.js");
+  return { default: mod.InvoicesEditPage };
+});
 
 /** Tiny placeholder rendered by routes whose pages live in later specs. */
 function Placeholder({ title }: { title: string }): ReactElement {
@@ -54,6 +88,33 @@ function Placeholder({ title }: { title: string }): ReactElement {
 }
 
 /**
+ * Minimal Suspense fallback rendered while a route chunk loads. Kept inline
+ * so it doesn't itself trigger a chunk fetch. Uses `role="status"` so
+ * assistive tech announces the loading state.
+ */
+function RouteFallback(): ReactElement {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="route-fallback"
+      className="flex items-center justify-center py-8 text-sm text-slate-600"
+    >
+      <span
+        aria-hidden="true"
+        className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-primary-600"
+      />
+      Cargando…
+    </div>
+  );
+}
+
+/** Wrap any element in a Suspense boundary with the shared fallback. */
+function lazyWrap(element: ReactElement): ReactElement {
+  return <Suspense fallback={<RouteFallback />}>{element}</Suspense>;
+}
+
+/**
  * Build the route table. Exported so tests can pass it to
  * `createMemoryRouter` with different initial URLs.
  */
@@ -63,36 +124,36 @@ export function buildRoutes(): RouteObject[] {
     { path: "/forbidden", element: <ForbiddenPage /> },
     {
       path: "/tenants/select",
-      element: (
+      element: lazyWrap(
         // RequireAuth allows ready-without-tenant through to this route by
         // matching on the path before redirecting. We let users see this
         // page even with status === ready (the guard redirects them HERE
         // when currentCompanyId is null).
-        <TenantSelectPage />
+        <TenantSelectPage />,
       ),
     },
     {
       element: <RequireAuth />,
       children: [
         {
-          element: <AppLayout />,
+          element: lazyWrap(<AppLayout />),
           children: [
-            { index: true, element: <HomePage /> },
+            { index: true, element: lazyWrap(<HomePage />) },
             {
               path: "invoices",
-              element: <InvoicesIndexPage />,
+              element: lazyWrap(<InvoicesIndexPage />),
             },
             {
               path: "invoices/new",
-              element: <InvoicesNewPage />,
+              element: lazyWrap(<InvoicesNewPage />),
             },
             {
               path: "invoices/:id/edit",
-              element: <InvoicesEditPage />,
+              element: lazyWrap(<InvoicesEditPage />),
             },
             {
               path: "invoices/:id",
-              element: <InvoicesDetailPage />,
+              element: lazyWrap(<InvoicesDetailPage />),
             },
             {
               path: "customers",

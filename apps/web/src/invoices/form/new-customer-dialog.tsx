@@ -20,8 +20,8 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useForm } from "react-hook-form";
 
-import { ApiError } from "../../lib/api.js";
 import { t } from "../../i18n/es.js";
+import { ApiError } from "../../lib/api.js";
 import { createCustomer, type CustomerCreatedResponse } from "../api.js";
 import { TIPO_IDENTIFICACION_TABLE } from "../tax-rates.js";
 

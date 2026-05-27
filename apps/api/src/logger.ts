@@ -7,6 +7,7 @@
  * Per SPEC-0006 §6.9.
  */
 import { createLogger, type Logger } from "@facturador/logger";
+
 import { env } from "./env.js";
 
 export const logger: Logger = createLogger({

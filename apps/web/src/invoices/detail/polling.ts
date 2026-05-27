@@ -24,11 +24,11 @@
 import type { SriEstado } from "@facturador/contracts/sri";
 
 /** Poll interval in milliseconds. The interval is fixed (no backoff). */
-export const POLL_INTERVAL_MS: 5_000 = 5_000;
+export const POLL_INTERVAL_MS = 5_000;
 
 /** Absolute polling cap (5 minutes). After this elapses since the FIRST
  * poll, `refetchInterval` returns `false` and no further polls fire. */
-export const POLL_MAX_DURATION_MS: 300_000 = 300_000;
+export const POLL_MAX_DURATION_MS = 300_000;
 
 /**
  * The SRI estados that trigger polling. Anything outside this set is

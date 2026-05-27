@@ -2,6 +2,7 @@
  * Tests for `TipoEmisionSchema`. Per TASKS-0005 §2.11.
  */
 import { describe, expect, it } from "vitest";
+
 import { TipoEmisionSchema } from "./tipo-emision.js";
 
 describe("TipoEmisionSchema", () => {

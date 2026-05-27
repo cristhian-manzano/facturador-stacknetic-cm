@@ -24,14 +24,20 @@
  *     never read a schema path from request input).
  *
  * Memoisation:
- *   - The XSD bytes are read once per process and cached on first call.
- *     `xmllint-wasm` re-parses the schema on every `validateXML` call —
- *     that's a libxml2 internal — but at least we avoid re-reading the
- *     file from disk.
+ *   - The XSD bytes are read once per process and cached on first call
+ *     via `cachedSchema` below. `xmllint-wasm` re-parses the schema on
+ *     every `validateXML` call — that's a libxml2 internal — but we
+ *     avoid re-reading the file from disk.
+ *   - The cache is lazily initialised so an `import` of this module
+ *     never pays the disk-read cost; only the first
+ *     `validateAgainstXsd(...)` call does. The boot-time warmer in
+ *     `index.ts` exploits this so the first real request never sees
+ *     the read amortised.
  */
-import { readFileSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { validateXML } from "xmllint-wasm";
 
 /** Result shape mirrors the original SPEC-0023 contract (libxmljs2 era). */
@@ -75,14 +81,26 @@ interface SchemaBundle {
   readonly xmldsigXsd: string;
 }
 
-let cachedSchemas: SchemaBundle | undefined;
+/**
+ * Lazy-initialised single-instance cache. Re-use across every
+ * `validateAgainstXsd()` call so we don't re-read the 40 KiB factura
+ * XSD + its xmldsig import on every invocation.
+ *
+ * Test note: `__resetSchemaCacheForTests()` resets this to `null` so a
+ * suite that spies on `fs.readFileSync` can observe the second-call-no-
+ * read assertion.
+ */
+let cachedSchema: SchemaBundle | null = null;
 
 const loadSchemas = (): SchemaBundle => {
-  if (cachedSchemas) return cachedSchemas;
-  const facturaXsd = readFileSync(getFacturaXsdPath(), "utf8");
-  const xmldsigXsd = readFileSync(getXmldsigXsdPath(), "utf8");
-  cachedSchemas = { facturaXsd, xmldsigXsd };
-  return cachedSchemas;
+  if (cachedSchema !== null) return cachedSchema;
+  // We deliberately call into `fs` via the named import object so a
+  // vitest spy (`vi.spyOn(fs, 'readFileSync')`) can intercept and
+  // count the call.
+  const facturaXsd = fs.readFileSync(getFacturaXsdPath(), "utf8");
+  const xmldsigXsd = fs.readFileSync(getXmldsigXsdPath(), "utf8");
+  cachedSchema = { facturaXsd, xmldsigXsd };
+  return cachedSchema;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -122,5 +140,5 @@ export const validateAgainstXsd = async (xml: string): Promise<XsdValidationResu
  * happy path but it keeps the cache honest in fuzz-style suites.
  */
 export const __resetSchemaCacheForTests = (): void => {
-  cachedSchemas = undefined;
+  cachedSchema = null;
 };

@@ -24,9 +24,9 @@ import {
   type ReactElement,
 } from "react";
 
-import { searchCustomers, type CustomerListItem } from "../api.js";
-import { ApiError } from "../../lib/api.js";
 import { t } from "../../i18n/es.js";
+import { ApiError } from "../../lib/api.js";
+import { searchCustomers, type CustomerListItem } from "../api.js";
 
 export interface CustomerComboboxProps {
   /** Currently-selected customer id (or empty string). */
@@ -52,6 +52,10 @@ export function CustomerCombobox({
 }: CustomerComboboxProps): ReactElement {
   const inputId = useId();
   const listboxId = useId();
+  // Stable prefix for option ids so the input's aria-activedescendant
+  // resolves to the currently-highlighted option element
+  // (REVIEW-0044 §9).
+  const optionIdPrefix = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState<string>(selectedLabel);
   const [items, setItems] = useState<CustomerListItem[]>([]);
@@ -171,6 +175,12 @@ export function CustomerCombobox({
           aria-expanded={open}
           aria-controls={listboxId}
           aria-autocomplete="list"
+          // Only point at an active option when the listbox is open AND
+          // we have at least one item — pointing at a non-existent
+          // descendant confuses screen readers (REVIEW-0044 §9).
+          aria-activedescendant={
+            open && items.length > 0 ? `${optionIdPrefix}-${items[highlighted]?.id ?? ""}` : undefined
+          }
           data-testid="customer-search-input"
           className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
           placeholder={t("invoice.form.customer.search")}
@@ -226,6 +236,7 @@ export function CustomerCombobox({
               <button
                 type="button"
                 role="option"
+                id={`${optionIdPrefix}-${item.id}`}
                 aria-selected={idx === highlighted}
                 data-testid={`customer-option-${item.id}`}
                 onMouseEnter={() => { setHighlighted(idx); }}

@@ -35,8 +35,9 @@
  * `@facturador/config/eslint`).
  */
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { PrismaClient } from "@prisma/client";
 import { ulid } from "ulid";
 

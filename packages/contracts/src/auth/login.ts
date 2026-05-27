@@ -12,6 +12,7 @@
  *     double-submit pattern documented in SPEC-0010 §FR-5.
  */
 import { z } from "zod";
+
 import { EmailSchema } from "../primitives/email.js";
 import { UlidSchema } from "../primitives/ulid.js";
 import { MembershipSummarySchema } from "../tenants/membership.js";
