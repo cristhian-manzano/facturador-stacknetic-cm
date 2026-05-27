@@ -150,9 +150,7 @@ async function main(): Promise<void> {
       console.log(
         `[smoke-sri] SUCCESS — numeroAutorizacion=${autResult.numeroAutorizacion ?? "(none)"} fechaAutorizacion=${autResult.fechaAutorizacion ?? "(none)"}`,
       );
-      console.log(
-        `[smoke-sri] hasAutorizadoXml=${String(autResult.autorizadoXml !== undefined)}`,
-      );
+      console.log(`[smoke-sri] hasAutorizadoXml=${String(autResult.autorizadoXml !== undefined)}`);
       process.exit(0);
     }
     if (autResult.estado === "NO_AUTORIZADO") {

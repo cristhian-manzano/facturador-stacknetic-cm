@@ -53,9 +53,7 @@ export interface SecurityHeadersOptions {
   alwaysSetHsts?: boolean;
 }
 
-export function securityHeadersMiddleware(
-  options: SecurityHeadersOptions = {},
-): RequestHandler {
+export function securityHeadersMiddleware(options: SecurityHeadersOptions = {}): RequestHandler {
   const hstsMaxAgeSeconds = options.hstsMaxAgeSeconds ?? TWO_YEARS_SECONDS;
   const alwaysSetHsts = options.alwaysSetHsts ?? false;
 

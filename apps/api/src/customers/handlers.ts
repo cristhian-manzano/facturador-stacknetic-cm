@@ -38,7 +38,6 @@ import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@facturador/utils/errors";
 
-
 import { ensureConsumidorFinal } from "./ensure-consumidor-final.js";
 import { validateCreate, validateUpdate } from "./validate.js";
 

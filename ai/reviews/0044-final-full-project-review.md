@@ -27,24 +27,24 @@ Conteo de hallazgos priorizados:
 
 ## 2. Validation Commands Executed
 
-| Command | Result | Notes | Blocking |
-| ------- | ------ | ----- | -------- |
-| `pnpm --filter @facturador/db prisma:validate` | PASS | Prisma schema valido. | No |
-| `pnpm lint` | FAIL | 309 errores: parser project para scripts/configs, reglas React Hooks no instaladas, `no-unsafe-*`, `no-non-null-assertion`, `restrict-template-expressions`, etc. | Si |
-| `pnpm typecheck` | FAIL | Falla primero en `@facturador/db`: `test/test-harness-internals.test.ts(40,12): 'rows' is of type 'unknown'`. | Si |
-| `pnpm --filter @facturador/utils typecheck` | PASS | Utils compila aislado. | No |
-| `pnpm --filter @facturador/api typecheck` | PASS | API compila aislado. | No |
-| `pnpm --filter @facturador/web typecheck` | FAIL | 3 errores TS2339 por `.value` en `HTMLElement` en tests. | Si |
-| `pnpm --filter @facturador/sri-core typecheck` | FAIL | 4 errores TS18046 en `src/jobs/poll-en-proceso.ts`: `rows` es `unknown`. | Si |
-| `pnpm build` | FAIL | Dentro del sandbox fallo por `tsx` IPC; fuera del sandbox llego a fallo real: `apps/sri-core/src/jobs/poll-en-proceso.ts` no compila por `rows` `unknown`. | Si |
-| `pnpm format:check` | FAIL | Prettier reporta 30 archivos con formato pendiente. | Si |
-| `pnpm test` | PASS fuera del sandbox | Dentro del sandbox fallo por DB/sockets; fuera del sandbox pasaron workspaces: DB 13, contracts 287, logger 35, utils 152, API 312, SRI Core 397, web 323 tests. Total: 1519 tests. | No, pero requiere entorno con DB/sockets |
-| `pnpm --filter @facturador/web test` | PASS | 44 archivos, 323 tests. Warnings de React Router v7 y MSW unhandled requests. | No |
-| `pnpm --filter @facturador/sri-core test` | PASS fuera del sandbox | 31 archivos, 397 tests. Dentro del sandbox fallo por `tsx` IPC. | No |
-| `pnpm --filter @facturador/api test` | PASS fuera del sandbox | 24 archivos, 312 tests. Dentro del sandbox fallo por sockets/DB. | No |
-| `pnpm --filter @facturador/db prisma:migrate:status` | PASS fuera del sandbox | 6 migraciones encontradas; DB local `facturador.public` al dia. Dentro del sandbox no pudo consultar Postgres. | No |
-| `pnpm -r --workspace-concurrency=1 test:coverage` | FAIL | Paquetes previos pasaron, pero API falla threshold global: branches 67.47% < 70%. El comando se corta antes de cubrir todo el monorepo. | Si |
-| `git status --short` | PASS informativo | Antes y despues de validaciones solo existia `D XXXXXXX-FINAL-DRAFT.md` no relacionado; despues de generar este reporte debe aparecer este archivo nuevo. | No |
+| Command                                              | Result                 | Notes                                                                                                                                                                               | Blocking                                 |
+| ---------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `pnpm --filter @facturador/db prisma:validate`       | PASS                   | Prisma schema valido.                                                                                                                                                               | No                                       |
+| `pnpm lint`                                          | FAIL                   | 309 errores: parser project para scripts/configs, reglas React Hooks no instaladas, `no-unsafe-*`, `no-non-null-assertion`, `restrict-template-expressions`, etc.                   | Si                                       |
+| `pnpm typecheck`                                     | FAIL                   | Falla primero en `@facturador/db`: `test/test-harness-internals.test.ts(40,12): 'rows' is of type 'unknown'`.                                                                       | Si                                       |
+| `pnpm --filter @facturador/utils typecheck`          | PASS                   | Utils compila aislado.                                                                                                                                                              | No                                       |
+| `pnpm --filter @facturador/api typecheck`            | PASS                   | API compila aislado.                                                                                                                                                                | No                                       |
+| `pnpm --filter @facturador/web typecheck`            | FAIL                   | 3 errores TS2339 por `.value` en `HTMLElement` en tests.                                                                                                                            | Si                                       |
+| `pnpm --filter @facturador/sri-core typecheck`       | FAIL                   | 4 errores TS18046 en `src/jobs/poll-en-proceso.ts`: `rows` es `unknown`.                                                                                                            | Si                                       |
+| `pnpm build`                                         | FAIL                   | Dentro del sandbox fallo por `tsx` IPC; fuera del sandbox llego a fallo real: `apps/sri-core/src/jobs/poll-en-proceso.ts` no compila por `rows` `unknown`.                          | Si                                       |
+| `pnpm format:check`                                  | FAIL                   | Prettier reporta 30 archivos con formato pendiente.                                                                                                                                 | Si                                       |
+| `pnpm test`                                          | PASS fuera del sandbox | Dentro del sandbox fallo por DB/sockets; fuera del sandbox pasaron workspaces: DB 13, contracts 287, logger 35, utils 152, API 312, SRI Core 397, web 323 tests. Total: 1519 tests. | No, pero requiere entorno con DB/sockets |
+| `pnpm --filter @facturador/web test`                 | PASS                   | 44 archivos, 323 tests. Warnings de React Router v7 y MSW unhandled requests.                                                                                                       | No                                       |
+| `pnpm --filter @facturador/sri-core test`            | PASS fuera del sandbox | 31 archivos, 397 tests. Dentro del sandbox fallo por `tsx` IPC.                                                                                                                     | No                                       |
+| `pnpm --filter @facturador/api test`                 | PASS fuera del sandbox | 24 archivos, 312 tests. Dentro del sandbox fallo por sockets/DB.                                                                                                                    | No                                       |
+| `pnpm --filter @facturador/db prisma:migrate:status` | PASS fuera del sandbox | 6 migraciones encontradas; DB local `facturador.public` al dia. Dentro del sandbox no pudo consultar Postgres.                                                                      | No                                       |
+| `pnpm -r --workspace-concurrency=1 test:coverage`    | FAIL                   | Paquetes previos pasaron, pero API falla threshold global: branches 67.47% < 70%. El comando se corta antes de cubrir todo el monorepo.                                             | Si                                       |
+| `git status --short`                                 | PASS informativo       | Antes y despues de validaciones solo existia `D XXXXXXX-FINAL-DRAFT.md` no relacionado; despues de generar este reporte debe aparecer este archivo nuevo.                           | No                                       |
 
 Comandos no ejecutados:
 
@@ -52,66 +52,81 @@ Comandos no ejecutados:
 
 ## 3. Overall Readiness Assessment
 
-| Area | Rating | Rationale |
-| ---- | ------ | --------- |
-| Functional readiness | Partially ready | Muchos flujos estan implementados y testeados, pero facturas reales tienen contrato API/Web roto y reemision/emision no siguen spec. |
-| SRI domain readiness | Partially ready | Clave, XML, SOAP y certificados estan avanzados; XAdES tiene un defecto critico de canonicalizacion y no hay validacion con SRI sandbox real. |
-| Test readiness | Partially ready | `pnpm test` pasa fuera del sandbox, pero `test:coverage` falla y hay tests que codifican comportamiento contrario a specs. |
-| Security readiness | Partially ready | Buen aislamiento por `companyId` en muchos endpoints; RBAC y lifecycle de memberships divergen de SPEC-0011. |
-| Architecture readiness | Partially ready | Separacion apps/packages razonable; contratos compartidos no estan alineados con wire real en facturas. |
-| Production readiness | Not ready | `lint`, `typecheck`, `build`, `format:check` y coverage fallan. |
+| Area                   | Rating          | Rationale                                                                                                                                     |
+| ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Functional readiness   | Partially ready | Muchos flujos estan implementados y testeados, pero facturas reales tienen contrato API/Web roto y reemision/emision no siguen spec.          |
+| SRI domain readiness   | Partially ready | Clave, XML, SOAP y certificados estan avanzados; XAdES tiene un defecto critico de canonicalizacion y no hay validacion con SRI sandbox real. |
+| Test readiness         | Partially ready | `pnpm test` pasa fuera del sandbox, pero `test:coverage` falla y hay tests que codifican comportamiento contrario a specs.                    |
+| Security readiness     | Partially ready | Buen aislamiento por `companyId` en muchos endpoints; RBAC y lifecycle de memberships divergen de SPEC-0011.                                  |
+| Architecture readiness | Partially ready | Separacion apps/packages razonable; contratos compartidos no estan alineados con wire real en facturas.                                       |
+| Production readiness   | Not ready       | `lint`, `typecheck`, `build`, `format:check` y coverage fallan.                                                                               |
 
 ## 4. Prompt-by-Prompt Review
 
 ### 0001 - Monorepo and Workspace
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `ai/prompts/0001-*`, `ai/specs/0001-*`, `ai/plans/0001-*`, `ai/tasks/0001-*`, `ai/reviews/0001-*`, `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `apps/*`, `packages/*`.
 
 #### Expected Requirements
+
 Monorepo pnpm, workspaces para apps/packages, TypeScript strict ESM, scripts base, README y estructura inicial.
 
 #### Implementation Found
+
 La estructura existe y los workspaces estan definidos. Los paquetes principales tienen `package.json`, `tsconfig` y scripts. README documenta setup y servicios.
 
 #### Validation Performed
+
 `pnpm -r list --depth -1`, revision manual y comandos globales. Los workspaces son detectados.
 
 #### Findings
+
 - La base del monorepo esta bien.
 - Algunos artefactos de bootstrap quedaron obsoletos frente a specs posteriores, pero eso es normal.
 - `packages/config/src/index.ts` aun exporta `placeholder`; bajo impacto.
 
 #### Risks
+
 Bajo: confusion menor por placeholders remanentes.
 
 #### Required Fixes
+
 Eliminar placeholders que ya no tengan proposito o documentarlos como intencionales.
 
 #### Recommendation
+
 Mantener aprobado como base, sujeto a corregir gates globales.
 
 ### 0002 - Shared Tooling
 
 #### Status
+
 Bloqueado por errores.
 
 #### Files Reviewed
+
 `ai/specs/0002-*`, `eslint.config.js`, `.prettierrc`, `.github/workflows/ci.yml`, package scripts.
 
 #### Expected Requirements
+
 Tooling compartido de ESLint/Prettier/TypeScript y CI con lint/typecheck/test/build.
 
 #### Implementation Found
+
 Tooling existe, pero actualmente no es ejecutable de forma verde.
 
 #### Validation Performed
+
 `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm build`, `pnpm test`, `pnpm -r --workspace-concurrency=1 test:coverage`.
 
 #### Findings
+
 - `pnpm lint` falla con 309 errores.
 - `pnpm format:check` falla en 30 archivos.
 - `pnpm typecheck` falla en DB, Web y SRI Core.
@@ -119,540 +134,696 @@ Tooling existe, pero actualmente no es ejecutable de forma verde.
 - `test:coverage` falla por threshold de branches en API.
 
 #### Risks
+
 Critico: CI no puede aprobar; no hay garantia de build producible.
 
 #### Required Fixes
+
 Alinear ESLint con tsconfigs, instalar/configurar plugin React Hooks o remover disables, corregir errores TS, correr Prettier, subir branch coverage o ajustar umbral con decision explicita.
 
 #### Recommendation
+
 No aprobar hasta que todos los gates pasen.
 
 ### 0003 - Docker and Local Development
 
 #### Status
+
 No verificable completamente.
 
 #### Files Reviewed
+
 `ai/specs/0003-*`, `README.md`, `.env.example`, `docker-compose.yml`, Dockerfiles de API/SRI/web, `packages/*/src/env.ts`, `apps/*/src/env.ts`.
 
 #### Expected Requirements
+
 Stack local Docker con Postgres, API, SRI Core, Web, Mailhog, envs seguros y health endpoints.
 
 #### Implementation Found
+
 `docker-compose.yml` y Dockerfiles existen; README documenta `pnpm dev`, health endpoints y teardown.
 
 #### Validation Performed
+
 Revision manual; `pnpm dev` no ejecutado por ser long-lived. Tests fuera del sandbox usaron Postgres local y pasaron.
 
 #### Findings
+
 - No se valido arranque Docker completo.
 - `.env.example` usa placeholders; `.env` existe localmente pero no se imprimio por seguridad.
 - Build falla antes de poder considerar imagenes como listas.
 
 #### Risks
+
 Medio: setup documentado puede no arrancar si build sigue fallando.
 
 #### Required Fixes
+
 Corregir build/typecheck y ejecutar smoke manual: `pnpm dev`, `/health`, `/health-db`, `/healthz`, `/readyz`, UI en `5173`.
 
 #### Recommendation
+
 Aprobar con observaciones solo despues de smoke Docker.
 
 ### 0004 - Database and Prisma
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `packages/db/prisma/schema.prisma`, `packages/db/prisma/migrations/*`, `packages/db/prisma/seed.ts`, `packages/db/src/test-harness.ts`, DB tests.
 
 #### Expected Requirements
+
 Schema multi-tenant, migraciones, seed seguro, test harness aislado.
 
 #### Implementation Found
+
 Schema y 6 migraciones existen. `prisma validate` pasa. `prisma migrate status` fuera del sandbox confirma DB al dia. Tests DB pasan fuera del sandbox.
 
 #### Validation Performed
+
 `pnpm --filter @facturador/db prisma:validate`, `pnpm --filter @facturador/db prisma:migrate:status`, `pnpm test`.
 
 #### Findings
+
 - Typecheck de `@facturador/db` falla por `rows` `unknown` en test harness.
 - `Membership` no tiene `acceptedAt` ni `revokedAt`, aunque SPEC-0011 los exige.
 - `BurnedSecuencial` es unico por `(companyId, estab, ptoEmi, secuencial)` y no incluye `tipoComprobante`, pese a que el contador si es por tipo de comprobante.
 
 #### Risks
+
 Alto: lifecycle de membership incompleto y potencial conflicto futuro al soportar nota credito/debito/retencion con mismo secuencial.
 
 #### Required Fixes
+
 Tipar resultados raw, agregar campos de membership lifecycle o ajustar spec, y cambiar unicidad de burned secuenciales a incluir `tipoComprobante` si se confirma espacio por documento.
 
 #### Recommendation
+
 No bloquear por schema base, pero si por typecheck y brechas de integridad.
 
 ### 0005 - Shared Contracts
 
 #### Status
+
 Implementacion parcial.
 
 #### Files Reviewed
+
 `packages/contracts/src/**`, `packages/contracts/src/invoices/detail.ts`, `packages/contracts/src/invoices/invoice.ts`, API handlers, Web API wrappers.
 
 #### Expected Requirements
+
 Contratos Zod compartidos y usados por API/Web para evitar drift.
 
 #### Implementation Found
+
 Contratos completos para auth, tenants, customers, SRI, invoices. Tests de contracts pasan.
 
 #### Validation Performed
+
 `pnpm test`, revision manual de contratos vs wire real.
 
 #### Findings
+
 - `InvoiceDetailSchema` exige `{ invoice, customer, sriDocument, sriEvents }`, pero `GET /api/v1/invoices/:id` devuelve un objeto plano de invoice.
 - `InvoiceSchema` no permite `null` en `codigoPrincipal`, `codigoAuxiliar`, `unidadMedida`, `plazo`, `unidadTiempo`; API devuelve `null` para esos campos.
 - El frontend usa esos contratos en runtime; las respuestas reales fallarian en Zod.
 
 #### Risks
+
 Critico: UI de crear/editar/detalle de facturas puede romperse contra API real.
 
 #### Required Fixes
+
 Definir una unica forma wire: o API devuelve exactamente `InvoiceSchema`/`InvoiceDetailSchema`, o contratos reflejan el wire real. Agregar integration test API response -> contract parse.
 
 #### Recommendation
+
 No aprobar hasta resolver el drift.
 
 ### 0006 - Error Model and Logging
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `packages/utils/src/errors/*`, `packages/logger/src/*`, `apps/api/src/middleware/*`, `apps/sri-core/src/middleware/*`, audit helpers/tests.
 
 #### Expected Requirements
+
 ProblemDetail uniforme, request-id, logging redactado, audit trail.
 
 #### Implementation Found
+
 Modelo de errores y auditoria existe; tests pasan fuera del sandbox.
 
 #### Validation Performed
+
 Tests API/SRI/logger/utils, revision de redactions.
 
 #### Findings
+
 - Buen manejo de errores typed y redaccion de secretos comunes.
 - Riesgo medio: redaccion por paths no garantiza cobertura profunda para payloads anidados arbitrarios.
 - Logs de pruebas muestran errores Prisma esperados; no se observo filtracion de XML/certificados/JWT.
 
 #### Risks
+
 Medio: si se loguean objetos anidados con PII/XML, redaccion puede no cubrir todos los paths.
 
 #### Required Fixes
+
 Agregar tests de redaccion para payloads profundamente anidados y arrays de mensajes SRI; evitar log de cuerpos completos.
 
 #### Recommendation
+
 Aprobable con hardening.
 
 ### 0007 - Testing Strategy
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 Vitest configs, test harness, tests en API/SRI/Web/Contracts/Utils/DB, `.github/workflows/ci.yml`.
 
 #### Expected Requirements
+
 Tests unitarios/integracion, fixtures sinteticos, coverage y CI.
 
 #### Implementation Found
+
 Hay 1519 tests que pasan fuera del sandbox. Hay cobertura muy amplia, incluido SRI Core, XML, SOAP y concurrencia de secuenciales.
 
 #### Validation Performed
+
 `pnpm test` fuera del sandbox PASS; `test:coverage` FAIL.
 
 #### Findings
+
 - `test:coverage` falla: API branch coverage 67.47% < 70%.
 - Algunos tests codifican comportamiento contrario a SPEC-0033, por ejemplo `DEVUELTA` y `ERROR_RED` dejando invoice `EMITIDO`.
 - Web tests usan fixtures/MSW con contrato ideal, no respuestas reales del API.
 
 #### Risks
+
 Alto: una suite verde puede ocultar drift de negocio.
 
 #### Required Fixes
+
 Actualizar tests para reflejar specs, agregar contract integration tests y cubrir ramas faltantes de API.
 
 #### Recommendation
+
 No aprobar testing hasta que coverage y drift de expectativas se corrijan.
 
 ### 0010 - Authentication and Sessions
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/api/src/auth/*`, `packages/contracts/src/auth/*`, `apps/web/src/auth/*`, `ADR-0004`, tests auth.
 
 #### Expected Requirements
+
 Login, sesiones server-side, cookies, CSRF, logout, `/me`, errores genericos.
 
 #### Implementation Found
+
 Implementacion robusta de sesiones, CSRF y auth flows. Tests API/Web pasan fuera del sandbox.
 
 #### Validation Performed
+
 Tests API auth, Web auth, revision manual.
 
 #### Findings
+
 - Login inicialmente deja `activeCompanyId` null hasta tenant switch.
 - Buen patron de cookies httpOnly y CSRF.
 - No se encontro filtracion de password/email en errores de login.
 
 #### Risks
+
 Bajo: depende de SPEC-0011 para tenant activo completo.
 
 #### Required Fixes
+
 Mantener pruebas de timing y cookies; documentar configuracion `Secure` por ambiente.
 
 #### Recommendation
+
 Aprobado con dependencia de RBAC/tenancy.
 
 ### 0011 - Tenants, Memberships and RBAC
 
 #### Status
+
 Implementacion parcial.
 
 #### Files Reviewed
+
 `ai/specs/0011-*`, `packages/utils/src/rbac/rbac.ts`, `apps/api/src/auth/require-tenant.ts`, `apps/api/src/tenants/*`, Prisma `Membership`, tests tenants.
 
 #### Expected Requirements
+
 Membership invite/accept/revoke, active membership por `acceptedAt != null` y `revokedAt == null`, tenant switch auditado, RBAC segun matriz.
 
 #### Implementation Found
+
 Tenant switch, CRUD parcial y guards existen. Tests cross-tenant y permisos pasan.
 
 #### Findings
+
 - SPEC dice `ACCOUNTANT` solo view para clientes/facturas; codigo permite `customer.create`, `customer.update`, `invoice.create`, `invoice.emit`, `invoice.reissue`.
 - `Membership` no tiene `acceptedAt` ni `revokedAt`; borrado de miembro es hard delete.
 - No se implemento flujo invite/accept/revoke como tal.
 
 #### Risks
+
 Alto: sobre-autorizacion de contadores y auditoria de membresias incompleta.
 
 #### Required Fixes
+
 Alinear `MATRIX` con SPEC-0011, agregar columnas lifecycle o cambiar spec, implementar invite/accept/revoke y soft revoke, migrar tests para validar ACCOUNTANT read-only.
 
 #### Recommendation
+
 No aprobar seguridad multi-tenant hasta corregir RBAC y membership lifecycle.
 
 ### 0020 - SRI Core Service Bootstrap
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/sri-core/src/server.ts`, routes documents/certificates, service JWT, Prisma SRI models, env, tests.
 
 #### Expected Requirements
+
 Servicio SRI Core separado, autenticado por JWT servicio, endpoints base y persistencia `SriDocument`/`SriEvent`.
 
 #### Implementation Found
+
 Servicio existe, valida service JWT, tiene health/ready, documentos, certificados y tests negativos de auth.
 
 #### Validation Performed
+
 SRI Core tests PASS fuera del sandbox.
 
 #### Findings
+
 - Buen aislamiento de SRI Core.
 - `SRI_STUB_MODE` facilita dev/test y se bloquea en produccion.
 - Algunos warnings/audit FK en test aparecen en stdout pero tests pasan; revisar que no oculten auditoria perdida.
 
 #### Risks
+
 Medio: warnings de FK en audit pueden indicar que auditoria de ciertos caminos no se persiste.
 
 #### Required Fixes
+
 Revisar `safeAudit`/fixtures para que no dependan de company inexistente o para documentar el swallow.
 
 #### Recommendation
+
 Aprobado con observaciones.
 
 ### 0021 - Certificate Management
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/sri-core/src/certificates/*`, `apps/sri-core/src/crypto/envelope.ts`, env, certificate routes/tests.
 
 #### Expected Requirements
+
 Upload `.p12`, password por header, parse seguro, cifrado en reposo, activacion atomica, expiry job, no fuga de secreto.
 
 #### Implementation Found
+
 La implementacion cubre upload/list/get/activate/delete, parse, cifrado y cache active cert.
 
 #### Validation Performed
+
 SRI Core certificate tests PASS.
 
 #### Findings
+
 - Buen aislamiento: API/Web no manejan `.p12`.
 - Stub mode tolera master key placeholder; non-stub exige key valida.
 - La clave privada se importa extractable por limitacion de xadesjs; esta documentado, pero aumenta importancia de no loguear ni retener.
 
 #### Risks
+
 Medio: material sensible en memoria inevitable; necesita observabilidad estricta.
 
 #### Required Fixes
+
 Agregar pruebas de no-log para passphrase/cert/key en todos los errores de upload/sign.
 
 #### Recommendation
+
 Aprobado con hardening.
 
 ### 0022 - Clave de Acceso Generator
 
 #### Status
+
 Completado correctamente.
 
 #### Files Reviewed
+
 `packages/utils/src/sri/clave-acceso.ts`, contract primitive, fixtures/tests, API smoke.
 
 #### Expected Requirements
+
 Clave 49 digitos, campos correctos, modulo 11, validaciones y fixtures.
 
 #### Implementation Found
+
 Generador y validador estan bien cubiertos: composicion, modulo 11, codDocs, ramas especiales, crosscheck con contracts.
 
 #### Validation Performed
+
 Utils tests PASS; contracts tests PASS; API smoke PASS.
 
 #### Findings
+
 - Excelente cobertura determinista.
 - Observacion: el generador valida RUC como 13 digitos, pero no checksum completo. La validacion de RUC ocurre en contracts/API; si se quiere defensa en profundidad, el generador deberia rechazar RUC invalido.
 
 #### Risks
+
 Bajo: si un caller bypassa contracts, podria generar clave con RUC formalmente invalido.
 
 #### Required Fixes
+
 Opcional: inyectar/usar validador RUC en `buildClaveAcceso`.
 
 #### Recommendation
+
 Aprobado.
 
 ### 0023 - XML Builder Factura
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/sri-core/src/xml/factura.ts`, sanitize/validate, XSD, golden fixtures, factura input contracts.
 
 #### Expected Requirements
+
 Construir XML factura V2.1.0, orden XSD, totales/impuestos, escaping, golden/XSD tests.
 
 #### Implementation Found
+
 Builder single-line, root `factura id="comprobante" version="2.1.0"`, escapes, validacion XSD y golden fixtures.
 
 #### Validation Performed
+
 SRI Core XML/XSD tests PASS.
 
 #### Findings
+
 - Buena cobertura para factura.
 - No cubre otros comprobantes del producto (`nota_credito`, `nota_debito`, `retencion`), pero eso no parece in-scope de SPEC-0023.
 - No hay validacion contra SRI sandbox real.
 
 #### Risks
+
 Medio: correctness fiscal final depende de prueba SRI real y de versiones futuras de XSD.
 
 #### Required Fixes
+
 Agregar fixtures representativos adicionales y una prueba manual/sandbox antes de produccion.
 
 #### Recommendation
+
 Aprobado para factura, no para todo el producto final.
 
 ### 0024 - XAdES-BES Signer
 
 #### Status
+
 Bloqueado por errores.
 
 #### Files Reviewed
+
 `ai/specs/0024-*`, `docs/sri-facturacion-electronica-ecuador.md`, `apps/sri-core/src/xml/sign.ts`, `apps/sri-core/src/xml/verify.ts`, sign tests.
 
 #### Expected Requirements
+
 XAdES-BES enveloped, URI `#comprobante`, transforms `enveloped-signature` + C14N inclusivo, SignedProperties, local verification.
 
 #### Implementation Found
+
 Signer usa xadesjs, SignedProperties, X509Data, SHA1/SHA256, local verify y tests.
 
 #### Findings
+
 - Defecto critico: `apps/sri-core/src/xml/sign.ts` configura `transforms: ["enveloped", "exc-c14n"]`. SPEC-0024 y docs internas exigen `http://www.w3.org/TR/2001/REC-xml-c14n-20010315` inclusivo, no exclusivo.
 - Tests validan round-trip con la misma libreria pero no que los URIs de canonicalizacion/transforms sean los exigidos por SRI.
 - La spec FR-6 habla de preservar declaracion XML; la implementacion exige `xmlForSigning` sin declaracion y devuelve cuerpo firmado sin declaracion. Puede ser aceptable si caller la agrega, pero contradice la spec.
 
 #### Risks
+
 Critico: SRI puede rechazar la firma aunque `verifySignedXml` local pase.
 
 #### Required Fixes
+
 Cambiar transforms a C14N inclusivo, assertar `CanonicalizationMethod` y `Transform Algorithm` exactos en tests, validar signed XML contra fixture compatible SRI/sandbox.
 
 #### Recommendation
+
 No aprobar SRI hasta corregir.
 
 ### 0025 - SRI SOAP Clients
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/sri-core/src/soap/*`, fixtures SOAP, tests clients/parse/retry/envelopes.
 
 #### Expected Requirements
+
 Clientes recepcion/autorizacion, endpoints por ambiente, timeouts, retries, parsing robusto y mocks.
 
 #### Implementation Found
+
 Clientes y parser SOAP existen; tests cubren RECIBIDA, DEVUELTA, AUTORIZADO, NO_AUTORIZADO, EN_PROCESO, error 43 y retries.
 
 #### Validation Performed
+
 SRI Core SOAP tests PASS.
 
 #### Findings
+
 - Buen manejo de `?wsdl`, TLS, timeouts y errores.
 - No se encontro stream/body cap duro para respuestas enormes.
 - No se ejecuto contra SRI real.
 
 #### Risks
+
 Medio: un XML SOAP inesperadamente grande o forma no fixtureada puede impactar memoria/parse.
 
 #### Required Fixes
+
 Agregar limite de bytes de respuesta y smoke manual contra endpoint de pruebas.
 
 #### Recommendation
+
 Aprobado con hardening.
 
 ### 0026 - Document Lifecycle and Jobs
 
 #### Status
+
 Implementacion parcial.
 
 #### Files Reviewed
+
 `apps/sri-core/src/lifecycle/*`, `apps/sri-core/src/jobs/poll-en-proceso.ts`, Prisma SRI models, lifecycle/job tests.
 
 #### Expected Requirements
+
 State machine, transiciones validas, eventos atomicos, retry/polling, idempotencia y jobs.
 
 #### Implementation Found
+
 State machine, `recordEvent`, `emitFactura`, poll job y tests existen.
 
 #### Findings
+
 - Bug critico: desde `ERROR_RED`, si reintento de recepcion vuelve a fallar, `emitFactura` llama `recordEvent(... estado: "ERROR_RED")` sin `allowSelfLoop`. `recordEvent` rechaza self-loop por defecto. Resultado: error `sri.invalid_transition` en vez de permanecer en `ERROR_RED`.
 - `canTransition` permite `ERROR_RED -> ERROR_RED`, pero el caller no activa self-loop.
 - Build/typecheck de `poll-en-proceso.ts` falla por `rows` `unknown`.
 
 #### Risks
+
 Critico: retries de red repetidos pueden romper el ciclo de recuperacion.
 
 #### Required Fixes
+
 Agregar `allowSelfLoop: true` en caminos de re-confirmacion `ERROR_RED`/`EN_PROCESO`, testear fallo de red repetido, tipar raw queries del poll job.
 
 #### Recommendation
+
 No aprobar lifecycle hasta corregir retry y typecheck.
 
 ### 0030 - Emission Points and Sequencing
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/api/src/establecimientos/*`, `apps/api/src/sequencing/*`, Prisma `SecuencialCounter`/`BurnedSecuencial`, tests establecimientos.
 
 #### Expected Requirements
+
 Establecimientos, puntos de emision, secuenciales atomicos por tenant/estab/ptoEmi/tipoComprobante, burns, concurrencia.
 
 #### Implementation Found
+
 CRUD y reserva con transaccion serializable existen. Test de 2000 reservas concurrentes pasa fuera del sandbox.
 
 #### Findings
+
 - `SecuencialCounter` es correcto por `(companyId, estab, ptoEmi, tipoComprobante)`.
 - `BurnedSecuencial` no incluye `tipoComprobante` en su unique, contradiciendo el comentario que indica que el espacio es por codDoc.
 - En SPEC-0033, reserva + update de invoice deberia ser una unica transaccion; actualmente `reserveSecuencial` y `invoice.update` son transacciones separadas.
 
 #### Risks
+
 Alto: futuros comprobantes pueden colisionar burns; fallos entre reserva y update dejan gap sin auditoria burn si no se compensa.
 
 #### Required Fixes
+
 Revisar unique de `BurnedSecuencial`; envolver reserva+persistencia de factura en una unidad transaccional o registrar burn compensatorio ante fallo intermedio.
 
 #### Recommendation
+
 Aprobado parcialmente; necesita ajustes antes de ampliar a otros comprobantes.
 
 ### 0031 - Customer Catalog
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/api/src/customers/*`, `packages/contracts/src/customers/*`, Prisma `Customer`, tests customers, web customer combobox/dialog.
 
 #### Expected Requirements
+
 CRUD tenant-scoped, validacion por tipo identificacion, consumidor final, soft delete, RBAC.
 
 #### Implementation Found
+
 Implementado y testeado ampliamente; cross-tenant y consumidor final cubiertos.
 
 #### Validation Performed
+
 API tests PASS; web tests PASS.
 
 #### Findings
+
 - Buenas validaciones de RUC/cedula/pasaporte/exterior/consumidor final.
 - PII se excluye de lista y aparece en detalle segun spec.
 - RBAC depende de matriz 0011, donde ACCOUNTANT esta demasiado permisivo.
 
 #### Risks
+
 Alto por RBAC heredado, no por catalogo en si.
 
 #### Required Fixes
+
 Corregir matriz y agregar test ACCOUNTANT no crea/actualiza clientes si esa es la regla final.
 
 #### Recommendation
+
 Aprobado condicionado a RBAC.
 
 ### 0032 - Invoice Domain
 
 #### Status
+
 Implementacion parcial.
 
 #### Files Reviewed
+
 `apps/api/src/invoices/*`, contracts invoices, Prisma invoice models, tests invoices, web form payload.
 
 #### Expected Requirements
+
 Draft invoices, totales server-side, validaciones, list/detail, tenant isolation, bloqueo de edit/delete tras emision.
 
 #### Implementation Found
+
 CRUD draft, compute totals, preview, list, detail, update/delete y tests existen.
 
 #### Findings
+
 - Calculo de totales y validacion de pagos estan bien cubiertos.
 - Wire de detalle/create/update no parsea con `InvoiceSchema` por `null` vs optional y campos extra/faltantes.
 - API detail no devuelve aggregate requerido por `InvoiceDetailSchema`.
 
 #### Risks
+
 Critico para UI real de facturas.
 
 #### Required Fixes
+
 Alinear wire/contract y agregar prueba de `InvoiceSchema.parse(toInvoiceDetailWire(row))` o reemplazar schema con wire real.
 
 #### Recommendation
+
 No aprobar hasta resolver contratos.
 
 ### 0033 - Invoice Emission Orchestrator
 
 #### Status
+
 Bloqueado por errores.
 
 #### Files Reviewed
+
 `apps/api/src/invoices/orchestrator.ts`, `translate-to-sri.ts`, `apps/api/src/sri/client.ts`, tests invoices, SPEC-0033.
 
 #### Expected Requirements
+
 Flujo crear/validar/clave/XML/firma/SRI/persistir/estado frontend; idempotencia; secuenciales seguros; reissue con nuevo documento emitido; estados segun outcome SRI.
 
 #### Implementation Found
+
 Emit llama SRI Core, genera clave y secuencial, mirror `sriEstado`, refresh y reissue existen.
 
 #### Findings
+
 - `reserveInTransaction` pone `estado: "EMITIDO"` antes de llamar SRI Core.
 - Si SRI Core falla por red, invoice queda `EMITIDO + ERROR_RED`; SPEC-0033 dice que deberia quedar `BORRADOR` con secuencial consumido.
 - `DEVUELTA`/`NO_AUTORIZADO` dejan invoice `EMITIDO`, impidiendo correccion normal de borrador.
@@ -660,127 +831,163 @@ Emit llama SRI Core, genera clave y secuencial, mirror `sriEstado`, refresh y re
 - `applyMirror` ignora `numeroAutorizacion` y `fechaAutorizacion`.
 
 #### Risks
+
 Critico: estados fiscales y UX operacional pueden ser incorrectos, y reintentos pueden generar documentos duplicados o no corregibles.
 
 #### Required Fixes
+
 Reimplementar segun SPEC-0033: reserva/update atomicos, outcome map correcto, old invoice `ANULADO` en reissue si aplica, link old/new, persistencia de autorizacion o join real con SRI Core, tests actualizados.
 
 #### Recommendation
+
 No aprobar.
 
 ### 0040 - Web App Bootstrap
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/web/src/router.tsx`, providers, auth layout, Vite config, Tailwind, tests web.
 
 #### Expected Requirements
+
 Vite React app, router, layout, auth guards y API client base.
 
 #### Implementation Found
+
 Web app compila con Vite durante `pnpm build` hasta que SRI Core falla. Web tests pasan.
 
 #### Findings
+
 - Bootstrap funcional.
 - Web typecheck falla por tests con `.value` en `HTMLElement`.
 - Warnings React Router v7 y MSW unhandled requests en tests.
 
 #### Risks
+
 Medio: typecheck bloquea CI; warnings pueden ocultar problemas de mocks.
 
 #### Required Fixes
+
 Tipar elementos de tests (`HTMLInputElement`/`HTMLSelectElement`), completar handlers MSW o marcar passthrough explicito.
 
 #### Recommendation
+
 Aprobar tras corregir typecheck.
 
 ### 0041 - Web Auth Flows
 
 #### Status
+
 Completado con observaciones.
 
 #### Files Reviewed
+
 `apps/web/src/auth/*`, `LoginPage`, `TenantSelectPage`, tenant switcher, API auth handlers/contracts.
 
 #### Expected Requirements
+
 Login/logout/me, tenant selection, guards, CSRF, forbidden route.
 
 #### Implementation Found
+
 Flujos implementados y testeados.
 
 #### Validation Performed
+
 Web tests PASS; API auth tests PASS.
 
 #### Findings
+
 - Buen manejo de loading/error/forbidden.
 - Depende de membership lifecycle incompleto de SPEC-0011.
 
 #### Risks
+
 Medio: una membresia removida por hard delete funciona, pero no hay invitaciones/revokes auditables como spec.
 
 #### Required Fixes
+
 Actualizar auth UI/API cuando se agregue invite/accept/revoke.
 
 #### Recommendation
+
 Aprobado condicionado a 0011.
 
 ### 0042 - Web Invoice Create
 
 #### Status
+
 Implementacion parcial.
 
 #### Files Reviewed
+
 `apps/web/src/invoices/form/*`, hooks, money/tax utilities, invoice API wrappers, API invoice create/preview/emit.
 
 #### Expected Requirements
+
 Crear/editar borrador, cliente, preview totals, autosave, emit modal y manejo de errores.
 
 #### Implementation Found
+
 UI rica y testeada; consume wrappers Zod.
 
 #### Findings
+
 - `createInvoiceDraft` y `updateInvoiceDraft` validan con `InvoiceSchema`, pero API devuelve nulls en campos que schema no acepta.
 - Tests de UI no ejercitan el API real; usan fixtures que ya cumplen el contrato esperado por frontend.
 - Emit modal interpreta outcomes, pero API state machine esta desviada.
 
 #### Risks
+
 Critico: flujo crear/editar puede fallar al primer response real del backend.
 
 #### Required Fixes
+
 Alinear contratos y agregar test de integracion Web wrapper contra fixture generado desde API real.
 
 #### Recommendation
+
 No aprobar hasta resolver contract drift.
 
 ### 0043 - Web Invoice List and Detail
 
 #### Status
+
 Bloqueado por errores.
 
 #### Files Reviewed
+
 `apps/web/src/routes/invoices.index.tsx`, `apps/web/src/routes/invoices.$id.tsx`, components detail/list, `apps/web/src/invoices/api.ts`, API list/detail/refresh/reissue.
 
 #### Expected Requirements
+
 Listado filtrable/paginado, detalle con customer/SRI timeline, polling bounded, acciones por estado/rol.
 
 #### Implementation Found
+
 UI existe, tests pasan, pero depende de `InvoiceDetailSchema` aggregate.
 
 #### Findings
+
 - `GET /api/v1/invoices/:id` real devuelve invoice plano; UI espera `{ invoice, customer, sriDocument, sriEvents }`.
 - `refreshInvoice` espera `InvoiceDetailSchema`; API devuelve `{ sriEstado, claveAcceso, numeroAutorizacion, fechaAutorizacion, invoice }`.
 - API no sirve eventos SRI al frontend, aunque UI renderiza timeline.
 - Placeholders para RIDE/XML son correctos para scope.
 
 #### Risks
+
 Critico: detalle/polling/timeline no funcionaran contra backend real.
 
 #### Required Fixes
+
 Implementar endpoint aggregate o cambiar frontend al wire real. Si se mantiene timeline, API debe consultar SRI Core status/eventos y devolverlos.
 
 #### Recommendation
+
 No aprobar.
 
 ## 5. SRI Domain Review
@@ -1053,6 +1260,7 @@ Concurrencia probada. La politica de burns debe alinearse con multiples tipos de
 ## 13. Recommended Implementation Plan
 
 1. Critical blockers
+
    - Corregir `lint`, `format`, `typecheck`, `build`.
    - Corregir XAdES C14N inclusivo y tests.
    - Alinear contracts/API/Web para facturas.
@@ -1060,26 +1268,31 @@ Concurrencia probada. La politica de burns debe alinearse con multiples tipos de
    - Corregir `ERROR_RED` self-loop.
 
 2. SRI correctness
+
    - Agregar signed XML golden con URIs exactos.
    - Ejecutar sandbox SRI para factura autorizada.
    - Persistir/exponer autorizacion y eventos.
 
 3. Data integrity
+
    - Revisar `BurnedSecuencial` unique.
    - Hacer atomica reserva+persistencia invoice o compensar burns.
    - Agregar lifecycle columns para memberships.
 
 4. Security
+
    - Alinear RBAC.
    - Tests negativos por rol/accion.
    - Hardening de redaccion nested.
 
 5. Tests
+
    - Corregir coverage API branches.
    - Agregar contract integration tests.
    - Ajustar tests que actualmente validan comportamiento contrario a spec.
 
 6. Architecture cleanup
+
    - Definir DTOs por endpoint.
    - Documentar si SRI Core sera fuente de timeline o si API tendra replica.
    - Preparar extension para nota credito/debito/retencion.

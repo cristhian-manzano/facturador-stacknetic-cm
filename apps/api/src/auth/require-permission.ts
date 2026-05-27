@@ -38,14 +38,35 @@ import { env } from "../env.js";
  * `@facturador/utils/rbac` is OWNER-only for `tenant.update`; setting
  * `RBAC_ADMIN_CAN_UPDATE_TENANT=true` flips that one bit for ADMIN.
  *
- * We do NOT push this override into `@facturador/utils/rbac` so the
+ * Similarly, the matrix is view-only for ACCOUNTANT
+ * (SPEC-0011 §FR-5 row 3); operators who relied on the legacy
+ * write-capable behaviour can set `RBAC_ACCOUNTANT_CAN_WRITE=true` to
+ * restore `customer.create/update` and `invoice.create/emit/reissue`
+ * for ACCOUNTANT.
+ *
+ * We do NOT push these overrides into `@facturador/utils/rbac` so the
  * matrix stays pure (no env / no I/O) — the SPA imports the same matrix
  * and must not depend on the server's runtime env. UIs that want ADMIN
  * to see the "Rename tenant" button anyway can read the same env flag
  * through the auth `/me` endpoint (future work).
  */
+const ACCOUNTANT_WRITE_ACTIONS: ReadonlySet<Action> = new Set<Action>([
+  "customer.create",
+  "customer.update",
+  "invoice.create",
+  "invoice.emit",
+  "invoice.reissue",
+]);
+
 function isAllowedByOverride(role: string, action: Action): boolean {
   if (action === "tenant.update" && env.RBAC_ADMIN_CAN_UPDATE_TENANT && role === "ADMIN") {
+    return true;
+  }
+  if (
+    role === "ACCOUNTANT" &&
+    env.RBAC_ACCOUNTANT_CAN_WRITE &&
+    ACCOUNTANT_WRITE_ACTIONS.has(action)
+  ) {
     return true;
   }
   return false;

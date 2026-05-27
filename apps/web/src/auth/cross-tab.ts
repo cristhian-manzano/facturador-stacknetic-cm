@@ -55,9 +55,7 @@ export function broadcastSignout(): void {
   ch.postMessage("signout" satisfies AuthChannelMessage);
 }
 
-export function subscribeAuthChannel(
-  listener: (msg: AuthChannelMessage) => void,
-): () => void {
+export function subscribeAuthChannel(listener: (msg: AuthChannelMessage) => void): () => void {
   const ch = getChannel();
   if (ch === null) return () => undefined;
   const handler = (event: MessageEvent<unknown>): void => {

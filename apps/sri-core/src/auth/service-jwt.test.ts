@@ -19,11 +19,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthError } from "@facturador/utils/errors";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
 
-import {
-  buildRequireServiceJwt,
-  createJtiDenyList,
-  type JtiDenyList,
-} from "./service-jwt.js";
+import { buildRequireServiceJwt, createJtiDenyList, type JtiDenyList } from "./service-jwt.js";
 
 const SECRET = "service-jwt-jti-test-secret-32-chars-of-entropy-padding!";
 

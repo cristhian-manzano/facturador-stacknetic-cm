@@ -38,11 +38,7 @@ import type { Dispatcher } from "undici";
 import type { SriMensaje } from "@facturador/contracts/sri";
 import type { Logger } from "@facturador/logger";
 
-import {
-  sriRequestTotal,
-  sriRequestDurationSeconds,
-  type SriRequestOutcome,
-} from "../metrics.js";
+import { sriRequestTotal, sriRequestDurationSeconds, type SriRequestOutcome } from "../metrics.js";
 
 import { buildAutorizacionEnvelope } from "./envelopes.js";
 import { SriClientError } from "./errors.js";
@@ -50,7 +46,6 @@ import { httpPostXml } from "./http.js";
 import { parseAutorizacionResponse, type AutorizacionEstadoParsed } from "./parse.js";
 import type { Ambiente } from "./recepcion-client.js";
 import { withRetry, type WithRetryOptions } from "./retry.js";
-
 
 export interface AutorizacionClientEnv {
   readonly SRI_AUTORIZACION_URL_PRUEBAS: string;

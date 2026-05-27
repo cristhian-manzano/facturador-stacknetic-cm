@@ -46,7 +46,10 @@ export function LinesPanel({ invoice }: LinesPanelProps): ReactElement {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {invoice.lines.map((l, idx) => (
-              <tr key={`${String(idx)}-${l.descripcion}`} data-testid={`line-detail-${String(idx)}`}>
+              <tr
+                key={`${String(idx)}-${l.descripcion}`}
+                data-testid={`line-detail-${String(idx)}`}
+              >
                 <td className="px-2 py-1 text-slate-800">{l.descripcion}</td>
                 <td className="px-2 py-1 text-right text-slate-700">{l.cantidad}</td>
                 <td className="px-2 py-1 text-right text-slate-700">

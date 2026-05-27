@@ -95,6 +95,24 @@ describe("RBAC matrix — exhaustive", () => {
     expect(can("ACCOUNTANT", "establecimiento.manage")).toBe(false);
   });
 
+  it("ACCOUNTANT is view-only (SPEC-0011 §FR-5 row 3; REVIEW-0044 HIGH-1)", () => {
+    // ACCOUNTANT may read everything its row is allowed to read, but
+    // cannot create/update/delete/emit/reissue. Servers that need the
+    // legacy write-capable behaviour set `RBAC_ACCOUNTANT_CAN_WRITE=true`
+    // in apps/api; that bypass is enforced in `requirePermission`, not
+    // in this matrix. The matrix MUST stay view-only.
+    expect(can("ACCOUNTANT", "customer.create")).toBe(false);
+    expect(can("ACCOUNTANT", "customer.update")).toBe(false);
+    expect(can("ACCOUNTANT", "customer.delete")).toBe(false);
+    expect(can("ACCOUNTANT", "invoice.create")).toBe(false);
+    expect(can("ACCOUNTANT", "invoice.emit")).toBe(false);
+    expect(can("ACCOUNTANT", "invoice.reissue")).toBe(false);
+    // And it still reads everything it's supposed to.
+    expect(can("ACCOUNTANT", "tenant.read")).toBe(true);
+    expect(can("ACCOUNTANT", "customer.read")).toBe(true);
+    expect(can("ACCOUNTANT", "invoice.read")).toBe(true);
+  });
+
   it("tenant.update is OWNER-only (SPEC-0011 §FR-5; production-readiness)", () => {
     // The matrix is the source of truth for the SPA's `can()` predicate;
     // the server may opt-in to ADMIN-can-update via the

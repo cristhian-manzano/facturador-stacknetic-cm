@@ -150,7 +150,7 @@ function readMensaje(node: Node): SriMensaje {
   ).toUpperCase();
   const tipo =
     tipoRaw === "ERROR" || tipoRaw === "ADVERTENCIA" || tipoRaw === "INFORMATIVO"
-      ? (tipoRaw)
+      ? tipoRaw
       : ("INFORMATIVO" satisfies SriMensaje["tipo"]);
   return informacionAdicional === undefined
     ? { identificador, mensaje, tipo }

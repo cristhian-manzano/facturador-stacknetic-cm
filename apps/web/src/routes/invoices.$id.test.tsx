@@ -12,7 +12,9 @@
  *   - VIEWER role lacks Reintentar / Reissue.
  *   - OPERATOR role sees Reintentar (when BORRADOR + prior failure)
  *     but NOT Reissue.
- *   - ACCOUNTANT role sees Reissue.
+ *   - ACCOUNTANT role: view-only per SPEC-0011 §FR-5 row 3 (REVIEW-0044
+ *     HIGH-1). Reissue is NOT visible because the matrix denies
+ *     `invoice.reissue` for ACCOUNTANT.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -65,10 +67,14 @@ const ME_OPERATOR = {
   permissions: ["invoice.read", "invoice.create", "invoice.emit"],
 };
 
+// ACCOUNTANT is view-only per SPEC-0011 §FR-5 row 3 (REVIEW-0044 HIGH-1).
+// Operators relying on the legacy write-capable behaviour set
+// `RBAC_ACCOUNTANT_CAN_WRITE=true` server-side; the matrix the SPA
+// receives via `/me` reflects the (potentially overridden) actions.
 const ME_ACCOUNTANT = {
   ...ME_OWNER,
   currentRole: "ACCOUNTANT" as const,
-  permissions: ["invoice.read", "invoice.create", "invoice.emit", "invoice.reissue"],
+  permissions: ["invoice.read"],
 };
 
 interface BuildDetailOpts {
@@ -361,7 +367,9 @@ describe("/invoices/:id — RBAC gating", () => {
     expect(screen.queryByTestId("action-reissue")).toBeNull();
   });
 
-  it("ACCOUNTANT role: Reissue visible when sriEstado=DEVUELTA", async () => {
+  it("ACCOUNTANT role: Reissue NOT visible (view-only per REVIEW-0044 HIGH-1)", async () => {
+    // ACCOUNTANT no longer has `invoice.reissue` in the default matrix
+    // (SPEC-0011 §FR-5 row 3). The Reissue button must NOT render.
     buildMount({
       me: ME_ACCOUNTANT,
       detailHandlers: [
@@ -371,7 +379,7 @@ describe("/invoices/:id — RBAC gating", () => {
       ],
     });
     await screen.findByTestId("detail-header");
-    expect(screen.getByTestId("action-reissue")).toBeInTheDocument();
+    expect(screen.queryByTestId("action-reissue")).toBeNull();
   });
 });
 

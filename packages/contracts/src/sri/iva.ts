@@ -241,10 +241,7 @@ export function pickIvaCode(fechaEmision: Date | string): PickIvaCodeResult {
  * Used by the api validation layer to reject "user picked 12% for a 2025
  * invoice" before we hand off to compute.
  */
-export function isIvaCodeValidFor(
-  codigoPorcentaje: string,
-  fechaEmision: Date | string,
-): boolean {
+export function isIvaCodeValidFor(codigoPorcentaje: string, fechaEmision: Date | string): boolean {
   const row = IVA_TABLE.find((r) => r.codigoPorcentaje === codigoPorcentaje);
   if (row === undefined) return false;
   const day = asDayKey(fechaEmision);

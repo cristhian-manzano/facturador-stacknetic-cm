@@ -207,10 +207,9 @@ export class RecepcionClient {
 
     // Metric — outcome label is the parsed estado (or "reclassified"
     // when a DEVUELTA was reclassified to RECIBIDA via mensaje 43).
-    const outcomeLabel =
-      parsed.reclassifiedFromDevuelta
-        ? "reclassified"
-        : (parsed.estado.toLowerCase() as "recibida" | "devuelta");
+    const outcomeLabel = parsed.reclassifiedFromDevuelta
+      ? "reclassified"
+      : (parsed.estado.toLowerCase() as "recibida" | "devuelta");
     sriRequestTotal.inc({ ambiente, outcome: outcomeLabel });
     endTimer();
 

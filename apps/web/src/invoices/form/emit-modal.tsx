@@ -227,7 +227,9 @@ export function EmitModal({
       if (ev.key === "Escape" && status !== "submitting") onClose();
     }
     window.addEventListener("keydown", onKey);
-    return (): void => { window.removeEventListener("keydown", onKey); };
+    return (): void => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, status, onClose]);
 
   // Auto-redirect 400 ms after success. Uses a ref so the timer is cleared
@@ -243,10 +245,14 @@ export function EmitModal({
     const handle = setTimeout(() => {
       onSuccessRedirect();
     }, SUCCESS_REDIRECT_DELAY_MS);
-    return (): void => { clearTimeout(handle); };
+    return (): void => {
+      clearTimeout(handle);
+    };
   }, [status, onSuccessRedirect]);
 
-  const handleExpand = useCallback(() => { dispatch({ type: "expand" }); }, [dispatch]);
+  const handleExpand = useCallback(() => {
+    dispatch({ type: "expand" });
+  }, [dispatch]);
 
   if (!open) return null;
 

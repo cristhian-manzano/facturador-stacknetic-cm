@@ -509,6 +509,82 @@ describe("emitFactura — ERROR_RED transient send failure", () => {
   });
 });
 
+describe("emitFactura — ERROR_RED self-loop on repeated failure (REVIEW-0044 CB-6)", () => {
+  const ctx = useTestSchema();
+
+  it("two consecutive transient SEND failures both land at ERROR_RED without sri.invalid_transition", async () => {
+    // Repro for REVIEW-0044 §CB-6: when an emit reaches ERROR_RED and a
+    // /resend retries from FIRMADO → (transient SOAP error), the SECOND
+    // failure used to throw ConflictError("sri.invalid_transition")
+    // because `recordEvent` rejected the ERROR_RED → ERROR_RED self-loop.
+    // After the fix, both failures persist ERROR_RED, the timeline
+    // grows a new event row, and the function returns normally.
+    const prisma = ctx.getPrisma();
+    const companyId = ulid();
+    await seedCompany({ prisma, companyId });
+    await seedActiveCert({ prisma, companyId });
+    const { documentId } = await seedPending({
+      prisma,
+      companyId,
+      secuencial: "000000120",
+    });
+
+    // Always throw transient on send so both attempts hit the failure path.
+    const recepcion = new FakeRecepcionClient(async () => {
+      throw new SriClientError("simulated repeated network", {
+        kind: "network",
+        transient: true,
+      });
+    });
+    const autorizacion = new FakeAutorizacionClient(async () => {
+      throw new Error("autorización must NOT be called when send fails");
+    });
+    const blobStore = new InMemoryBlobStore();
+
+    // First emit: PENDIENTE → FIRMADO → ERROR_RED.
+    const r1 = await emitFactura(
+      {
+        prisma,
+        blobStore,
+        stubMode: false,
+        recepcionClient: asRecepcionClient(recepcion),
+        autorizacionClient: asAutorizacionClient(autorizacion),
+      },
+      { documentId, facturaInput: loadGoldenFacturaInput() },
+    );
+    expect(r1.document.estado).toBe("ERROR_RED");
+
+    // Capture event count before the retry so we can confirm a new
+    // ERROR_RED row was appended (not silently dropped).
+    const eventsAfterFirst = await prisma.sriEvent.findMany({
+      where: { documentId },
+    });
+    const errorRedCountFirst = eventsAfterFirst.filter((e) => e.estado === "ERROR_RED").length;
+    expect(errorRedCountFirst).toBe(1);
+
+    // Second emit: ERROR_RED → ERROR_RED (self-loop). Must NOT throw.
+    const r2 = await emitFactura(
+      {
+        prisma,
+        blobStore,
+        stubMode: false,
+        recepcionClient: asRecepcionClient(recepcion),
+        autorizacionClient: asAutorizacionClient(autorizacion),
+      },
+      { documentId },
+    );
+    expect(r2.document.estado).toBe("ERROR_RED");
+    expect(recepcion.calls).toBe(2);
+
+    // Second ERROR_RED event row was appended.
+    const eventsAfterSecond = await prisma.sriEvent.findMany({
+      where: { documentId },
+    });
+    const errorRedCountSecond = eventsAfterSecond.filter((e) => e.estado === "ERROR_RED").length;
+    expect(errorRedCountSecond).toBe(2);
+  });
+});
+
 describe("emitFactura — ERROR_BUILD", () => {
   const ctx = useTestSchema();
 

@@ -211,11 +211,9 @@ export async function sriCoreFetch<T>(
   if (options.schema !== undefined) {
     const result = options.schema.safeParse(parsed);
     if (!result.success) {
-      throw new UpstreamError(
-        "sri-core response failed schema validation",
-        "sri.contract",
-        { cause: result.error },
-      );
+      throw new UpstreamError("sri-core response failed schema validation", "sri.contract", {
+        cause: result.error,
+      });
     }
     return {
       status: response.status,

@@ -27,7 +27,7 @@ const truncate = (value: string, max: number): string =>
 
 const issuesToMensajes = (
   slice: RequestSlice,
-   
+
   issues: readonly { path: readonly (string | number)[]; message: string }[],
 ): SriMensaje[] => {
   const sorted = [...issues].sort((a, b) => {
@@ -72,9 +72,6 @@ function assignSlice(req: Request, slice: RequestSlice, value: unknown): void {
   (req as unknown as Record<RequestSlice, unknown>)[slice] = value;
 }
 
-export const validateBody = <T>(schema: ZodSchema<T>): RequestHandler =>
-  build("body", schema);
-export const validateQuery = <T>(schema: ZodSchema<T>): RequestHandler =>
-  build("query", schema);
-export const validateParams = <T>(schema: ZodSchema<T>): RequestHandler =>
-  build("params", schema);
+export const validateBody = <T>(schema: ZodSchema<T>): RequestHandler => build("body", schema);
+export const validateQuery = <T>(schema: ZodSchema<T>): RequestHandler => build("query", schema);
+export const validateParams = <T>(schema: ZodSchema<T>): RequestHandler => build("params", schema);

@@ -82,7 +82,7 @@ const defaultSaver: AutoSaveSaver = async (id, body, { signal, etag: _etag }) =>
   // the next etag.
   const nextEtag =
     typeof (result as { updatedAt?: unknown }).updatedAt === "string"
-      ? ((result as { updatedAt: string }).updatedAt)
+      ? (result as { updatedAt: string }).updatedAt
       : undefined;
   return nextEtag !== undefined ? { etag: nextEtag } : {};
 };

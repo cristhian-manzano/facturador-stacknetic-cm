@@ -21,7 +21,6 @@ import type { SriEstado } from "@facturador/db";
 import { useTestSchema } from "@facturador/db/test-harness";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
 
-
 import type {
   AutorizacionClient,
   AutorizacionResult,

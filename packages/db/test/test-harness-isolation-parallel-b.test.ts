@@ -27,7 +27,7 @@ describe("test-harness — cross-file isolation (worker B)", () => {
     expect(handle).toBeDefined();
     // Non-null assertion: `expect(handle).toBeDefined()` above narrows for
     // the runtime, but TS sees `handle: TestSchema | undefined` here.
-     
+
     const h = handle!;
     await h.prisma.company.create({
       data: {

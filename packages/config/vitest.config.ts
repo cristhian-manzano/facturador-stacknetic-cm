@@ -15,10 +15,7 @@ export default defineConfig({
     name: "@facturador/config",
     environment: "node",
     globals: true,
-    include: [
-      "src/**/*.test.{ts,tsx,js}",
-      "eslint/**/__tests__/**/*.test.{ts,js}",
-    ],
+    include: ["src/**/*.test.{ts,tsx,js}", "eslint/**/__tests__/**/*.test.{ts,js}"],
     poolOptions: {
       threads: {
         singleThread: false,

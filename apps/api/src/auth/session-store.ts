@@ -89,8 +89,7 @@ export async function createSession(
   // during the migration window: existing readers keep working off the
   // raw value while ipHash propagates downstream (audit log review
   // queries already join on it).
-  const ipHash =
-    typeof input.ip === "string" && input.ip.length > 0 ? hashIp(input.ip) : null;
+  const ipHash = typeof input.ip === "string" && input.ip.length > 0 ? hashIp(input.ip) : null;
   await prisma.session.create({
     data: {
       id,

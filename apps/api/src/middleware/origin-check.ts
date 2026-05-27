@@ -114,10 +114,8 @@ export function originCheckMiddleware(options: OriginCheckOptions = {}): Request
       return;
     }
 
-    const originHeader =
-      typeof req.headers.origin === "string" ? req.headers.origin : undefined;
-    const refererHeader =
-      typeof req.headers.referer === "string" ? req.headers.referer : undefined;
+    const originHeader = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
+    const refererHeader = typeof req.headers.referer === "string" ? req.headers.referer : undefined;
 
     const headerOrigin = extractOrigin(originHeader) ?? extractOrigin(refererHeader);
     const ownOrigin = requestOrigin(req.protocol, req.headers.host);

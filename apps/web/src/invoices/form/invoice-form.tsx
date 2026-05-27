@@ -264,8 +264,10 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
       .finally(() => {
         setEmissionPointsLoading(false);
       });
-    return (): void => { controller.abort(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `getValues` and `setValue` are stable RHF refs; including them would trigger this effect on every render.
+    return (): void => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `getValues` and `setValue` are stable RHF refs; including them would trigger this effect on every render.
   }, [props.emissionPointsOverride]);
 
   // -------------------------------------------------------------------------
@@ -393,7 +395,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
     <FormProvider {...form}>
       <form
         aria-label={t("invoice.new.title")}
-        onSubmit={(ev) => { ev.preventDefault(); }}
+        onSubmit={(ev) => {
+          ev.preventDefault();
+        }}
         className="flex flex-col gap-6 md:flex-row md:items-start"
       >
         <input type="hidden" {...register("customerId")} />
@@ -448,7 +452,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
               value={customerIdWatch}
               selectedLabel={customerLabel}
               onSelect={handleCustomerSelect}
-              onCreateNewRequested={() => { setShowNewCustomerDialog(true); }}
+              onCreateNewRequested={() => {
+                setShowNewCustomerDialog(true);
+              }}
             />
             {customerIdWatch === "" && formState.isSubmitted && (
               <p role="alert" className="text-xs text-red-600">
@@ -466,7 +472,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
               <button
                 type="button"
                 data-testid="add-line"
-                onClick={() => { lines.append(newLine(fechaWatch)); }}
+                onClick={() => {
+                  lines.append(newLine(fechaWatch));
+                }}
                 className="rounded border border-primary-600 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
               >
                 {t("invoice.form.lines.add")}
@@ -479,8 +487,12 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
                   index={idx}
                   canRemove={canRemoveLine}
                   isLast={idx === lines.fields.length - 1}
-                  onRemove={() => { lines.remove(idx); }}
-                  onLastFieldEnter={() => { lines.append(newLine(fechaWatch)); }}
+                  onRemove={() => {
+                    lines.remove(idx);
+                  }}
+                  onLastFieldEnter={() => {
+                    lines.append(newLine(fechaWatch));
+                  }}
                 />
               ))}
             </div>
@@ -495,7 +507,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
               <button
                 type="button"
                 data-testid="add-payment"
-                onClick={() => { payments.append(newPayment()); }}
+                onClick={() => {
+                  payments.append(newPayment());
+                }}
                 className="rounded border border-primary-600 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
               >
                 {t("invoice.form.payments.add")}
@@ -507,7 +521,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
                   key={field.id}
                   index={idx}
                   canRemove={canRemovePayment}
-                  onRemove={() => { payments.remove(idx); }}
+                  onRemove={() => {
+                    payments.remove(idx);
+                  }}
                 />
               ))}
             </div>
@@ -522,7 +538,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
               <button
                 type="button"
                 data-testid="add-adicional"
-                onClick={() => { adicionales.append({ nombre: "", valor: "" }); }}
+                onClick={() => {
+                  adicionales.append({ nombre: "", valor: "" });
+                }}
                 disabled={adicionales.fields.length >= 15}
                 className="rounded border border-primary-600 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -547,7 +565,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
                 />
                 <button
                   type="button"
-                  onClick={() => { adicionales.remove(idx); }}
+                  onClick={() => {
+                    adicionales.remove(idx);
+                  }}
                   className="rounded border border-slate-300 px-2 py-1 text-xs"
                   aria-label="Quitar campo"
                 >
@@ -584,7 +604,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { navigate("/invoices"); }}
+                onClick={() => {
+                  navigate("/invoices");
+                }}
                 className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
               >
                 {t("invoice.form.actions.cancel")}
@@ -621,7 +643,9 @@ export function InvoiceForm(props: InvoiceFormProps): ReactElement {
 
       <NewCustomerDialog
         open={showNewCustomerDialog}
-        onClose={() => { setShowNewCustomerDialog(false); }}
+        onClose={() => {
+          setShowNewCustomerDialog(false);
+        }}
         onCreated={handleNewCustomerCreated}
       />
 

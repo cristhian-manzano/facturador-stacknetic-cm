@@ -85,9 +85,7 @@ async function proxyToSriCore(
   const fetchImpl = args.deps.fetchImpl ?? fetch;
   const token = await mintServiceJwt({
     companyId: args.companyId,
-    ...(args.deps.serviceJwtSecret === undefined
-      ? {}
-      : { secret: args.deps.serviceJwtSecret }),
+    ...(args.deps.serviceJwtSecret === undefined ? {} : { secret: args.deps.serviceJwtSecret }),
     ttlSeconds: 60,
   });
 

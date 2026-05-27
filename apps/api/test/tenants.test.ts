@@ -288,8 +288,10 @@ describe("RBAC matrix (per-role privileged action probe)", () => {
         .set("cookie", `${SESSION_COOKIE}=${sessionId}; ${CSRF_COOKIE}=${csrf}`)
         .set("x-csrf-token", csrf);
 
-      if (role === "VIEWER") {
-        // VIEWER lacks `invoice.create`.
+      // VIEWER never had `invoice.create`. ACCOUNTANT lost it as part of
+      // REVIEW-0044 §HIGH-1 (view-only by default per SPEC-0011 §FR-5
+      // row 3); flip `RBAC_ACCOUNTANT_CAN_WRITE=true` to restore.
+      if (role === "VIEWER" || role === "ACCOUNTANT") {
         expect(res.status).toBe(403);
         const parsed = ProblemDetailSchema.safeParse(res.body);
         expect(parsed.success).toBe(true);
@@ -297,7 +299,7 @@ describe("RBAC matrix (per-role privileged action probe)", () => {
           expect(parsed.data.code).toBe("forbidden_action");
         }
       } else {
-        // Everyone else (OWNER, ADMIN, ACCOUNTANT, OPERATOR) has it.
+        // OWNER, ADMIN, OPERATOR retain `invoice.create`.
         expect(res.status).toBe(204);
       }
     },

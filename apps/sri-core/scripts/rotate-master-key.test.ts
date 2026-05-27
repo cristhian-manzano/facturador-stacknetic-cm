@@ -19,11 +19,7 @@ import { randomBytes } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  decodeMasterKeyHex,
-  decryptEnvelope,
-  encryptEnvelope,
-} from "@facturador/utils/crypto";
+import { decodeMasterKeyHex, decryptEnvelope, encryptEnvelope } from "@facturador/utils/crypto";
 
 import { rotateMasterKey } from "./rotate-master-key.js";
 

@@ -19,7 +19,9 @@ describe("useToast", () => {
   it("show() sets a toast then auto-dismisses after the duration", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useToast());
-    act(() => { result.current.show("hi"); });
+    act(() => {
+      result.current.show("hi");
+    });
     expect(result.current.toast).toEqual({ message: "hi", variant: "info" });
     act(() => {
       vi.advanceTimersByTime(2500);
@@ -29,20 +31,28 @@ describe("useToast", () => {
 
   it("dismiss() clears immediately", () => {
     const { result } = renderHook(() => useToast());
-    act(() => { result.current.show("hi", "success", 9999); });
+    act(() => {
+      result.current.show("hi", "success", 9999);
+    });
     expect(result.current.toast).not.toBeNull();
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(result.current.toast).toBeNull();
   });
 
   it("the second show() replaces the first and resets the timer", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useToast());
-    act(() => { result.current.show("first"); });
+    act(() => {
+      result.current.show("first");
+    });
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    act(() => { result.current.show("second", "error"); });
+    act(() => {
+      result.current.show("second", "error");
+    });
     expect(result.current.toast).toEqual({
       message: "second",
       variant: "error",

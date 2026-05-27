@@ -867,9 +867,7 @@ export function buildInvoiceHandlers(deps: InvoiceHandlerDeps): InvoiceHandlers 
               method: "GET",
               companyId,
               requestId: req.id ?? newId(),
-              ...(deps.sriCoreBaseUrl === undefined
-                ? {}
-                : { baseUrl: deps.sriCoreBaseUrl }),
+              ...(deps.sriCoreBaseUrl === undefined ? {} : { baseUrl: deps.sriCoreBaseUrl }),
               ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
               ...(deps.serviceJwtSecret === undefined
                 ? {}

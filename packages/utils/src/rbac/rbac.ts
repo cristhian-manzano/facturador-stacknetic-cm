@@ -21,8 +21,13 @@
  *   - OWNER       — tenant founder. Full power within the tenant.
  *   - ADMIN       — operational manager. Can configure most things but cannot
  *                   permanently destroy the tenant.
- *   - ACCOUNTANT  — read-mostly auditor + invoice reissue. Cannot manage
- *                   certificates or members.
+ *   - ACCOUNTANT  — view-only auditor across the board (SPEC-0011 §FR-5 row 3).
+ *                   Cannot create/update/delete/emit/reissue anything; the
+ *                   role exists so auditors can read the full tenant state
+ *                   without altering it. Legacy installs that relied on the
+ *                   pre-REVIEW-0044 write-capable matrix can opt in to it via
+ *                   `RBAC_ACCOUNTANT_CAN_WRITE=true` (enforced server-side in
+ *                   `requirePermission`, NOT in this matrix).
  *   - OPERATOR    — day-to-day invoice issuance. Can manage customers + emit
  *                   invoices, but cannot reissue or manage certificates.
  *   - VIEWER      — read-only.
@@ -112,16 +117,19 @@ export const MATRIX: Readonly<Record<Action, readonly Role[]>> = {
   // a Rename button the server would reject).
   "tenant.update": ["OWNER"],
   "tenant.manage_members": ["OWNER", "ADMIN"],
-  // Customer
+  // Customer — ACCOUNTANT is view-only per SPEC-0011 §FR-5 row 3
+  // (REVIEW-0044 HIGH-1). Servers can flip the legacy write-capable
+  // behaviour back on via `RBAC_ACCOUNTANT_CAN_WRITE=true`; that
+  // override lives in `apps/api/src/auth/require-permission.ts`.
   "customer.read": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR", "VIEWER"],
-  "customer.create": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR"],
-  "customer.update": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR"],
+  "customer.create": ["OWNER", "ADMIN", "OPERATOR"],
+  "customer.update": ["OWNER", "ADMIN", "OPERATOR"],
   "customer.delete": ["OWNER", "ADMIN"],
-  // Invoice
+  // Invoice — ACCOUNTANT removed from create/emit/reissue (HIGH-1).
   "invoice.read": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR", "VIEWER"],
-  "invoice.create": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR"],
-  "invoice.emit": ["OWNER", "ADMIN", "ACCOUNTANT", "OPERATOR"],
-  "invoice.reissue": ["OWNER", "ADMIN", "ACCOUNTANT"],
+  "invoice.create": ["OWNER", "ADMIN", "OPERATOR"],
+  "invoice.emit": ["OWNER", "ADMIN", "OPERATOR"],
+  "invoice.reissue": ["OWNER", "ADMIN"],
   // Sensitive
   "certificate.manage": ["OWNER", "ADMIN"],
   "establecimiento.manage": ["OWNER", "ADMIN"],

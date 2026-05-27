@@ -33,14 +33,14 @@ describe("useAutoSave", () => {
   it("does nothing when invoiceId is null", () => {
     vi.useFakeTimers();
     const saver = vi.fn();
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: null,
         dirty: true,
         buildBody: () => makeBody(),
         saver: saver as unknown as AutoSaveSaver,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
@@ -52,15 +52,15 @@ describe("useAutoSave", () => {
     vi.useFakeTimers();
     const saver = vi.fn(async () => undefined);
     const onSaved = vi.fn();
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => makeBody(),
         saver: saver as unknown as AutoSaveSaver,
         onSaved,
-      }); },
-    );
+      });
+    });
     expect(saver).not.toHaveBeenCalled();
     act(() => {
       vi.advanceTimersByTime(30_000);
@@ -83,15 +83,15 @@ describe("useAutoSave", () => {
           resolveFn = resolve;
         }),
     );
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => makeBody(),
         intervalMs: 1000,
         saver: saver as unknown as AutoSaveSaver,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(1000);
     });
@@ -117,14 +117,14 @@ describe("useAutoSave", () => {
   it("does nothing when dirty=false", () => {
     vi.useFakeTimers();
     const saver = vi.fn();
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: false,
         buildBody: () => makeBody(),
         saver: saver as unknown as AutoSaveSaver,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
@@ -135,14 +135,14 @@ describe("useAutoSave", () => {
   it("cancels the interval on unmount", () => {
     vi.useFakeTimers();
     const saver = vi.fn(async () => undefined);
-    const { unmount } = renderHook(() =>
-      { useAutoSave({
+    const { unmount } = renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => makeBody(),
         saver: saver as unknown as AutoSaveSaver,
-      }); },
-    );
+      });
+    });
     unmount();
     act(() => {
       vi.advanceTimersByTime(120_000);
@@ -158,15 +158,15 @@ describe("useAutoSave", () => {
       receivedSignal = signal;
       return new Promise(() => undefined);
     };
-    const { unmount } = renderHook(() =>
-      { useAutoSave({
+    const { unmount } = renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => makeBody(),
         intervalMs: 100,
         saver,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(100);
     });
@@ -180,15 +180,15 @@ describe("useAutoSave", () => {
   it("does NOT fire when buildBody returns null", () => {
     vi.useFakeTimers();
     const saver = vi.fn();
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => null,
         intervalMs: 100,
         saver: saver as unknown as AutoSaveSaver,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(100);
     });
@@ -202,16 +202,16 @@ describe("useAutoSave", () => {
     const saver = vi.fn(async () => {
       throw new Error("boom");
     });
-    renderHook(() =>
-      { useAutoSave({
+    renderHook(() => {
+      useAutoSave({
         invoiceId: "inv-1",
         dirty: true,
         buildBody: () => makeBody(),
         intervalMs: 100,
         saver: saver as unknown as AutoSaveSaver,
         onError,
-      }); },
-    );
+      });
+    });
     act(() => {
       vi.advanceTimersByTime(100);
     });

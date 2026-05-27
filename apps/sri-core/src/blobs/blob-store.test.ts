@@ -33,7 +33,9 @@ describe("assertSafeKey", () => {
     ["dot in segment", "abc/def/signed.xml"],
     ["dashes allowed", "01F-8/01F-9/file-name.xml"],
   ])("%s accepts: %s", (_name, key) => {
-    expect(() => { assertSafeKey(key); }).not.toThrow();
+    expect(() => {
+      assertSafeKey(key);
+    }).not.toThrow();
   });
 
   // Build the bad-key table with explicit String.fromCharCode for the
@@ -55,7 +57,9 @@ describe("assertSafeKey", () => {
   ];
 
   it.each(BAD_KEYS)("%s rejects: %s", (_name, key) => {
-    expect(() => { assertSafeKey(key); }).toThrowError(BlobStoreKeyError);
+    expect(() => {
+      assertSafeKey(key);
+    }).toThrowError(BlobStoreKeyError);
   });
 });
 
@@ -93,9 +97,7 @@ describe("InMemoryBlobStore", () => {
 
   it("put rejects path-traversal keys", async () => {
     const store = new InMemoryBlobStore();
-    await expect(store.put("../etc/passwd", "x")).rejects.toBeInstanceOf(
-      BlobStoreKeyError,
-    );
+    await expect(store.put("../etc/passwd", "x")).rejects.toBeInstanceOf(BlobStoreKeyError);
   });
 
   it("clear empties the store; size reflects current entries", async () => {
@@ -136,19 +138,13 @@ describe("FilesystemBlobStore", () => {
       // Pre-computed SHA-256 digest of the UTF-8 bytes `<x/>`.
       "2a31f44da4bd7decbbd3ddfd1a37ae04d02ec665e2c2688816ccc65631586ed1",
     );
-    const onDisk = await fs.readFile(
-      path.join(root, "CO", "DO", "signed.xml"),
-      "utf8",
-    );
+    const onDisk = await fs.readFile(path.join(root, "CO", "DO", "signed.xml"), "utf8");
     expect(onDisk).toBe("<x/>");
   });
 
   it("writes a sidecar .sha256 file containing the digest", async () => {
     const r = await store.put("CO/DO/signed.xml", "<x/>");
-    const text = await fs.readFile(
-      path.join(root, "CO", "DO", "signed.xml.sha256"),
-      "utf8",
-    );
+    const text = await fs.readFile(path.join(root, "CO", "DO", "signed.xml.sha256"), "utf8");
     expect(text.trim()).toBe(r.sha256);
 
     // The convenience getter exposes the same value.
@@ -171,12 +167,8 @@ describe("FilesystemBlobStore", () => {
   it("remove deletes both the payload and the sidecar", async () => {
     await store.put("CO/DO/signed.xml", "<x/>");
     await store.remove("CO/DO/signed.xml");
-    await expect(
-      fs.access(path.join(root, "CO", "DO", "signed.xml")),
-    ).rejects.toThrow();
-    await expect(
-      fs.access(path.join(root, "CO", "DO", "signed.xml.sha256")),
-    ).rejects.toThrow();
+    await expect(fs.access(path.join(root, "CO", "DO", "signed.xml"))).rejects.toThrow();
+    await expect(fs.access(path.join(root, "CO", "DO", "signed.xml.sha256"))).rejects.toThrow();
   });
 
   it("remove is a no-op when the file does not exist", async () => {
@@ -190,21 +182,15 @@ describe("FilesystemBlobStore", () => {
   });
 
   it("put rejects keys containing `..`", async () => {
-    await expect(store.put("../etc/passwd", "x")).rejects.toBeInstanceOf(
-      BlobStoreKeyError,
-    );
+    await expect(store.put("../etc/passwd", "x")).rejects.toBeInstanceOf(BlobStoreKeyError);
   });
 
   it("put rejects absolute paths", async () => {
-    await expect(store.put("/etc/passwd", "x")).rejects.toBeInstanceOf(
-      BlobStoreKeyError,
-    );
+    await expect(store.put("/etc/passwd", "x")).rejects.toBeInstanceOf(BlobStoreKeyError);
   });
 
   it("get rejects path-traversal keys", async () => {
-    await expect(store.get("../etc/passwd")).rejects.toBeInstanceOf(
-      BlobStoreKeyError,
-    );
+    await expect(store.get("../etc/passwd")).rejects.toBeInstanceOf(BlobStoreKeyError);
   });
 
   it("getRoot returns the resolved root path", () => {

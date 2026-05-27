@@ -23,7 +23,7 @@ import request from "supertest";
 import { ulid } from "ulid";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { InvoiceDetailSchema } from "@facturador/contracts/invoices";
+import { InvoiceDetailSchema, InvoiceSchema } from "@facturador/contracts/invoices";
 import { useTestSchema } from "@facturador/db/test-harness";
 import type { Role } from "@facturador/utils/rbac";
 
@@ -399,5 +399,90 @@ describe("GET /api/v1/invoices/:id — contract round-trip vs InvoiceDetailSchem
     expect(parsed.data.sriDocument).not.toBeNull();
     expect(parsed.data.sriDocument?.estado).toBe("AUTORIZADO");
     expect(parsed.data.sriEvents).toHaveLength(2);
+  });
+
+  it("REVIEW-0044 CB-3: BORRADOR with empty optional line/payment fields parses InvoiceSchema cleanly", async () => {
+    // CB-3 of REVIEW-0044 noted that `InvoiceSchema` declares
+    // `codigoPrincipal`, `codigoAuxiliar`, `unidadMedida`, `plazo`, and
+    // `unidadTiempo` as `.optional()` (not `.nullable()`). The API row
+    // stores nulls on the DB side; `toLineDTO` and `toPaymentDTO` MUST
+    // omit those keys (rather than emitting `null`) so the wire payload
+    // round-trips through Zod. This test exercises the path explicitly
+    // by creating a draft with no optional fields populated, then
+    // asserts BOTH `InvoiceSchema` (inner shape) AND `InvoiceDetailSchema`
+    // (wrapped envelope) accept the response.
+    const prisma = ctx.getPrisma();
+    const { app } = createTestApp({ prisma });
+    const auth = await authenticatedSession(app, prisma, "inv-detail-cb3");
+
+    // Bare body — only the required fields. No codigoPrincipal /
+    // codigoAuxiliar / unidadMedida on the line, no plazo / unidadTiempo
+    // on the payment.
+    const create = await request(app)
+      .post("/api/v1/invoices")
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send({
+        emissionPointId: auth.emissionPointId,
+        customerId: auth.customerId,
+        fechaEmision: "2026-05-20",
+        lines: [
+          {
+            descripcion: "Servicio Sin Códigos",
+            cantidad: 1,
+            precioUnitario: 50,
+            descuento: 0,
+            impuestos: [{ codigo: "2", codigoPorcentaje: "4", tarifa: 15 }],
+          },
+        ],
+        payments: [{ formaPago: "01", total: 57.5 }],
+      });
+    expect(create.status).toBe(201);
+    const id = (create.body as { id: string }).id;
+
+    const detail = await request(app)
+      .get(`/api/v1/invoices/${id}`)
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf));
+    expect(detail.status).toBe(200);
+
+    // 1) The wrapped envelope parses.
+    const envelopeParse = InvoiceDetailSchema.safeParse(detail.body);
+    if (!envelopeParse.success) {
+      throw new Error(
+        `InvoiceDetailSchema.parse failed:\n${JSON.stringify(envelopeParse.error.issues, null, 2)}`,
+      );
+    }
+    expect(envelopeParse.success).toBe(true);
+
+    // 2) The inner `invoice` parses against `InvoiceSchema` directly.
+    //    This is the assertion that locks in the null-stripping
+    //    contract for `codigoPrincipal/codigoAuxiliar/unidadMedida/
+    //    plazo/unidadTiempo`. If a future refactor emits `null` instead
+    //    of omitting the key, this parse fails with
+    //    `"Expected string, received null"`.
+    const innerBody = (detail.body as { invoice: unknown }).invoice;
+    const innerParse = InvoiceSchema.safeParse(innerBody);
+    if (!innerParse.success) {
+      throw new Error(
+        `InvoiceSchema.parse failed:\n${JSON.stringify(innerParse.error.issues, null, 2)}`,
+      );
+    }
+    expect(innerParse.success).toBe(true);
+
+    // 3) Assert the optional keys are OMITTED (not `null`) so we never
+    //    regress to the broken contract.
+    const line = innerParse.data.lines[0];
+    expect(line).toBeDefined();
+    if (line !== undefined) {
+      expect(Object.prototype.hasOwnProperty.call(line, "codigoPrincipal")).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(line, "codigoAuxiliar")).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(line, "unidadMedida")).toBe(false);
+    }
+    const payment = innerParse.data.payments[0];
+    expect(payment).toBeDefined();
+    if (payment !== undefined) {
+      expect(Object.prototype.hasOwnProperty.call(payment, "plazo")).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(payment, "unidadTiempo")).toBe(false);
+    }
   });
 });

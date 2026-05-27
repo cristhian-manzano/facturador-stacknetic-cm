@@ -91,9 +91,7 @@ export function nowInEcuador(now: Date = new Date()): EcuadorWallClock {
   // sanity net if the runtime drops the feature.
   /* c8 ignore start */
   if (year === 0 || month === 0 || day === 0) {
-    throw new Error(
-      "nowInEcuador: Intl.DateTimeFormat did not produce year/month/day parts.",
-    );
+    throw new Error("nowInEcuador: Intl.DateTimeFormat did not produce year/month/day parts.");
   }
   /* c8 ignore stop */
 

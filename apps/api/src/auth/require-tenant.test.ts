@@ -17,10 +17,7 @@ import type { PrismaClient } from "@facturador/db";
 import { requirePermission } from "./require-permission.js";
 import { buildRequireTenant } from "./require-tenant.js";
 
-function makeReq(session: {
-  userId: string;
-  companyId: string | null;
-}): Request {
+function makeReq(session: { userId: string; companyId: string | null }): Request {
   return {
     session: {
       id: "01HSESSION0000000000000000",

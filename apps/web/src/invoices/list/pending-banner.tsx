@@ -118,10 +118,11 @@ export function PendingBanner({
     // Wrap each task so the per-row spinner clears when the call settles
     // (regardless of resolve / reject). This gives the user fine-grained
     // feedback during a batch refresh (REVIEW-0044 §7).
-    const tasks = pending.map((row) => () =>
-      fn(row.id).finally(() => {
-        setInFlight((prev) => prev.filter((id) => id !== row.id));
-      }),
+    const tasks = pending.map(
+      (row) => () =>
+        fn(row.id).finally(() => {
+          setInFlight((prev) => prev.filter((id) => id !== row.id));
+        }),
     );
     try {
       await runWithConcurrency(tasks, PENDING_REFRESH_CONCURRENCY);

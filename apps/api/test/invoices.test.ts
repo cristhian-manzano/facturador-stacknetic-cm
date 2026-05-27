@@ -613,6 +613,115 @@ describe("PATCH/DELETE on EMITIDO → 422 locked", () => {
 });
 
 // =========================================================================
+// SECTION 4.5 — PATCH BORRADOR partial body — exercises legacy* helpers in
+// handlers.ts (REVIEW-0044 CB-1 branch-coverage pass).
+//
+// When a PATCH body omits `lines`, `payments`, or `adicionales`, the
+// handler re-runs `computeInvoice` against the existing rows; the helpers
+// `legacyLines`, `legacyPayments`, and `legacyAdicionales` are responsible
+// for projecting the DB rows back into the contract shape. Prior to this
+// pass the helpers were uncovered (handlers.ts:1167-1218 = 0% branch).
+// =========================================================================
+
+describe("PATCH /api/v1/invoices/:id — partial body re-uses persisted lines/payments", () => {
+  const ctx = useTestSchema();
+
+  it("PATCH propina only (no lines/payments) succeeds and totals are recomputed", async () => {
+    const prisma = ctx.getPrisma();
+    const { app } = createTestApp({ prisma });
+    const auth = await authenticatedSession(app, prisma, "inv-patch-partial");
+
+    // Create a BORRADOR with one line + one payment, plus an adicional so
+    // legacyAdicionales also fires.
+    const createBody: Record<string, unknown> = {
+      emissionPointId: auth.emissionPointId,
+      customerId: auth.customerId,
+      fechaEmision: "2026-05-20",
+      lines: [
+        {
+          descripcion: "Servicio Alpha",
+          cantidad: 1,
+          precioUnitario: 100,
+          descuento: 0,
+          impuestos: [{ codigo: "2", codigoPorcentaje: "4", tarifa: 15 }],
+        },
+      ],
+      payments: [{ formaPago: "01", total: 115 }],
+      adicionales: [{ nombre: "OC", valor: "12345" }],
+    };
+    const create = await request(app)
+      .post("/api/v1/invoices")
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send(createBody);
+    expect(create.status).toBe(201);
+    const id = (create.body as { id: string }).id;
+
+    // PATCH only `propina`. The handler must re-run computeInvoice over the
+    // existing line/payment rows projected via the legacy* helpers.
+    // Payments include the propina so importeTotal stays balanced.
+    const res = await request(app)
+      .patch(`/api/v1/invoices/${id}`)
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send({ propina: 5, payments: [{ formaPago: "01", total: 120 }] });
+
+    expect(res.status).toBe(200);
+    const body = res.body as { propina: number; importeTotal: number };
+    expect(body.propina).toBeCloseTo(5, 2);
+    expect(body.importeTotal).toBeCloseTo(120, 2);
+  });
+
+  it("PATCH on the same row with adicionales unchanged keeps the original adicionales", async () => {
+    const prisma = ctx.getPrisma();
+    const { app } = createTestApp({ prisma });
+    const auth = await authenticatedSession(app, prisma, "inv-patch-adic");
+
+    const create = await request(app)
+      .post("/api/v1/invoices")
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send({
+        emissionPointId: auth.emissionPointId,
+        customerId: auth.customerId,
+        fechaEmision: "2026-05-20",
+        lines: [
+          {
+            descripcion: "Producto Beta",
+            cantidad: 2,
+            precioUnitario: 25,
+            descuento: 0,
+            impuestos: [{ codigo: "2", codigoPorcentaje: "4", tarifa: 15 }],
+          },
+        ],
+        payments: [{ formaPago: "01", total: 57.5 }],
+        adicionales: [
+          { nombre: "Cliente", valor: "ABC" },
+          { nombre: "Pedido", valor: "P-9000" },
+        ],
+      });
+    expect(create.status).toBe(201);
+    const id = (create.body as { id: string }).id;
+
+    // PATCH omits `adicionales` — the handler must project the existing
+    // ones via `legacyAdicionales`. We only tweak the customer reference
+    // (which doesn't touch totals) to keep the assertion narrow.
+    const res = await request(app)
+      .patch(`/api/v1/invoices/${id}`)
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send({ customerId: auth.customerId });
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      adicionales: { nombre: string; valor: string }[];
+    };
+    expect(body.adicionales).toHaveLength(2);
+    expect(body.adicionales[0]?.nombre).toBe("Cliente");
+    expect(body.adicionales[1]?.nombre).toBe("Pedido");
+  });
+});
+
+// =========================================================================
 // SECTION 5 — emit happy path + idempotency (stub sri-core via MSW).
 // =========================================================================
 
@@ -1040,6 +1149,43 @@ describe("POST /api/v1/invoices/:id/emit — orchestrator", () => {
       .set("cookie", authCookieHeader(t1.sessionId, t1.csrf))
       .set("x-csrf-token", t1.csrf);
     expect(res.status).toBe(404);
+  });
+
+  it("emit body that smuggles claveAcceso is rejected (defence in depth)", async () => {
+    // Covers orchestrator.ts `assertBodyHasNoClaveAcceso`: the server is
+    // the only party allowed to compute the clave. A hostile client that
+    // POSTs `{claveAcceso: ...}` to `/emit` MUST get a 400 ValidationError
+    // (`identificador: "claveAcceso"`) before the orchestrator touches
+    // the row. This was previously an uncovered branch in
+    // `apps/api/src/invoices/orchestrator.ts` (REVIEW-0044 CB-1 pass).
+    const prisma = ctx.getPrisma();
+    const { app } = createTestApp({
+      prisma,
+      sriCoreBaseUrl: SRI_CORE_TEST_URL,
+      serviceJwtSecret: SERVICE_JWT_TEST_SECRET,
+    });
+    const auth = await authenticatedSession(app, prisma, "inv-emit-clave");
+
+    const create = await request(app)
+      .post("/api/v1/invoices")
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send(
+        validInvoiceBody({
+          emissionPointId: auth.emissionPointId,
+          customerId: auth.customerId,
+        }),
+      );
+    const id = (create.body as { id: string }).id;
+
+    const res = await request(app)
+      .post(`/api/v1/invoices/${id}/emit`)
+      .set("cookie", authCookieHeader(auth.sessionId, auth.csrf))
+      .set("x-csrf-token", auth.csrf)
+      .send({ claveAcceso: "1".repeat(49) });
+    expect(res.status).toBe(400);
+    const parsed = ProblemDetailSchema.safeParse(res.body);
+    expect(parsed.success).toBe(true);
   });
 });
 

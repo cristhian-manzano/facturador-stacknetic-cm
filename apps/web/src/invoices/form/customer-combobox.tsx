@@ -81,7 +81,9 @@ export function CustomerCombobox({
       if (!rootRef.current.contains(ev.target)) setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
-    return (): void => { document.removeEventListener("mousedown", onDocClick); };
+    return (): void => {
+      document.removeEventListener("mousedown", onDocClick);
+    };
   }, []);
 
   useEffect(() => {
@@ -179,7 +181,9 @@ export function CustomerCombobox({
           // we have at least one item — pointing at a non-existent
           // descendant confuses screen readers (REVIEW-0044 §9).
           aria-activedescendant={
-            open && items.length > 0 ? `${optionIdPrefix}-${items[highlighted]?.id ?? ""}` : undefined
+            open && items.length > 0
+              ? `${optionIdPrefix}-${items[highlighted]?.id ?? ""}`
+              : undefined
           }
           data-testid="customer-search-input"
           className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -189,7 +193,9 @@ export function CustomerCombobox({
             setQuery(ev.target.value);
             setOpen(true);
           }}
-          onFocus={() => { setOpen(true); }}
+          onFocus={() => {
+            setOpen(true);
+          }}
           onKeyDown={onKeyDown}
           aria-invalid={value === "" ? "true" : "false"}
         />
@@ -239,7 +245,9 @@ export function CustomerCombobox({
                 id={`${optionIdPrefix}-${item.id}`}
                 aria-selected={idx === highlighted}
                 data-testid={`customer-option-${item.id}`}
-                onMouseEnter={() => { setHighlighted(idx); }}
+                onMouseEnter={() => {
+                  setHighlighted(idx);
+                }}
                 onMouseDown={(ev) => {
                   // mouseDown so blur doesn't fire first
                   ev.preventDefault();

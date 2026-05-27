@@ -397,10 +397,15 @@ model BurnedSecuencial {
 
   document SriDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
-  // The (companyId, estab, ptoEmi, secuencial) uniqueness preserves the
-  // existing constraint from the SRI-core skeleton — burning the same
-  // secuencial twice (even across codDoc) is a defect.
-  @@unique([companyId, estab, ptoEmi, secuencial])
+  // Uniqueness keyed by `(companyId, estab, ptoEmi, tipoComprobante,
+  // secuencial)`. The sequence space is **per-tipoComprobante** under
+  // SRI rules — factura (01) and nota crédito (04) share the same
+  // (estab, ptoEmi) but maintain independent counters, so the same
+  // secuencial number can legitimately appear once per tipo without
+  // a conflict. The earlier 4-tuple form (without `tipoComprobante`)
+  // wrongly rejected such legitimate burns; corrected in migration
+  // `burned_secuencial_per_tipo` (REVIEW-0044 §HIGH-2).
+  @@unique([companyId, estab, ptoEmi, tipoComprobante, secuencial])
   @@index([companyId, estab, ptoEmi])
   @@index([companyId, estab, ptoEmi, tipoComprobante, createdAt])
 }

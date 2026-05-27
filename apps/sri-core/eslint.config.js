@@ -15,10 +15,7 @@ const config = [
   // config (which re-runs after this block thanks to flat-config ordering).
   {
     files: ["**/src/**/*.{ts,tsx,mts,cts}", "**/scripts/**/*.{ts,mts,cts}"],
-    ignores: [
-      "**/src/env.ts",
-      "**/src/env/**/*.ts",
-    ],
+    ignores: ["**/src/env.ts", "**/src/env/**/*.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -32,10 +29,7 @@ const config = [
   // Operator scripts that read `process.env` directly (no zod-validated
   // env loader because the operator passes the keys at the prompt).
   {
-    files: [
-      "**/scripts/rotate-master-key.ts",
-      "**/scripts/smoke-*.ts",
-    ],
+    files: ["**/scripts/rotate-master-key.ts", "**/scripts/smoke-*.ts"],
     rules: {
       "no-restricted-syntax": "off",
     },
@@ -43,10 +37,7 @@ const config = [
   // Test files: allow sri-model access AND env access (same as the shared
   // test override but with our reduced no-restricted-syntax list).
   {
-    files: [
-      "**/*.test.{ts,tsx,mts,cts}",
-      "**/test/**/*.{ts,tsx,mts,cts}",
-    ],
+    files: ["**/*.test.{ts,tsx,mts,cts}", "**/test/**/*.{ts,tsx,mts,cts}"],
     rules: {
       "no-restricted-syntax": "off",
     },
@@ -55,10 +46,7 @@ const config = [
   // flat-config "last block wins" semantics require this explicit override
   // because block 2's `ignores` does NOT subtract from later rules.).
   {
-    files: [
-      "**/src/env.ts",
-      "**/src/env/**/*.ts",
-    ],
+    files: ["**/src/env.ts", "**/src/env/**/*.ts"],
     rules: {
       "no-restricted-syntax": "off",
     },

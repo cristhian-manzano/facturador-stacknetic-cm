@@ -43,11 +43,7 @@
 import process from "node:process";
 
 import { createPrismaClient, type PrismaClient } from "@facturador/db";
-import {
-  decodeMasterKeyHex,
-  decryptEnvelope,
-  encryptEnvelope,
-} from "@facturador/utils/crypto";
+import { decodeMasterKeyHex, decryptEnvelope, encryptEnvelope } from "@facturador/utils/crypto";
 
 interface RotationSummary {
   ok: number;

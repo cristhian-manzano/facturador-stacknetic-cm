@@ -98,9 +98,7 @@ describe("<PendingBanner /> batch refresh", () => {
     // Hold all three refresh calls open until the assertions on the
     // spinners run. We capture the resolvers per call.
     const resolvers: (() => void)[] = [];
-    const refreshFn = vi.fn(
-      (): Promise<void> => new Promise<void>((r) => resolvers.push(r)),
-    );
+    const refreshFn = vi.fn((): Promise<void> => new Promise<void>((r) => resolvers.push(r)));
     const user = userEvent.setup();
     render(<PendingBanner items={items} refreshFn={refreshFn} />);
     await user.click(screen.getByTestId("pending-banner-refresh"));

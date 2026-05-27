@@ -68,10 +68,7 @@ export const EXPIRY_SKIPPED_RESULT: RunExpiryCheckResult = Object.freeze({
  * Returns `true` when the caller holds the lock and is the sole runner
  * for this tick; `false` when a peer beat them to it.
  */
-async function tryAcquireAdvisoryLock(
-  prisma: PrismaClient,
-  lockName: string,
-): Promise<boolean> {
+async function tryAcquireAdvisoryLock(prisma: PrismaClient, lockName: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${lockName})) AS locked
   `;

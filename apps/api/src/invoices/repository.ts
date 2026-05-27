@@ -202,13 +202,7 @@ export async function replaceInvoiceDraft(
       where: { id: args.id, companyId: args.companyId },
       data: updateData,
     });
-    await insertChildren(
-      tx,
-      args.id,
-      args.lines,
-      args.payments,
-      args.adicionales,
-    );
+    await insertChildren(tx, args.id, args.lines, args.payments, args.adicionales);
 
     const row = await tx.invoice.findUniqueOrThrow({
       where: { id: args.id },
@@ -318,9 +312,7 @@ export async function listInvoices(
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: args.limit + 1,
-    ...(args.cursor === undefined
-      ? {}
-      : { cursor: { id: args.cursor }, skip: 1 }),
+    ...(args.cursor === undefined ? {} : { cursor: { id: args.cursor }, skip: 1 }),
     select: {
       id: true,
       estado: true,
@@ -416,9 +408,7 @@ async function insertChildren(
         orden: p.orden,
         formaPago: p.formaPago,
         total: new Prisma.Decimal(p.total),
-        plazo: p.plazo === undefined || p.plazo === null
-          ? null
-          : new Prisma.Decimal(p.plazo),
+        plazo: p.plazo === undefined || p.plazo === null ? null : new Prisma.Decimal(p.plazo),
         unidadTiempo: p.unidadTiempo ?? null,
       })),
     });
@@ -436,9 +426,7 @@ async function insertChildren(
   }
 }
 
-function cloneTotalImpuestos(
-  buckets: readonly TaxBucket[],
-): Prisma.InputJsonValue {
+function cloneTotalImpuestos(buckets: readonly TaxBucket[]): Prisma.InputJsonValue {
   return buckets.map((b) => ({
     codigo: b.codigo,
     codigoPorcentaje: b.codigoPorcentaje,

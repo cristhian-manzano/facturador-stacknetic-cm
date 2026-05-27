@@ -24,7 +24,6 @@ import { prisma } from "@facturador/db";
 import { createLogger } from "@facturador/logger";
 import { mintServiceJwt } from "@facturador/utils/service-jwt";
 
-
 import { env } from "../src/env.js";
 import { createApp } from "../src/server.js";
 
@@ -35,7 +34,12 @@ function generateP12(passphrase: string): Buffer {
   const pub = forge.pki.rsa.setPublicKey(forgeKey.n, forgeKey.e);
   const cert = forge.pki.createCertificate();
   cert.publicKey = pub;
-  cert.serialNumber = "01" + ulid().slice(0, 12).toLowerCase().replace(/[^0-9a-f]/g, "0");
+  cert.serialNumber =
+    "01" +
+    ulid()
+      .slice(0, 12)
+      .toLowerCase()
+      .replace(/[^0-9a-f]/g, "0");
   cert.validity.notBefore = new Date(Date.now() - 86_400_000);
   cert.validity.notAfter = new Date(Date.now() + 365 * 86_400_000);
   const dn = [{ shortName: "CN", value: "SMOKE TEST CERT" }];
@@ -54,7 +58,11 @@ async function main(): Promise<void> {
   const logger = createLogger({
     service: "sri-core",
     env: "development",
-    destination: new Writable({ write: (_c, _e, cb) => { cb(); } }),
+    destination: new Writable({
+      write: (_c, _e, cb) => {
+        cb();
+      },
+    }),
   });
   const app = createApp({ logger });
   // Bind to an ephemeral port so the smoke doesn't fight with anything
@@ -128,7 +136,9 @@ async function main(): Promise<void> {
       throw new Error(`get failed: ${String(getRes.status)}`);
     }
     const getBody = (await getRes.json()) as Record<string, unknown>;
-    process.stdout.write(`[smoke] get returned subjectCN=${String(getBody.subjectCN)} status=${String(getBody.status)}\n`);
+    process.stdout.write(
+      `[smoke] get returned subjectCN=${String(getBody.subjectCN)} status=${String(getBody.status)}\n`,
+    );
     for (const forbidden of [
       "p12CiphertextB64",
       "p12NonceB64",

@@ -50,9 +50,7 @@ export function parseFechaEmision(s: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (m === null) {
     throw new ValidationError("fechaEmision must be YYYY-MM-DD", {
-      errors: [
-        { identificador: "fechaEmision", mensaje: "formato inválido", tipo: "ERROR" },
-      ],
+      errors: [{ identificador: "fechaEmision", mensaje: "formato inválido", tipo: "ERROR" }],
     });
   }
   // Capture groups m[1..3] are guaranteed by the regex match above.
@@ -63,15 +61,9 @@ export function parseFechaEmision(s: string): Date {
   const utc = Date.UTC(y, mo - 1, d);
   const dt = new Date(utc);
   // Round-trip the components to catch out-of-range dates like 2024-02-30.
-  if (
-    dt.getUTCFullYear() !== y ||
-    dt.getUTCMonth() !== mo - 1 ||
-    dt.getUTCDate() !== d
-  ) {
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) {
     throw new ValidationError("fechaEmision is not a valid calendar date", {
-      errors: [
-        { identificador: "fechaEmision", mensaje: "fecha inválida", tipo: "ERROR" },
-      ],
+      errors: [{ identificador: "fechaEmision", mensaje: "fecha inválida", tipo: "ERROR" }],
     });
   }
   return dt;
@@ -97,11 +89,7 @@ function isFechaEmisionAcceptable(fechaEmision: Date, now: Date): boolean {
   // Reduce `now` to its local-midnight Ecuador equivalent by reading UTC
   // components (the caller is expected to have built `now` consistently
   // with `parseFechaEmision`; tests inject `Date.UTC(y,m,d)` directly).
-  const nowDay = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
+  const nowDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const oneDay = 24 * 60 * 60 * 1000;
   return fechaEmision.getTime() <= nowDay + oneDay;
 }

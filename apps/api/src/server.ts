@@ -379,12 +379,8 @@ export function createApp(options: CreateAppOptions = {}): Express {
     buildCertificateRouter({
       prisma,
       logger: rootLogger,
-      ...(options.sriCoreBaseUrl === undefined
-        ? {}
-        : { sriCoreBaseUrl: options.sriCoreBaseUrl }),
-      ...(options.sriCoreFetchImpl === undefined
-        ? {}
-        : { fetchImpl: options.sriCoreFetchImpl }),
+      ...(options.sriCoreBaseUrl === undefined ? {} : { sriCoreBaseUrl: options.sriCoreBaseUrl }),
+      ...(options.sriCoreFetchImpl === undefined ? {} : { fetchImpl: options.sriCoreFetchImpl }),
       ...(options.serviceJwtSecret === undefined
         ? {}
         : { serviceJwtSecret: options.serviceJwtSecret }),

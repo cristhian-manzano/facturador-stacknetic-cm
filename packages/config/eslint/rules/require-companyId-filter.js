@@ -124,8 +124,7 @@ function whereContainsCompanyId(obj) {
       (keyName === "AND" || keyName === "OR") &&
       prop.value.type === "ArrayExpression" &&
       prop.value.elements.some(
-        (el) =>
-          el !== null && el.type === "ObjectExpression" && whereContainsCompanyId(el),
+        (el) => el !== null && el.type === "ObjectExpression" && whereContainsCompanyId(el),
       )
     ) {
       return true;

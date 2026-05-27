@@ -18,12 +18,12 @@ Express `trust proxy` setting. The rate limiter inspects this to resolve
 `req.ip`; a misconfigured value lets a client spoof `X-Forwarded-For` and
 evade per-IP throttling.
 
-| Deployment                         | Value         |
-| ---------------------------------- | ------------- |
-| Single nginx / ALB in front        | `1`           |
-| Two proxies (CDN → load balancer)  | `2`           |
+| Deployment                         | Value                |
+| ---------------------------------- | -------------------- |
+| Single nginx / ALB in front        | `1`                  |
+| Two proxies (CDN → load balancer)  | `2`                  |
 | Local development / direct connect | `loopback` (default) |
-| Strict trust (any proxy)           | `true`        |
+| Strict trust (any proxy)           | `true`               |
 
 Accepts integers (hop count), the string `"true"`, and Express preset
 strings (`"loopback"`, `"linklocal"`, `"uniquelocal"`).
@@ -34,6 +34,21 @@ Default `false`. Per SPEC-0011 §FR-5 the `tenant.update` permission is
 OWNER-only — ADMIN gets view access. Set to `true` to restore the legacy
 behaviour where ADMIN can rename a tenant; the matrix test is exhaustive
 and locks in whichever branch is configured at boot.
+
+### `RBAC_ACCOUNTANT_CAN_WRITE`
+
+Default `false`. Per SPEC-0011 §FR-5 row 3 (and REVIEW-0044 §HIGH-1)
+the ACCOUNTANT role is **view-only** across the board — it can read
+companies, memberships, certificates, emission points, customers, and
+invoices, but cannot create/update/delete/emit/reissue anything. Set
+this flag to `true` to restore the pre-REVIEW-0044 write-capable
+behaviour, granting ACCOUNTANT back `customer.create`,
+`customer.update`, `invoice.create`, `invoice.emit`, and
+`invoice.reissue`. Override is enforced server-side in
+`apps/api/src/auth/require-permission.ts`; the pure RBAC matrix in
+`@facturador/utils/rbac` stays view-only so the SPA's `can()` predicate
+mirrors the default behaviour. Document any deployment that flips this
+flag and review the membership of the ACCOUNTANT role before doing so.
 
 ### `SECUENCIAL_RESERVE_MAX_RETRIES`
 

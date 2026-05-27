@@ -81,8 +81,12 @@ export function InvoicesEditPage(): ReactElement {
           setError(t("invoice.form.error.generic"));
         }
       })
-      .finally(() => { setLoading(false); });
-    return (): void => { controller.abort(); };
+      .finally(() => {
+        setLoading(false);
+      });
+    return (): void => {
+      controller.abort();
+    };
   }, [id]);
 
   const initial = useMemo<InvoiceFormValues | undefined>(

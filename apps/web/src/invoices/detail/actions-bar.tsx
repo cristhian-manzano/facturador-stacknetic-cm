@@ -198,8 +198,7 @@ export function ActionsBar({
       key: "retry",
       label: t("invoice.detail.actions.retryEmit"),
       onClick: onRetryEmit,
-      visible:
-        isBorrador && hadPriorFailure(detail) && has(INVOICE_ACTION_PERMISSIONS.retryEmit),
+      visible: isBorrador && hadPriorFailure(detail) && has(INVOICE_ACTION_PERMISSIONS.retryEmit),
       testId: "action-retry-emit",
       variant: "primary",
       busy: pending === "retry",

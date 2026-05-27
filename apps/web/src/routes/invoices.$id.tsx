@@ -101,7 +101,9 @@ function InvoicesDetailInner({ id }: { readonly id: string }): ReactElement {
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { document.removeEventListener("visibilitychange", onVisibility); };
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [id, queryClient]);
 
   const isPolling = useMemo(() => {

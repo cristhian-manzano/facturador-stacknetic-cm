@@ -34,7 +34,12 @@
  *   1. Exactly one `<ds:Signature>` is appended as the LAST child of
  *      `<factura id="comprobante">`.
  *   2. The single content reference uses URI `#comprobante` with
- *      transforms `[enveloped-signature, xml-exc-c14n#]`.
+ *      transforms `[enveloped-signature, inclusive C14N]`. Both the
+ *      `<ds:CanonicalizationMethod>` element on `SignedInfo` and the
+ *      reference's transform pin the inclusive algorithm URI
+ *      `http://www.w3.org/TR/2001/REC-xml-c14n-20010315` — the SRI
+ *      ficha técnica only accepts inclusive C14N (NOT exclusive C14N
+ *      `xml-exc-c14n#`).
  *   3. KeyInfo contains the leaf certificate DER (base64) under
  *      `<X509Data><X509Certificate>`. No PEM headers leak.
  *   4. SignedProperties carries `SigningTime` + `SigningCertificate`
@@ -99,6 +104,16 @@ export class XmlSignError extends Error {
 
 /** Signing algorithm choice — SHA-1 by default, SHA-256 when opted in. */
 export type SignAlgo = "SHA1" | "SHA256";
+
+/**
+ * Inclusive XML Canonicalization (C14N) algorithm URI — SRI requires
+ * inclusive C14N (`http://www.w3.org/TR/2001/REC-xml-c14n-20010315`),
+ * NOT exclusive C14N (`http://www.w3.org/2001/10/xml-exc-c14n#`).
+ *
+ * Source: `docs/sri-facturacion-electronica-ecuador.md` §10
+ * ("CanonicalizationMethod ... C14N exclusivo no, inclusivo sí").
+ */
+export const INCLUSIVE_C14N_URI = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
 
 /**
  * Mapping from the public {@link SignAlgo} to the WebCrypto + URI
@@ -380,6 +395,13 @@ export async function signFacturaXml(input: SignFacturaXmlInput): Promise<SignFa
 
   const signed = new SignedXml();
 
+  // Defensive override: xmldsigjs already defaults the SignedInfo
+  // <ds:CanonicalizationMethod> to inclusive C14N
+  // (`http://www.w3.org/TR/2001/REC-xml-c14n-20010315`), but a future
+  // upstream change could flip the default. We pin the value so that a
+  // regression at the library level cannot ship the wrong URI to SRI.
+  signed.XmlSignature.SignedInfo.CanonicalizationMethod.Algorithm = INCLUSIVE_C14N_URI;
+
   const signOptions: OptionsXAdES = {
     keyValue: privateKey,
     x509: [certB64],
@@ -388,7 +410,10 @@ export async function signFacturaXml(input: SignFacturaXmlInput): Promise<SignFa
       {
         uri: "#comprobante",
         hash: { name: algoCfg.webcryptoHash },
-        transforms: ["enveloped", "exc-c14n"],
+        // `c14n` resolves to `XmlDsigC14NTransform` (inclusive
+        // canonicalization). SRI rejects exclusive C14N
+        // (`xml-exc-c14n#`); see docs/sri-facturacion-electronica-ecuador.md §10.
+        transforms: ["enveloped", "c14n"],
       },
     ],
     signingTime: { value: (input.now ?? (() => new Date()))() },

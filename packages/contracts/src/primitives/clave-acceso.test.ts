@@ -79,9 +79,7 @@ describe("formatClaveAccesoGroups", () => {
     // 49 / 4 = 12 r 1 → 12 groups of 4 + a single trailing digit
     // ("2" — the check digit). Total spaces = 12.
     const formatted = formatClaveAccesoGroups(VALID);
-    expect(formatted).toBe(
-      "1905 2026 0117 9001 2344 0011 0010 0100 0000 1231 2345 6781 2",
-    );
+    expect(formatted).toBe("1905 2026 0117 9001 2344 0011 0010 0100 0000 1231 2345 6781 2");
     // Spot-check the structure:
     expect(formatted.split(" ")).toHaveLength(13);
     expect(formatted.replace(/ /g, "")).toBe(VALID);

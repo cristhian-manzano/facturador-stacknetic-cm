@@ -48,7 +48,9 @@ describe("<NewCustomerDialog>", () => {
     await user.type(screen.getByLabelText(/Identificación/), "1700000001");
     await user.type(screen.getByLabelText(/Razón social/), "Pepito Pérez");
     await user.click(screen.getByTestId("new-customer-submit"));
-    await waitFor(() => { expect(creator).toHaveBeenCalledOnce(); });
+    await waitFor(() => {
+      expect(creator).toHaveBeenCalledOnce();
+    });
     expect(onCreated).toHaveBeenCalledOnce();
     expect(onCreated.mock.calls[0]?.[0]?.id).toBe("cust-new");
     expect(onClose).toHaveBeenCalledOnce();

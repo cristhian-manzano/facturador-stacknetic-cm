@@ -50,7 +50,6 @@ import type { Logger } from "@facturador/logger";
 import { audit, type AuditPrismaClient } from "@facturador/utils/audit";
 import { AuthError, ForbiddenError, NotFoundError } from "@facturador/utils/errors";
 
-
 import { setSessionCookies } from "../auth/cookies.js";
 import { switchSessionTenant } from "../auth/session-store.js";
 

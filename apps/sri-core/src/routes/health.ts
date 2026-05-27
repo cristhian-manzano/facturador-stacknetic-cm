@@ -19,10 +19,7 @@ import { Router, type Request, type Response } from "express";
 
 import type { PrismaClient } from "@facturador/db";
 
-import {
-  POLLING_STALENESS_THRESHOLD_MS,
-  type PollingHealthState,
-} from "../jobs/polling-health.js";
+import { POLLING_STALENESS_THRESHOLD_MS, type PollingHealthState } from "../jobs/polling-health.js";
 
 export interface HealthOkBody {
   readonly status: "ok";

@@ -23,11 +23,7 @@
 import { MockAgent } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  SriCircuitOpenError,
-  SriClientError,
-  SriResponseTooLargeError,
-} from "./errors.js";
+import { SriCircuitOpenError, SriClientError, SriResponseTooLargeError } from "./errors.js";
 import {
   httpPostXml,
   TLS_OPTIONS,

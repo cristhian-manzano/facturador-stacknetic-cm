@@ -19,7 +19,9 @@ export function buildMetricsRouter(): Router {
       res.setHeader("content-type", registry.contentType);
       res.status(200).send(body);
     } catch (err) {
-      res.status(500).json({ error: "metrics_unavailable", message: String((err as Error).message) });
+      res
+        .status(500)
+        .json({ error: "metrics_unavailable", message: String((err as Error).message) });
     }
   });
   return router;

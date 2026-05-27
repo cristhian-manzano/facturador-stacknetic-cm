@@ -117,6 +117,42 @@ describe("signFacturaXml — round-trip", () => {
     expect(matches).toHaveLength(1);
   });
 
+  it("CanonicalizationMethod uses inclusive C14N (REVIEW-0044 CB-2)", async () => {
+    // SRI ficha técnica §10 requires inclusive C14N
+    // (`http://www.w3.org/TR/2001/REC-xml-c14n-20010315`). Using
+    // exclusive C14N (`http://www.w3.org/2001/10/xml-exc-c14n#`) causes
+    // SRI to reject the document at "validación de la firma".
+    const xmlForSigning = buildGoldenXml();
+    const cert = makeTestCert();
+    const { signedXml } = await signFacturaXml({
+      xmlForSigning,
+      certificate: { certPem: cert.certPem, keyPem: cert.keyPem },
+    });
+
+    // <ds:CanonicalizationMethod> on <ds:SignedInfo> must pin inclusive C14N.
+    expect(signedXml).toMatch(
+      /<ds:CanonicalizationMethod[^>]+Algorithm="http:\/\/www\.w3\.org\/TR\/2001\/REC-xml-c14n-20010315"/,
+    );
+    // The exclusive-C14N URI must NOT appear anywhere.
+    expect(signedXml).not.toContain("http://www.w3.org/2001/10/xml-exc-c14n#");
+
+    // Every <ds:Transform> inside the content reference must also use the
+    // inclusive algorithm (only `enveloped-signature` + inclusive C14N).
+    const transforms = signedXml.match(/<ds:Transform Algorithm="([^"]+)"/g) ?? [];
+    expect(transforms.length).toBeGreaterThan(0);
+    for (const t of transforms) {
+      expect(t).not.toContain("xml-exc-c14n#");
+    }
+    // At least one Transform uses the inclusive C14N URI.
+    expect(
+      transforms.some((t) => t.includes("http://www.w3.org/TR/2001/REC-xml-c14n-20010315")),
+    ).toBe(true);
+    // The enveloped-signature transform must still be present.
+    expect(signedXml).toContain(
+      'Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"',
+    );
+  });
+
   it("KeyInfo includes X509Certificate without PEM markers", async () => {
     const xmlForSigning = buildGoldenXml();
     const cert = makeTestCert();

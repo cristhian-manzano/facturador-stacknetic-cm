@@ -62,7 +62,7 @@ describe("audit()", () => {
     // payloadHash chain is computed by default — empty stub means
     // the helper hashes "" || canonicalJson({}) = sha256("|{}").
     expect(typeof args.data.payloadHash).toBe("string");
-    expect((args.data.payloadHash as string)).toHaveLength(64);
+    expect(args.data.payloadHash as string).toHaveLength(64);
   });
 
   it("redacts payloadJson before insert", async () => {
@@ -151,21 +151,22 @@ describe("audit()", () => {
     const prisma: AuditPrismaClient = {
       auditLog: {
         create: create as unknown as AuditPrismaClient["auditLog"]["create"],
-        findFirst: findFirst as unknown as NonNullable<
-          AuditPrismaClient["auditLog"]["findFirst"]
-        >,
+        findFirst: findFirst as unknown as NonNullable<AuditPrismaClient["auditLog"]["findFirst"]>,
       },
     };
     const logger = makeStubLogger();
     // Row 1: no predecessor (genesis).
     findFirst.mockResolvedValueOnce(null);
     create.mockResolvedValueOnce({});
-    await audit({ prisma, logger }, {
-      action: "tenant.member_added",
-      entity: "Membership",
-      companyId: "01HCO0",
-      payloadJson: { role: "VIEWER" },
-    });
+    await audit(
+      { prisma, logger },
+      {
+        action: "tenant.member_added",
+        entity: "Membership",
+        companyId: "01HCO0",
+        payloadJson: { role: "VIEWER" },
+      },
+    );
     const row1 = create.mock.calls[0]?.[0] as { data: Record<string, unknown> };
     const hash1 = row1.data.payloadHash as string;
     expect(hash1).toHaveLength(64);
@@ -173,12 +174,15 @@ describe("audit()", () => {
     // Row 2: predecessor returns row 1's hash.
     findFirst.mockResolvedValueOnce({ payloadHash: hash1 });
     create.mockResolvedValueOnce({});
-    await audit({ prisma, logger }, {
-      action: "tenant.member_added",
-      entity: "Membership",
-      companyId: "01HCO0",
-      payloadJson: { role: "OPERATOR" },
-    });
+    await audit(
+      { prisma, logger },
+      {
+        action: "tenant.member_added",
+        entity: "Membership",
+        companyId: "01HCO0",
+        payloadJson: { role: "OPERATOR" },
+      },
+    );
     const row2 = create.mock.calls[1]?.[0] as { data: Record<string, unknown> };
     const hash2 = row2.data.payloadHash as string;
     expect(hash2).toHaveLength(64);
@@ -187,12 +191,15 @@ describe("audit()", () => {
     // Row 3: predecessor returns row 2's hash.
     findFirst.mockResolvedValueOnce({ payloadHash: hash2 });
     create.mockResolvedValueOnce({});
-    await audit({ prisma, logger }, {
-      action: "tenant.member_added",
-      entity: "Membership",
-      companyId: "01HCO0",
-      payloadJson: { role: "OWNER" },
-    });
+    await audit(
+      { prisma, logger },
+      {
+        action: "tenant.member_added",
+        entity: "Membership",
+        companyId: "01HCO0",
+        payloadJson: { role: "OWNER" },
+      },
+    );
     const row3 = create.mock.calls[2]?.[0] as { data: Record<string, unknown> };
     const hash3 = row3.data.payloadHash as string;
     expect(hash3).toHaveLength(64);

@@ -82,7 +82,9 @@ export function NewCustomerDialog({
       if (ev.key === "Escape" && !submitting) onClose();
     }
     window.addEventListener("keydown", onKey);
-    return (): void => { window.removeEventListener("keydown", onKey); };
+    return (): void => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, submitting, onClose]);
 
   if (!open) return null;

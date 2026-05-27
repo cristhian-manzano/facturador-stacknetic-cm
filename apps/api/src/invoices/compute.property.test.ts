@@ -39,9 +39,7 @@ const IVA_5 = { codigo: "2", codigoPorcentaje: "5", tarifa: 5 } as const;
  * sidestep any float-shape collision between fast-check's `double` and
  * decimal.js parsing — the production code accepts `string | number | Decimal`.
  */
-const moneyArb = fc
-  .integer({ min: 1, max: 999_999 })
-  .map((cents) => (cents / 100).toFixed(2));
+const moneyArb = fc.integer({ min: 1, max: 999_999 }).map((cents) => (cents / 100).toFixed(2));
 
 /**
  * 6-decimal quantity arbitrary in [0.000001, 100]. We pick a tight upper
@@ -90,18 +88,14 @@ function makeBalancedPayments(importeTotal: number): ComputePaymentInput[] {
  * pre-decreto 12% lookup and post-decreto 15%). The dates are normalised
  * to UTC-midnight to mirror `parseFechaEmision`.
  */
-const fechaArb: fc.Arbitrary<Date> = fc
-  .integer({ min: 2017, max: 2030 })
-  .chain((y) =>
+const fechaArb: fc.Arbitrary<Date> = fc.integer({ min: 2017, max: 2030 }).chain((y) =>
+  fc.integer({ min: 1, max: 12 }).chain((m) =>
     fc
-      .integer({ min: 1, max: 12 })
-      .chain((m) =>
-        fc
-          // Use 1..28 to side-step month-end edge cases (Feb 29 etc.).
-          .integer({ min: 1, max: 28 })
-          .map((d) => new Date(Date.UTC(y, m - 1, d))),
-      ),
-  );
+      // Use 1..28 to side-step month-end edge cases (Feb 29 etc.).
+      .integer({ min: 1, max: 28 })
+      .map((d) => new Date(Date.UTC(y, m - 1, d))),
+  ),
+);
 
 /* -------------------------------------------------------------------------- */
 /*                              Determinism                                   */
@@ -175,10 +169,7 @@ describe("computeInvoice — importeTotal reconciliation", () => {
             propina,
             totalDescuento: cappedDescuento,
           });
-          const sumImp = r.totalImpuestos.reduce(
-            (acc, t) => acc.plus(t.valor),
-            new Decimal(0),
-          );
+          const sumImp = r.totalImpuestos.reduce((acc, t) => acc.plus(t.valor), new Decimal(0));
           const expected = new Decimal(r.totalSinImpuestos)
             .minus(r.totalDescuento)
             .plus(sumImp)
@@ -249,9 +240,7 @@ describe("pickIvaCode — deterministic IVA selection", () => {
         const b = pickIvaCode(fechaEmision);
         // `a.codigo` is the literal "2" so a direct `a.codigo === b.codigo`
         // would be flagged by lint; compare the result objects holistically.
-        return (
-          JSON.stringify({ ...a }) === JSON.stringify({ ...b })
-        );
+        return JSON.stringify({ ...a }) === JSON.stringify({ ...b });
       }),
       { numRuns: 100 },
     );

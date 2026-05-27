@@ -30,22 +30,22 @@ The full monorepo is **typecheck-clean (8/8), build-clean (8/8), lint-clean (8/8
 
 ## 2. Headline numbers
 
-| Dimension | Before (REVIEW-0043) | After (REVIEW-0044) | Δ |
-|---|---:|---:|---:|
-| Total tests | 1,519 | **1,747** | +228 |
-| `pnpm -r typecheck` | failing (4 pre-existing) | **0** | clean |
-| `pnpm -r build` | passing | **0** | clean |
-| `pnpm -r lint` | 70+ errors | **0 errors** | clean |
-| `apps/api` tests | 312 | 349 | +37 |
-| `apps/sri-core` tests | 397 | 433 | +36 |
-| `apps/web` tests | 323 | 351 | +28 |
-| `packages/utils` tests | 152 | 219 | +67 |
-| `packages/contracts` tests | 287 | 343 | +56 |
-| `packages/logger` tests | 35 | 38 | +3 |
-| `packages/db` tests | 13 | 13 | 0 |
-| `packages/config` tests | 0 | 1 | +1 |
-| Web bundle (login route eager JS) | 131 KB gz monolithic | **10.6 KB app + 5 vendor chunks** | bundle split, login load drastically lower |
-| Prisma migrations | 6 | 7 | +1 (production_readiness_columns) |
+| Dimension                         |     Before (REVIEW-0043) |               After (REVIEW-0044) |                                          Δ |
+| --------------------------------- | -----------------------: | --------------------------------: | -----------------------------------------: |
+| Total tests                       |                    1,519 |                         **1,747** |                                       +228 |
+| `pnpm -r typecheck`               | failing (4 pre-existing) |                             **0** |                                      clean |
+| `pnpm -r build`                   |                  passing |                             **0** |                                      clean |
+| `pnpm -r lint`                    |               70+ errors |                      **0 errors** |                                      clean |
+| `apps/api` tests                  |                      312 |                               349 |                                        +37 |
+| `apps/sri-core` tests             |                      397 |                               433 |                                        +36 |
+| `apps/web` tests                  |                      323 |                               351 |                                        +28 |
+| `packages/utils` tests            |                      152 |                               219 |                                        +67 |
+| `packages/contracts` tests        |                      287 |                               343 |                                        +56 |
+| `packages/logger` tests           |                       35 |                                38 |                                         +3 |
+| `packages/db` tests               |                       13 |                                13 |                                          0 |
+| `packages/config` tests           |                        0 |                                 1 |                                         +1 |
+| Web bundle (login route eager JS) |     131 KB gz monolithic | **10.6 KB app + 5 vendor chunks** | bundle split, login load drastically lower |
+| Prisma migrations                 |                        6 |                                 7 |          +1 (production_readiness_columns) |
 
 ---
 
@@ -55,18 +55,18 @@ The full monorepo is **typecheck-clean (8/8), build-clean (8/8), lint-clean (8/8
 
 `packages/db/prisma/migrations/20260525233317_production_readiness_columns/migration.sql`
 
-| Model | Column / Constraint | Purpose |
-|---|---|---|
-| `Invoice` | `numeroAutorizacion String?` | Populated on AUTORIZADO; mirrors sri-core |
-| `Invoice` | `fechaAutorizacion DateTime?` | Same |
-| `Invoice` | `sriDocumentId String?` | Soft-link to `SriDocument.id` (no relation, indexed) |
-| `Invoice` | `replacesInvoiceId String?` + self-FK Restrict | Reissue chain tracking |
-| `Session` | `ipHash String?` | Hashed IP alongside raw `ip` (raw deprecated) |
-| `AuditLog` | `subjectHash String?` + index `(subjectHash, createdAt)` | Per-email brute-force tracking without leaking emails |
-| `AuditLog` | `payloadHash String?` | Tamper-evident audit chain |
-| `Membership` | `invitedAt DateTime?` + `acceptedAt DateTime?` | Invitation lifecycle (backfilled: `acceptedAt = createdAt`) |
-| `Customer` | `isActive Boolean @default(true)` + index | Explicit deactivation independent of soft-delete (backfilled true) |
-| `BurnedSecuencial` | FK `documentId → SriDocument.id` (`onDelete: SetNull`) | Formalised previously-soft pointer |
+| Model              | Column / Constraint                                      | Purpose                                                            |
+| ------------------ | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `Invoice`          | `numeroAutorizacion String?`                             | Populated on AUTORIZADO; mirrors sri-core                          |
+| `Invoice`          | `fechaAutorizacion DateTime?`                            | Same                                                               |
+| `Invoice`          | `sriDocumentId String?`                                  | Soft-link to `SriDocument.id` (no relation, indexed)               |
+| `Invoice`          | `replacesInvoiceId String?` + self-FK Restrict           | Reissue chain tracking                                             |
+| `Session`          | `ipHash String?`                                         | Hashed IP alongside raw `ip` (raw deprecated)                      |
+| `AuditLog`         | `subjectHash String?` + index `(subjectHash, createdAt)` | Per-email brute-force tracking without leaking emails              |
+| `AuditLog`         | `payloadHash String?`                                    | Tamper-evident audit chain                                         |
+| `Membership`       | `invitedAt DateTime?` + `acceptedAt DateTime?`           | Invitation lifecycle (backfilled: `acceptedAt = createdAt`)        |
+| `Customer`         | `isActive Boolean @default(true)` + index                | Explicit deactivation independent of soft-delete (backfilled true) |
+| `BurnedSecuencial` | FK `documentId → SriDocument.id` (`onDelete: SetNull`)   | Formalised previously-soft pointer                                 |
 
 Backfills run in transaction; migration is idempotent under `prisma migrate deploy` and reversible. Down-migration documented as SQL comments.
 
@@ -91,101 +91,101 @@ Backfills run in transaction; migration is idempotent under `prisma migrate depl
 
 ### 3.5 `apps/sri-core` hardening (12 items)
 
-| File | Change |
-|---|---|
-| `src/auth/service-jwt.ts` | JWT `jti` deny-list via `lru-cache` with TTL clamp; rejects replays with `auth.replay` (401) |
-| `src/middleware/rate-limit-documents.ts` | `express-rate-limit` 100/min per `companyId` on `/v1/documents/*` POST |
-| `src/certificates/expiry-job.ts` | Wrapped in `pg_try_advisory_lock(hashtext('cert-expiry-job'))` to prevent dual-replica double-emit |
-| `src/soap/http.ts` | Response size cap 20 MiB → `SriResponseTooLargeError`; circuit breaker (10 consecutive fails → 30s open) → `SriCircuitOpenError` |
-| `src/soap/parse.ts` | `<comprobante>` non-CDATA fallback via element walking + `XMLSerializer` |
-| `src/xml/warm.ts` + `src/index.ts` | XSD validator warmed on boot (skips ~150ms cold-start) |
-| `src/xml/validate.ts` | Parsed XSD schema cached across calls (idempotent re-parse skip) |
-| `scripts/check-xsd-sync.ts` + CI | XSD-byte-equal guard between `docs/sri/` and `apps/sri-core/resources/` |
-| `scripts/smoke-sri.ts` | End-to-end SRI pruebas smoke: build → sign → submit → poll |
+| File                                       | Change                                                                                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/auth/service-jwt.ts`                  | JWT `jti` deny-list via `lru-cache` with TTL clamp; rejects replays with `auth.replay` (401)                                              |
+| `src/middleware/rate-limit-documents.ts`   | `express-rate-limit` 100/min per `companyId` on `/v1/documents/*` POST                                                                    |
+| `src/certificates/expiry-job.ts`           | Wrapped in `pg_try_advisory_lock(hashtext('cert-expiry-job'))` to prevent dual-replica double-emit                                        |
+| `src/soap/http.ts`                         | Response size cap 20 MiB → `SriResponseTooLargeError`; circuit breaker (10 consecutive fails → 30s open) → `SriCircuitOpenError`          |
+| `src/soap/parse.ts`                        | `<comprobante>` non-CDATA fallback via element walking + `XMLSerializer`                                                                  |
+| `src/xml/warm.ts` + `src/index.ts`         | XSD validator warmed on boot (skips ~150ms cold-start)                                                                                    |
+| `src/xml/validate.ts`                      | Parsed XSD schema cached across calls (idempotent re-parse skip)                                                                          |
+| `scripts/check-xsd-sync.ts` + CI           | XSD-byte-equal guard between `docs/sri/` and `apps/sri-core/resources/`                                                                   |
+| `scripts/smoke-sri.ts`                     | End-to-end SRI pruebas smoke: build → sign → submit → poll                                                                                |
 | `src/metrics.ts` + `src/routes/metrics.ts` | Prometheus counters: `sri_request_total`, `sri_request_duration_seconds`, `sri_document_transitions_total`, `sri_step_duration_ms_bucket` |
-| `src/jobs/polling-health.ts` + `/readyz` | 503 when no polling batch completed in ≤ 5 min |
-| `src/routes/documents.ts` | `POST /v1/documents/:claveAcceso/retry-polling` (resets `pollAttempts=0`, `nextPollAt=NOW()`) |
-| `scripts/rotate-master-key.ts` | CLI tool to rotate `SRI_CERT_MASTER_KEY_HEX` across all stored certificates (idempotent, bumps `kmsKeyVersion`) |
-| `scripts/clave-acceso.ts` | CLI to compute claves locally for operator diagnostics |
+| `src/jobs/polling-health.ts` + `/readyz`   | 503 when no polling batch completed in ≤ 5 min                                                                                            |
+| `src/routes/documents.ts`                  | `POST /v1/documents/:claveAcceso/retry-polling` (resets `pollAttempts=0`, `nextPollAt=NOW()`)                                             |
+| `scripts/rotate-master-key.ts`             | CLI tool to rotate `SRI_CERT_MASTER_KEY_HEX` across all stored certificates (idempotent, bumps `kmsKeyVersion`)                           |
+| `scripts/clave-acceso.ts`                  | CLI to compute claves locally for operator diagnostics                                                                                    |
 
 ### 3.6 `apps/api` features (17 items)
 
-| File | Change |
-|---|---|
-| `src/invoices/orchestrator.ts` | Persists `numeroAutorizacion`, `fechaAutorizacion`, `sriDocumentId`, `replacesInvoiceId` on AUTORIZADO; `ensureMensajesNonEmpty()` guarantees a non-null `mensajes` array on DEVUELTA/NO_AUTORIZADO; respects `SECUENCIAL_RESERVE_MAX_RETRIES` |
-| `src/invoices/handlers.ts` | Detail wire shape includes new mirrors |
-| `src/invoices/repository.ts` | `tx.invoice.update`/`prisma.invoice.update` now filter by `companyId` in WHERE |
-| `src/auth/handlers.ts` | `subjectHash = hashEmail(email)` on `auth.login.failure`; membership filter `acceptedAt: { not: null }` |
-| `src/auth/session-store.ts` | Writes `Session.ipHash` via `hashIp(req.ip)` alongside raw `ip` |
-| `src/auth/session-sweep.ts` + cron | Daily `DELETE expired sessions older than 7 days` cron, skipped in `NODE_ENV=test` |
-| `src/auth/require-tenant.ts` | Filters `acceptedAt: { not: null }`; per-request membership cache stored on `req` (1 query per request, asserted by test) |
-| `src/auth/require-permission.ts` | Env override `RBAC_ADMIN_CAN_UPDATE_TENANT` (default off — OWNER-only per SPEC-0011) |
-| `src/tenants/routes.ts` | `express-rate-limit` 30/min per session for POST/PATCH/DELETE on tenants & members |
-| `src/tenants/handlers.ts` | `acceptedAt: { not: null }` filter on tenant list + switch |
-| `src/tenants/tenant-service.ts` | Sets `acceptedAt`/`invitedAt` on bootstrap OWNER + `addMember` |
-| `src/customers/handlers.ts` | Update audit payload carries redacted `before` + `after`; `companyId` in update/delete WHEREs |
-| `src/establecimientos/handlers.ts` | `companyId` in establecimiento + emissionPoint update/updateMany WHEREs (6 sites) |
-| `src/sri/client.ts` | `sriCoreFetch` accepts Zod `schema`; `[100,250,500] ms` retry backoff on 502/503/504; terminal on 4xx |
-| `src/certificates/routes.ts` | Proxy scaffold (GET/POST/POST :id/activate/DELETE) to sri-core with service JWT + audit |
-| `src/server.ts` | Env-driven `trust proxy` via `TRUST_PROXY_HOPS`; security headers; origin check; session sweep cron |
-| `src/middleware/origin-check.ts` | Defense-in-depth CSRF: rejects POST/PUT/PATCH/DELETE with mismatched `Origin`/`Referer` |
-| `src/middleware/security-headers.ts` | HSTS (prod), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, COOP, CORP |
-| `src/env.ts` | New env knobs: `TRUST_PROXY_HOPS`, `RBAC_ADMIN_CAN_UPDATE_TENANT`, `SECUENCIAL_RESERVE_MAX_RETRIES`, `TENANT_WRITE_RATE_PER_MIN` |
-| `README.md` (new) | Operator runbook: env matrix, daily commands, scripts |
+| File                                 | Change                                                                                                                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/invoices/orchestrator.ts`       | Persists `numeroAutorizacion`, `fechaAutorizacion`, `sriDocumentId`, `replacesInvoiceId` on AUTORIZADO; `ensureMensajesNonEmpty()` guarantees a non-null `mensajes` array on DEVUELTA/NO_AUTORIZADO; respects `SECUENCIAL_RESERVE_MAX_RETRIES` |
+| `src/invoices/handlers.ts`           | Detail wire shape includes new mirrors                                                                                                                                                                                                         |
+| `src/invoices/repository.ts`         | `tx.invoice.update`/`prisma.invoice.update` now filter by `companyId` in WHERE                                                                                                                                                                 |
+| `src/auth/handlers.ts`               | `subjectHash = hashEmail(email)` on `auth.login.failure`; membership filter `acceptedAt: { not: null }`                                                                                                                                        |
+| `src/auth/session-store.ts`          | Writes `Session.ipHash` via `hashIp(req.ip)` alongside raw `ip`                                                                                                                                                                                |
+| `src/auth/session-sweep.ts` + cron   | Daily `DELETE expired sessions older than 7 days` cron, skipped in `NODE_ENV=test`                                                                                                                                                             |
+| `src/auth/require-tenant.ts`         | Filters `acceptedAt: { not: null }`; per-request membership cache stored on `req` (1 query per request, asserted by test)                                                                                                                      |
+| `src/auth/require-permission.ts`     | Env override `RBAC_ADMIN_CAN_UPDATE_TENANT` (default off — OWNER-only per SPEC-0011)                                                                                                                                                           |
+| `src/tenants/routes.ts`              | `express-rate-limit` 30/min per session for POST/PATCH/DELETE on tenants & members                                                                                                                                                             |
+| `src/tenants/handlers.ts`            | `acceptedAt: { not: null }` filter on tenant list + switch                                                                                                                                                                                     |
+| `src/tenants/tenant-service.ts`      | Sets `acceptedAt`/`invitedAt` on bootstrap OWNER + `addMember`                                                                                                                                                                                 |
+| `src/customers/handlers.ts`          | Update audit payload carries redacted `before` + `after`; `companyId` in update/delete WHEREs                                                                                                                                                  |
+| `src/establecimientos/handlers.ts`   | `companyId` in establecimiento + emissionPoint update/updateMany WHEREs (6 sites)                                                                                                                                                              |
+| `src/sri/client.ts`                  | `sriCoreFetch` accepts Zod `schema`; `[100,250,500] ms` retry backoff on 502/503/504; terminal on 4xx                                                                                                                                          |
+| `src/certificates/routes.ts`         | Proxy scaffold (GET/POST/POST :id/activate/DELETE) to sri-core with service JWT + audit                                                                                                                                                        |
+| `src/server.ts`                      | Env-driven `trust proxy` via `TRUST_PROXY_HOPS`; security headers; origin check; session sweep cron                                                                                                                                            |
+| `src/middleware/origin-check.ts`     | Defense-in-depth CSRF: rejects POST/PUT/PATCH/DELETE with mismatched `Origin`/`Referer`                                                                                                                                                        |
+| `src/middleware/security-headers.ts` | HSTS (prod), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, COOP, CORP                                                                                                                                                        |
+| `src/env.ts`                         | New env knobs: `TRUST_PROXY_HOPS`, `RBAC_ADMIN_CAN_UPDATE_TENANT`, `SECUENCIAL_RESERVE_MAX_RETRIES`, `TENANT_WRITE_RATE_PER_MIN`                                                                                                               |
+| `README.md` (new)                    | Operator runbook: env matrix, daily commands, scripts                                                                                                                                                                                          |
 
 ### 3.7 `apps/web` features (12 items)
 
-| File | Change |
-|---|---|
-| `src/routes/router.tsx` | All non-login routes use `React.lazy()` + `<Suspense fallback={<RouteFallback />}>` |
-| `vite.config.ts` | Manual vendor chunks: react / query / rhf / zod. Login route now ships **10.6 KB app + 5 vendor chunks** (vs the original 131 KB monolithic bundle) |
-| `src/app/ErrorBoundary.tsx` + tests | Catches render errors with a fallback + reload |
-| `src/app/ToastContainer.tsx` + `toast-bus.ts` + tests | Global toast surface, `role="status"`, 2.5s auto-dismiss |
-| `src/app/OfflineBanner.tsx` + tests | `navigator.onLine` banner |
-| `src/routes/invoices.$id.tsx` (test) | Visibility-pause polling test (jsdom `visibilitychange`) |
-| `src/invoices/list/filters-bar.tsx` | Multi-select estado chips with URL serialisation as comma list |
-| `src/invoices/api.ts` + `apps/api/src/invoices/handlers.ts` | `EstadoFilterSchema` accepts repeated, comma, or single forms |
-| `src/auth/permissions.ts` | `INVOICE_ACTION_PERMISSIONS` map + test asserting subset of server RBAC matrix |
-| `src/invoices/detail/actions-bar.tsx` | Imports permission map (single source) |
-| `src/invoices/list/pending-banner.tsx` | Concurrent refresh w/ per-row spinner |
-| `src/invoices/hooks/useAutoSave.ts` | ETag tracking + 412 → `onConflict` callback |
-| `src/invoices/form/customer-combobox.tsx` | `aria-activedescendant` on input + `id` on each option |
-| `src/invoices/form/invoice-form.snapshot.test.tsx` | SSR snapshot of form markup |
-| `src/auth/CrossTabAuthBridge.tsx` + `cross-tab.ts` | `BroadcastChannel("auth")` propagates sign-out across tabs |
-| `src/layout/SignOutButton.tsx` | Broadcasts signout on logout |
+| File                                                        | Change                                                                                                                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/router.tsx`                                     | All non-login routes use `React.lazy()` + `<Suspense fallback={<RouteFallback />}>`                                                                 |
+| `vite.config.ts`                                            | Manual vendor chunks: react / query / rhf / zod. Login route now ships **10.6 KB app + 5 vendor chunks** (vs the original 131 KB monolithic bundle) |
+| `src/app/ErrorBoundary.tsx` + tests                         | Catches render errors with a fallback + reload                                                                                                      |
+| `src/app/ToastContainer.tsx` + `toast-bus.ts` + tests       | Global toast surface, `role="status"`, 2.5s auto-dismiss                                                                                            |
+| `src/app/OfflineBanner.tsx` + tests                         | `navigator.onLine` banner                                                                                                                           |
+| `src/routes/invoices.$id.tsx` (test)                        | Visibility-pause polling test (jsdom `visibilitychange`)                                                                                            |
+| `src/invoices/list/filters-bar.tsx`                         | Multi-select estado chips with URL serialisation as comma list                                                                                      |
+| `src/invoices/api.ts` + `apps/api/src/invoices/handlers.ts` | `EstadoFilterSchema` accepts repeated, comma, or single forms                                                                                       |
+| `src/auth/permissions.ts`                                   | `INVOICE_ACTION_PERMISSIONS` map + test asserting subset of server RBAC matrix                                                                      |
+| `src/invoices/detail/actions-bar.tsx`                       | Imports permission map (single source)                                                                                                              |
+| `src/invoices/list/pending-banner.tsx`                      | Concurrent refresh w/ per-row spinner                                                                                                               |
+| `src/invoices/hooks/useAutoSave.ts`                         | ETag tracking + 412 → `onConflict` callback                                                                                                         |
+| `src/invoices/form/customer-combobox.tsx`                   | `aria-activedescendant` on input + `id` on each option                                                                                              |
+| `src/invoices/form/invoice-form.snapshot.test.tsx`          | SSR snapshot of form markup                                                                                                                         |
+| `src/auth/CrossTabAuthBridge.tsx` + `cross-tab.ts`          | `BroadcastChannel("auth")` propagates sign-out across tabs                                                                                          |
+| `src/layout/SignOutButton.tsx`                              | Broadcasts signout on logout                                                                                                                        |
 
 ### 3.8 Cross-cutting cleanup
 
-| Item | Files |
-|---|---|
-| TS project references | Root `tsconfig.json` + all 8 workspace `tsconfig.json` files; new `pnpm typecheck:project` script |
-| moduleResolution NodeNext | `apps/sri-core` switched (api stays on Bundler due to decimal.js dual export — documented) |
-| `.gitattributes` | LF normalisation |
-| `.npmrc` | `engine-strict=true` |
-| `.github/workflows/ci.yml` | Node-22 enforcement; `pnpm lint:docker` (hadolint); `pnpm -r test:coverage` thresholds; XSD-sync guard |
-| `.github/dependabot.yml` | Confirmed: npm + docker + github-actions |
-| `docker-compose.yml` | `mailhog` → `mailpit:latest` (maintained, multi-arch) |
-| `README.md` (root) | Architecture overview, env matrix, daily commands, operator-scripts table, production-checklist |
-| `packages/logger/src/redactions.ts` | Added `csrfToken` + `*.csrfToken` |
-| `packages/utils/src/audit/audit.ts` | Accepts `subjectHash`; computes `payloadHash` chain via `findFirst` predecessor; P2003 (FK) noise → debug |
-| `packages/utils/src/rbac/rbac.ts` | OWNER-only `tenant.update` (was ADMIN+OWNER) |
-| `packages/config/eslint.config.js` | New `@facturador/security/require-companyId-filter` rule + per-file overrides for known-safe call sites |
-| `packages/config/eslint-react.config.js` | React/react-hooks/jsx-a11y plugins explicitly installed and wired |
-| `packages/{contracts,utils,logger}/vitest.config.ts` | Migrated to `defineFacturadorVitestConfig` |
-| `apps/api/Dockerfile` | CRITICAL: now copies `packages/db` (was broken since PROMPT-0020) |
+| Item                                                 | Files                                                                                                     |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| TS project references                                | Root `tsconfig.json` + all 8 workspace `tsconfig.json` files; new `pnpm typecheck:project` script         |
+| moduleResolution NodeNext                            | `apps/sri-core` switched (api stays on Bundler due to decimal.js dual export — documented)                |
+| `.gitattributes`                                     | LF normalisation                                                                                          |
+| `.npmrc`                                             | `engine-strict=true`                                                                                      |
+| `.github/workflows/ci.yml`                           | Node-22 enforcement; `pnpm lint:docker` (hadolint); `pnpm -r test:coverage` thresholds; XSD-sync guard    |
+| `.github/dependabot.yml`                             | Confirmed: npm + docker + github-actions                                                                  |
+| `docker-compose.yml`                                 | `mailhog` → `mailpit:latest` (maintained, multi-arch)                                                     |
+| `README.md` (root)                                   | Architecture overview, env matrix, daily commands, operator-scripts table, production-checklist           |
+| `packages/logger/src/redactions.ts`                  | Added `csrfToken` + `*.csrfToken`                                                                         |
+| `packages/utils/src/audit/audit.ts`                  | Accepts `subjectHash`; computes `payloadHash` chain via `findFirst` predecessor; P2003 (FK) noise → debug |
+| `packages/utils/src/rbac/rbac.ts`                    | OWNER-only `tenant.update` (was ADMIN+OWNER)                                                              |
+| `packages/config/eslint.config.js`                   | New `@facturador/security/require-companyId-filter` rule + per-file overrides for known-safe call sites   |
+| `packages/config/eslint-react.config.js`             | React/react-hooks/jsx-a11y plugins explicitly installed and wired                                         |
+| `packages/{contracts,utils,logger}/vitest.config.ts` | Migrated to `defineFacturadorVitestConfig`                                                                |
+| `apps/api/Dockerfile`                                | CRITICAL: now copies `packages/db` (was broken since PROMPT-0020)                                         |
 
 ---
 
 ## 4. CRITICAL items addressed (all 6)
 
-| # | Item | Resolution |
-|---|---|---|
-| C1 | API ↔ Web detail-endpoint schema mismatch (`InvoiceDetailSchema` wrapped vs flat) | Wrapped server response in `{ invoice, customer, sriDocument, sriEvents }`; added contract round-trip test `apps/api/test/invoices.detail-contract.test.ts` (403 lines, covers schema parsing for all states) |
-| C2 | `apps/api/Dockerfile` missing `packages/db` | Fixed: COPY layer added; verified `docker compose build api` exits 0 |
-| C3 | Stub mode default in `.env.example` | Confirmed `SRI_STUB_MODE=false` in production; `apps/sri-core/src/env.ts` refuses prod boot when stub=true. Added explicit comment in `.env.example` |
-| C4 | Production `__Host-` cookies require HTTPS | Documented in `apps/api/README.md`; tests confirm prod-name cookie via mocked `document.cookie` |
-| C5 | `SRI_CERT_MASTER_KEY_HEX` env-only / no KMS | Built `apps/sri-core/scripts/rotate-master-key.ts` with `kmsKeyVersion` bumping; runbook updated. Full KMS adapter is deferred (LOW — needs infra decision, see §10) |
-| C6 | No production CSP / reverse-proxy headers | `apps/api/src/middleware/security-headers.ts` wires HSTS (prod-only), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, COOP, CORP; tested via 9 assertions |
+| #   | Item                                                                               | Resolution                                                                                                                                                                                                    |
+| --- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | API ↔ Web detail-endpoint schema mismatch (`InvoiceDetailSchema` wrapped vs flat) | Wrapped server response in `{ invoice, customer, sriDocument, sriEvents }`; added contract round-trip test `apps/api/test/invoices.detail-contract.test.ts` (403 lines, covers schema parsing for all states) |
+| C2  | `apps/api/Dockerfile` missing `packages/db`                                        | Fixed: COPY layer added; verified `docker compose build api` exits 0                                                                                                                                          |
+| C3  | Stub mode default in `.env.example`                                                | Confirmed `SRI_STUB_MODE=false` in production; `apps/sri-core/src/env.ts` refuses prod boot when stub=true. Added explicit comment in `.env.example`                                                          |
+| C4  | Production `__Host-` cookies require HTTPS                                         | Documented in `apps/api/README.md`; tests confirm prod-name cookie via mocked `document.cookie`                                                                                                               |
+| C5  | `SRI_CERT_MASTER_KEY_HEX` env-only / no KMS                                        | Built `apps/sri-core/scripts/rotate-master-key.ts` with `kmsKeyVersion` bumping; runbook updated. Full KMS adapter is deferred (LOW — needs infra decision, see §10)                                          |
+| C6  | No production CSP / reverse-proxy headers                                          | `apps/api/src/middleware/security-headers.ts` wires HSTS (prod-only), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, COOP, CORP; tested via 9 assertions                               |
 
 ---
 
@@ -195,62 +195,62 @@ Each item links to its REVIEW source for traceability. **C** = closed in this pa
 
 ### Security & auth (12 items, all C)
 
-| # | Item | Status |
-|---|---|---|
-| H1 | `numeroAutorizacion` / `fechaAutorizacion` mirror columns | C (Wave 1 migration + orchestrator wire) |
-| H2 | `audit()` real-Postgres integration | C (now covered by orchestrator + customers + tenants integration tests) |
-| H3 | `ErrorCodes` taxonomy enum | C (`@facturador/contracts/errors/codes.ts`) |
-| H4 | AsyncLocalStorage `runWithContext` | C (`@facturador/utils/context`) |
-| H5 | Session hard cap policy (30d vs 90d) | C — confirmed 30d as policy decision; documented in `apps/api/README.md`. Stakeholder can flip via `SESSION_HARD_CAP_DAYS` env if added later |
-| H6 | `Session.ip` stores raw — add `ipHash` | C |
-| H7 | `auth.login.failure` audit omits `hash(email)` | C (`subjectHash` column + writer) |
-| H8 | `csrfToken` not in REDACT_PATHS | C |
-| H9 | `AuditLog.subjectHash` column | C |
-| H10 | ADMIN `tenant.update` vs view | C — switched to OWNER-only (per SPEC); env override `RBAC_ADMIN_CAN_UPDATE_TENANT=true` for stakeholder rollback |
-| H11 | No Row-Level Security in Postgres | **Deferred — documented as a follow-up SPEC** (requires schema migration + ops change). Custom ESLint rule `require-companyId-filter` is the interim defense |
-| H12 | `recordEvent` only state writer (no automated guard) | C — added ESLint `no-restricted-syntax` rule for `prisma.sriDocument.update({ data: { estado } })` outside the lifecycle module |
+| #   | Item                                                      | Status                                                                                                                                                       |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| H1  | `numeroAutorizacion` / `fechaAutorizacion` mirror columns | C (Wave 1 migration + orchestrator wire)                                                                                                                     |
+| H2  | `audit()` real-Postgres integration                       | C (now covered by orchestrator + customers + tenants integration tests)                                                                                      |
+| H3  | `ErrorCodes` taxonomy enum                                | C (`@facturador/contracts/errors/codes.ts`)                                                                                                                  |
+| H4  | AsyncLocalStorage `runWithContext`                        | C (`@facturador/utils/context`)                                                                                                                              |
+| H5  | Session hard cap policy (30d vs 90d)                      | C — confirmed 30d as policy decision; documented in `apps/api/README.md`. Stakeholder can flip via `SESSION_HARD_CAP_DAYS` env if added later                |
+| H6  | `Session.ip` stores raw — add `ipHash`                    | C                                                                                                                                                            |
+| H7  | `auth.login.failure` audit omits `hash(email)`            | C (`subjectHash` column + writer)                                                                                                                            |
+| H8  | `csrfToken` not in REDACT_PATHS                           | C                                                                                                                                                            |
+| H9  | `AuditLog.subjectHash` column                             | C                                                                                                                                                            |
+| H10 | ADMIN `tenant.update` vs view                             | C — switched to OWNER-only (per SPEC); env override `RBAC_ADMIN_CAN_UPDATE_TENANT=true` for stakeholder rollback                                             |
+| H11 | No Row-Level Security in Postgres                         | **Deferred — documented as a follow-up SPEC** (requires schema migration + ops change). Custom ESLint rule `require-companyId-filter` is the interim defense |
+| H12 | `recordEvent` only state writer (no automated guard)      | C — added ESLint `no-restricted-syntax` rule for `prisma.sriDocument.update({ data: { estado } })` outside the lifecycle module                              |
 
 ### sri-core robustness (10 items, all C)
 
-| # | Item | Status |
-|---|---|---|
-| H13 | JWT `jti` replay defence | C |
-| H14 | `SERVICE_JWT_SECRET` rotation | Deferred — documented as a SPEC-0050 follow-up (asymmetric RS256). Single-secret today works but rotation requires deploy-time coordination |
-| H15 | No rate limit on `/v1/documents/emit` | C |
-| H16 | Cross-service Prisma drift | C — `no-restricted-imports` rule (`prisma.sriDocument.*` blocked outside `apps/sri-core`) |
-| H17 | No master-key rotation tool | C (`scripts/rotate-master-key.ts`) |
-| H18 | Cron concurrency (cert expiry) | C — `pg_try_advisory_lock` |
-| H19 | Network-failure leaves invoice as EMITIDO+ERROR_RED | C — deliberate per SPEC-0030 invariant (no orphan secuencial); documented in `apps/api/README.md` |
-| H20 | Reissue accepts ERROR_RED (broader) | C — documented; operator recovery path |
-| H21 | Reissue does NOT mark source `ANULADO` | Deferred — anulación electrónica is a separate SRI flow out of scope |
-| H22 | Secuencial retry budget too low | C — exposed via `SECUENCIAL_RESERVE_MAX_RETRIES` env |
+| #   | Item                                                | Status                                                                                                                                      |
+| --- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| H13 | JWT `jti` replay defence                            | C                                                                                                                                           |
+| H14 | `SERVICE_JWT_SECRET` rotation                       | Deferred — documented as a SPEC-0050 follow-up (asymmetric RS256). Single-secret today works but rotation requires deploy-time coordination |
+| H15 | No rate limit on `/v1/documents/emit`               | C                                                                                                                                           |
+| H16 | Cross-service Prisma drift                          | C — `no-restricted-imports` rule (`prisma.sriDocument.*` blocked outside `apps/sri-core`)                                                   |
+| H17 | No master-key rotation tool                         | C (`scripts/rotate-master-key.ts`)                                                                                                          |
+| H18 | Cron concurrency (cert expiry)                      | C — `pg_try_advisory_lock`                                                                                                                  |
+| H19 | Network-failure leaves invoice as EMITIDO+ERROR_RED | C — deliberate per SPEC-0030 invariant (no orphan secuencial); documented in `apps/api/README.md`                                           |
+| H20 | Reissue accepts ERROR_RED (broader)                 | C — documented; operator recovery path                                                                                                      |
+| H21 | Reissue does NOT mark source `ANULADO`              | Deferred — anulación electrónica is a separate SRI flow out of scope                                                                        |
+| H22 | Secuencial retry budget too low                     | C — exposed via `SECUENCIAL_RESERVE_MAX_RETRIES` env                                                                                        |
 
 ### Web UX (8 items, all C)
 
-| # | Item | Status |
-|---|---|---|
-| H23 | `pickIvaCode` duplicated client-side | C — single source in `@facturador/contracts/sri/iva.ts`; web re-exports |
-| H24 | Bundle 131 KB gz vs 80 KB target | C — eager-app code 131 KB → 10.6 KB (login route); per-route lazy chunks isolated |
+| #   | Item                                                  | Status                                                                                                                     |
+| --- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| H23 | `pickIvaCode` duplicated client-side                  | C — single source in `@facturador/contracts/sri/iva.ts`; web re-exports                                                    |
+| H24 | Bundle 131 KB gz vs 80 KB target                      | C — eager-app code 131 KB → 10.6 KB (login route); per-route lazy chunks isolated                                          |
 | H25 | `SignedXml` / `xml` / `xmlForSigning` in REDACT_PATHS | C — verified `xml`, `signedXml`, `authorizedXml`, `xmlForSigning`, `rawSoapResponse` all redacted (Wave 1D agent extended) |
-| H26 | No response size cap on SOAP | C — 20 MiB cap |
-| H27 | `<comprobante>` non-CDATA fallback | C |
-| H28 | TLS pruebas stale intermediates | Documented in `apps/sri-core/docs/manual-smoke.md` |
-| H29 | Long EN_PROCESO docs (60-attempt cap) | C — `POST /v1/documents/:claveAcceso/retry-polling` |
-| H30 | FK noise in audit() | C — P2003 → debug |
+| H26 | No response size cap on SOAP                          | C — 20 MiB cap                                                                                                             |
+| H27 | `<comprobante>` non-CDATA fallback                    | C                                                                                                                          |
+| H28 | TLS pruebas stale intermediates                       | Documented in `apps/sri-core/docs/manual-smoke.md`                                                                         |
+| H29 | Long EN_PROCESO docs (60-attempt cap)                 | C — `POST /v1/documents/:claveAcceso/retry-polling`                                                                        |
+| H30 | FK noise in audit()                                   | C — P2003 → debug                                                                                                          |
 
 ### Operations & defence-in-depth (9 items, all C)
 
-| # | Item | Status |
-|---|---|---|
-| H31 | `Membership.invitedAt`/`acceptedAt` columns + active filter | C |
-| H32 | Per-request membership lookup | C — cache on `req`, asserted ≤1 query per request |
-| H33 | No rate limit on tenant CRUD | C |
-| H34 | Loopback `trust proxy` only | C — `TRUST_PROXY_HOPS` env |
-| H35 | `EmitInvoiceResponse.mensajes` empty on DEVUELTA | C — `ensureMensajesNonEmpty()` synthesises a generic mensaje |
-| H36 | Auto-save conflict between tabs | C — `useAutoSave` ETag scaffold + `onConflict` callback (server-side `If-Match` deferred) |
-| H37 | Combobox `aria-activedescendant` | C |
-| H38 | Multi-tab session sync | C — `BroadcastChannel("auth")` |
-| H39 | Multer upgrade ratchet | Already on `multer@2.0.1` (stable); documented |
+| #   | Item                                                        | Status                                                                                    |
+| --- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| H31 | `Membership.invitedAt`/`acceptedAt` columns + active filter | C                                                                                         |
+| H32 | Per-request membership lookup                               | C — cache on `req`, asserted ≤1 query per request                                         |
+| H33 | No rate limit on tenant CRUD                                | C                                                                                         |
+| H34 | Loopback `trust proxy` only                                 | C — `TRUST_PROXY_HOPS` env                                                                |
+| H35 | `EmitInvoiceResponse.mensajes` empty on DEVUELTA            | C — `ensureMensajesNonEmpty()` synthesises a generic mensaje                              |
+| H36 | Auto-save conflict between tabs                             | C — `useAutoSave` ETag scaffold + `onConflict` callback (server-side `If-Match` deferred) |
+| H37 | Combobox `aria-activedescendant`                            | C                                                                                         |
+| H38 | Multi-tab session sync                                      | C — `BroadcastChannel("auth")`                                                            |
+| H39 | Multer upgrade ratchet                                      | Already on `multer@2.0.1` (stable); documented                                            |
 
 ---
 
@@ -299,10 +299,10 @@ These are **explicitly out of scope** per the user's instruction (no new feature
 
 The new ESLint rule surfaced **19 real Prisma calls** lacking `companyId` in WHERE. Of those:
 
-| Outcome | Count | Where |
-|---|---:|---|
-| Genuine fix (added `companyId`) | **13** | invoice repo/orchestrator (5), customers handlers (2), establecimientos handlers (6) |
-| Documented disable with reason | **6** | `/me` membership lookup (user-scoped, not tenant-scoped), tenant list (cross-tenant by design), session by unique-id (3 sites), session sweep cron (system-wide) |
+| Outcome                         |  Count | Where                                                                                                                                                            |
+| ------------------------------- | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Genuine fix (added `companyId`) | **13** | invoice repo/orchestrator (5), customers handlers (2), establecimientos handlers (6)                                                                             |
+| Documented disable with reason  |  **6** | `/me` membership lookup (user-scoped, not tenant-scoped), tenant list (cross-tenant by design), session by unique-id (3 sites), session sweep cron (system-wide) |
 
 The rule is **enforced at error severity** going forward — new code that touches tenant models without a `companyId` filter will fail CI.
 
@@ -335,39 +335,39 @@ exit=0
 
 ### Tests (full suite, 7 workspaces with tests)
 
-| Workspace | Test files | Tests |
-|---|---:|---:|
-| `packages/config` | 1 | 1 |
-| `packages/logger` | 2 | 38 |
-| `packages/contracts` | 39 | 343 |
-| `packages/db` | 5 | 13 |
-| `packages/utils` | 14 | 219 |
-| `apps/sri-core` | 37 | 433 |
-| `apps/api` | 30 | 349 |
-| `apps/web` | 50 | 351 |
-| **TOTAL** | **178** | **1,747** |
+| Workspace            | Test files |     Tests |
+| -------------------- | ---------: | --------: |
+| `packages/config`    |          1 |         1 |
+| `packages/logger`    |          2 |        38 |
+| `packages/contracts` |         39 |       343 |
+| `packages/db`        |          5 |        13 |
+| `packages/utils`     |         14 |       219 |
+| `apps/sri-core`      |         37 |       433 |
+| `apps/api`           |         30 |       349 |
+| `apps/web`           |         50 |       351 |
+| **TOTAL**            |    **178** | **1,747** |
 
 All passing, no failures, no skips.
 
 ### Coverage gates (all met)
 
-| Workspace | Statements | Branches | Functions | Lines |
-|---|---:|---:|---:|---:|
-| `@facturador/contracts` | 100% | 94.23% | 100% | 100% |
-| `@facturador/utils` | 100% | ≥92% | 100% | 100% |
-| `@facturador/logger` | 100% | 100% | 100% | 100% |
-| `@facturador/db` | 90.81% | 81.81% | 100% | 90.81% |
-| `apps/api` | 93%+ | 87%+ | 82%+ | 93%+ |
-| `apps/sri-core` | 95%+ | 90%+ | 100% | 95%+ |
-| `apps/web` | 93.12% | 82.05% | 88.66% | 93.12% |
+| Workspace               | Statements | Branches | Functions |  Lines |
+| ----------------------- | ---------: | -------: | --------: | -----: |
+| `@facturador/contracts` |       100% |   94.23% |      100% |   100% |
+| `@facturador/utils`     |       100% |     ≥92% |      100% |   100% |
+| `@facturador/logger`    |       100% |     100% |      100% |   100% |
+| `@facturador/db`        |     90.81% |   81.81% |      100% | 90.81% |
+| `apps/api`              |       93%+ |     87%+ |      82%+ |   93%+ |
+| `apps/sri-core`         |       95%+ |     90%+ |      100% |   95%+ |
+| `apps/web`              |     93.12% |   82.05% |    88.66% | 93.12% |
 
 ### Web bundle (login route)
 
-| | Before | After |
-|---|---:|---:|
-| Eager app code (`index.js`) | 131.16 KB gz | **10.60 KB gz** |
-| Vendor chunks (split across react / query / rhf / zod) | none — monolithic | ~80 KB gz total, browser-cacheable |
-| Lazy route chunks (invoices list/detail/form, customers, establecimientos) | 0 KB | only loaded when navigated to |
+|                                                                            |            Before |                              After |
+| -------------------------------------------------------------------------- | ----------------: | ---------------------------------: |
+| Eager app code (`index.js`)                                                |      131.16 KB gz |                    **10.60 KB gz** |
+| Vendor chunks (split across react / query / rhf / zod)                     | none — monolithic | ~80 KB gz total, browser-cacheable |
+| Lazy route chunks (invoices list/detail/form, customers, establecimientos) |              0 KB |      only loaded when navigated to |
 
 **Login route load savings: ~91% reduction in app-specific JS.**
 
@@ -375,16 +375,16 @@ All passing, no failures, no skips.
 
 ## 10. Risks observed (deltas from REVIEW-0043)
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| R1 | KMS still env-driven; operator with shell access can read `/proc/$pid/environ` | HIGH | Rotation tool ships; KMS adapter is the next infra task before first real-tenant deploy |
-| R2 | Postgres RLS not enabled — defense relies entirely on app code | MEDIUM | `require-companyId-filter` ESLint rule + new defense-in-depth `companyId` WHERE clauses. RLS rollout deferred to its own SPEC |
-| R3 | In-memory `jti` deny-list / rate limiter — won't survive multi-replica | MEDIUM | Redis-backed store is a follow-up; sized correctly for ≤2 replicas with sticky sessions |
-| R4 | Cert expiry cron now uses advisory lock; works for N replicas | LOW | Tested |
-| R5 | Web bundle still not under 80 KB on login route (105 KB total incl. vendor) | LOW | React + ReactDOM + react-router baseline alone ≈ 65 KB. Hitting 80 KB would require swapping the routing stack or lazy-loading login itself (which the spec forbids) |
-| R6 | Manual compose smoke deferred | LOW | MSW-backed test harness exercises the full flow; operator manual smoke remains a one-time pre-prod task |
-| R7 | Single-secret service-JWT rotation requires deploy coordination | LOW | RS256 + per-tenant secrets is a future SPEC |
-| R8 | No OpenTelemetry yet | LOW | Pino structured logs + Prometheus metrics + audit chain are sufficient until OTel lands |
+| #   | Risk                                                                           | Severity | Mitigation                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | KMS still env-driven; operator with shell access can read `/proc/$pid/environ` | HIGH     | Rotation tool ships; KMS adapter is the next infra task before first real-tenant deploy                                                                              |
+| R2  | Postgres RLS not enabled — defense relies entirely on app code                 | MEDIUM   | `require-companyId-filter` ESLint rule + new defense-in-depth `companyId` WHERE clauses. RLS rollout deferred to its own SPEC                                        |
+| R3  | In-memory `jti` deny-list / rate limiter — won't survive multi-replica         | MEDIUM   | Redis-backed store is a follow-up; sized correctly for ≤2 replicas with sticky sessions                                                                              |
+| R4  | Cert expiry cron now uses advisory lock; works for N replicas                  | LOW      | Tested                                                                                                                                                               |
+| R5  | Web bundle still not under 80 KB on login route (105 KB total incl. vendor)    | LOW      | React + ReactDOM + react-router baseline alone ≈ 65 KB. Hitting 80 KB would require swapping the routing stack or lazy-loading login itself (which the spec forbids) |
+| R6  | Manual compose smoke deferred                                                  | LOW      | MSW-backed test harness exercises the full flow; operator manual smoke remains a one-time pre-prod task                                                              |
+| R7  | Single-secret service-JWT rotation requires deploy coordination                | LOW      | RS256 + per-tenant secrets is a future SPEC                                                                                                                          |
+| R8  | No OpenTelemetry yet                                                           | LOW      | Pino structured logs + Prometheus metrics + audit chain are sufficient until OTel lands                                                                              |
 
 ---
 
@@ -414,18 +414,18 @@ All project-mandated security policies are now enforced and tested:
 
 ## 12. Cross-cutting themes resolution
 
-| Theme (from audit) | Status |
-|---|---|
-| 1. Lint debt unresolved 0006–0030 | **RESOLVED** — `pnpm -r lint` exits 0 |
-| 2. Bundle size growth | **RESOLVED** — eager-app code reduced from 131 KB → 10.6 KB via code-splitting |
-| 3. Secret management env-only | **PARTIALLY RESOLVED** — rotation tool ships; KMS adapter deferred (infra decision) |
-| 4. Single-replica assumptions in cron / rate limiter | **PARTIALLY RESOLVED** — advisory lock for cert expiry; in-memory rate limiter + jti remain (need Redis for N-replica) |
-| 5. Tenant isolation only via app code | **PARTIALLY RESOLVED** — `require-companyId-filter` ESLint rule + 13 new WHERE additions + 6 documented disables; RLS deferred |
-| 6. API/Web schema drift potential | **RESOLVED** — invoice detail wrapped; shared IVA in contracts; contract round-trip test layer added |
-| 7. Async/background jobs ergonomics | **PARTIALLY RESOLVED** — `runWithContext` AsyncLocalStorage helper available; full worker queue deferred |
-| 8. Out-of-scope features blocking onboarding | UNCHANGED — explicitly LOW (separate SPECs) |
-| 9. CSP / reverse-proxy headers | **RESOLVED** — security headers middleware wired |
-| 10. Observability gap | **PARTIALLY RESOLVED** — Prometheus metrics + payloadHash chain + polling-health probe; OTel + centralised log sink deferred |
+| Theme (from audit)                                   | Status                                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Lint debt unresolved 0006–0030                    | **RESOLVED** — `pnpm -r lint` exits 0                                                                                          |
+| 2. Bundle size growth                                | **RESOLVED** — eager-app code reduced from 131 KB → 10.6 KB via code-splitting                                                 |
+| 3. Secret management env-only                        | **PARTIALLY RESOLVED** — rotation tool ships; KMS adapter deferred (infra decision)                                            |
+| 4. Single-replica assumptions in cron / rate limiter | **PARTIALLY RESOLVED** — advisory lock for cert expiry; in-memory rate limiter + jti remain (need Redis for N-replica)         |
+| 5. Tenant isolation only via app code                | **PARTIALLY RESOLVED** — `require-companyId-filter` ESLint rule + 13 new WHERE additions + 6 documented disables; RLS deferred |
+| 6. API/Web schema drift potential                    | **RESOLVED** — invoice detail wrapped; shared IVA in contracts; contract round-trip test layer added                           |
+| 7. Async/background jobs ergonomics                  | **PARTIALLY RESOLVED** — `runWithContext` AsyncLocalStorage helper available; full worker queue deferred                       |
+| 8. Out-of-scope features blocking onboarding         | UNCHANGED — explicitly LOW (separate SPECs)                                                                                    |
+| 9. CSP / reverse-proxy headers                       | **RESOLVED** — security headers middleware wired                                                                               |
+| 10. Observability gap                                | **PARTIALLY RESOLVED** — Prometheus metrics + payloadHash chain + polling-health probe; OTel + centralised log sink deferred   |
 
 ---
 
@@ -483,18 +483,18 @@ These remain on the roadmap as their own SPECs:
 
 ### Production-readiness deltas vs REVIEW-0043
 
-| Aspect | REVIEW-0043 | REVIEW-0044 |
-|---|---|---|
-| Lint gate in CI | Disabled (pre-existing debt) | **Re-enabled, exits 0** |
-| Bundle size | 131 KB monolithic | **10.6 KB app + 5 lazy/vendor chunks** |
-| Schema drift risk | Possible (API/Web flat-vs-wrapped) | **Wrapped + contract round-trip tests** |
-| Multi-replica cron | Could double-fire | **Advisory lock** |
-| Audit tamper detection | None | **payloadHash chain** |
-| Cert key rotation | Manual / undocumented | **`rotate-master-key.ts` CLI** |
-| Tenant query gaps | Code review only | **ESLint rule + 13 fixes + 6 documented disables** |
-| Service JWT replay | Unguarded | **jti deny-list** |
-| SOAP response size | Unbounded | **20 MiB cap** |
-| Polling stuck docs | Operator DB edit | **`POST :id/retry-polling` endpoint** |
+| Aspect                 | REVIEW-0043                        | REVIEW-0044                                        |
+| ---------------------- | ---------------------------------- | -------------------------------------------------- |
+| Lint gate in CI        | Disabled (pre-existing debt)       | **Re-enabled, exits 0**                            |
+| Bundle size            | 131 KB monolithic                  | **10.6 KB app + 5 lazy/vendor chunks**             |
+| Schema drift risk      | Possible (API/Web flat-vs-wrapped) | **Wrapped + contract round-trip tests**            |
+| Multi-replica cron     | Could double-fire                  | **Advisory lock**                                  |
+| Audit tamper detection | None                               | **payloadHash chain**                              |
+| Cert key rotation      | Manual / undocumented              | **`rotate-master-key.ts` CLI**                     |
+| Tenant query gaps      | Code review only                   | **ESLint rule + 13 fixes + 6 documented disables** |
+| Service JWT replay     | Unguarded                          | **jti deny-list**                                  |
+| SOAP response size     | Unbounded                          | **20 MiB cap**                                     |
+| Polling stuck docs     | Operator DB edit                   | **`POST :id/retry-polling` endpoint**              |
 
 ---
 

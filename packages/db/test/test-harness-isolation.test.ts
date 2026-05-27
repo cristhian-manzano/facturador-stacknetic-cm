@@ -53,9 +53,9 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
     expect(b).toBeDefined();
     // Non-null assertions: the `toBeDefined` calls above narrow at runtime
     // but TS still sees `TestSchema | undefined` here.
-     
+
     const ha = a!;
-     
+
     const hb = b!;
     const ruc = "9999000000001";
     await ha.prisma.company.create({
@@ -97,9 +97,9 @@ describe("test-harness — cross-schema isolation (intra-file)", () => {
     expect(a).toBeDefined();
     expect(b).toBeDefined();
     // Non-null assertions: see comment in the test above.
-     
+
     const ha = a!;
-     
+
     const hb = b!;
     await ha.prisma.user.create({
       data: {

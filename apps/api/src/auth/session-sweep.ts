@@ -82,10 +82,7 @@ export function scheduleSessionSweep(deps: SessionSweepDeps): ScheduledTaskHandl
             "session_sweep_complete",
           );
         } catch (err) {
-          deps.logger.error(
-            { event: "session.sweep.failed", err },
-            "session_sweep_failed",
-          );
+          deps.logger.error({ event: "session.sweep.failed", err }, "session_sweep_failed");
         }
       })();
     },

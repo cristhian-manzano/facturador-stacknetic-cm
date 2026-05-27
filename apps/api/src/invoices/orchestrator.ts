@@ -37,12 +37,7 @@ import type { Request, RequestHandler } from "express";
 import { z } from "zod";
 
 import type { EmitDocumentResponse, DocumentStatusResponse } from "@facturador/contracts/sri";
-import type {
-  Customer,
-  Establecimiento,
-  PrismaClient,
-  SriEstado,
-} from "@facturador/db";
+import type { Customer, Establecimiento, PrismaClient, SriEstado } from "@facturador/db";
 import { Prisma } from "@facturador/db";
 import { newId } from "@facturador/db";
 import type { Logger } from "@facturador/logger";
@@ -304,15 +299,13 @@ async function reserveInTransaction(
  * Throws `UpstreamError` on network / non-2xx — the handler treats this as
  * a 502 + ERROR_RED mirror update.
  */
-async function callSriCoreEmit(
-  args: {
-    reserved: ReservedInvoice;
-    requestId: string;
-    baseUrl?: string;
-    fetchImpl?: typeof fetch;
-    serviceJwtSecret?: string;
-  },
-): Promise<EmitDocumentResponse> {
+async function callSriCoreEmit(args: {
+  reserved: ReservedInvoice;
+  requestId: string;
+  baseUrl?: string;
+  fetchImpl?: typeof fetch;
+  serviceJwtSecret?: string;
+}): Promise<EmitDocumentResponse> {
   const body = translateInvoiceToSriRequest({
     company: args.reserved.company,
     invoice: args.reserved.invoice,
@@ -333,23 +326,18 @@ async function callSriCoreEmit(
     payments: args.reserved.invoice.payments,
     adicionales: args.reserved.invoice.adicionales,
   });
-  const result = await sriCoreFetch<EmitDocumentResponse>(
-    "/v1/documents/emit",
-    {
-      method: "POST",
-      companyId: args.reserved.company.id,
-      body,
-      requestId: args.requestId,
-      ...(args.baseUrl === undefined ? {} : { baseUrl: args.baseUrl }),
-      ...(args.fetchImpl === undefined ? {} : { fetchImpl: args.fetchImpl }),
-      ...(args.serviceJwtSecret === undefined
-        ? {}
-        : { serviceJwtSecret: args.serviceJwtSecret }),
-      // 60-second service JWT is the contract default; explicit so future
-      // changes to the helper's default surface here.
-      serviceJwtTtlSeconds: 60,
-    },
-  );
+  const result = await sriCoreFetch<EmitDocumentResponse>("/v1/documents/emit", {
+    method: "POST",
+    companyId: args.reserved.company.id,
+    body,
+    requestId: args.requestId,
+    ...(args.baseUrl === undefined ? {} : { baseUrl: args.baseUrl }),
+    ...(args.fetchImpl === undefined ? {} : { fetchImpl: args.fetchImpl }),
+    ...(args.serviceJwtSecret === undefined ? {} : { serviceJwtSecret: args.serviceJwtSecret }),
+    // 60-second service JWT is the contract default; explicit so future
+    // changes to the helper's default surface here.
+    serviceJwtTtlSeconds: 60,
+  });
   return result.body;
 }
 
@@ -396,9 +384,7 @@ async function mirrorEmitResponse(
     sriEstado: resp.estado,
     numeroAutorizacion: resp.numeroAutorizacion ?? null,
     fechaAutorizacion:
-      resp.fechaAutorizacion === undefined
-        ? null
-        : new Date(resp.fechaAutorizacion),
+      resp.fechaAutorizacion === undefined ? null : new Date(resp.fechaAutorizacion),
     mensajesJson: mensajes,
   });
   return mensajes;
@@ -427,17 +413,15 @@ function buildEmitResponseBody(
     sriEstado: row.sriEstado ?? resp?.estado ?? null,
     numeroAutorizacion:
       resp?.numeroAutorizacion ??
-      ((row.mensajesJson as { numeroAutorizacion?: string } | null)
-        ?.numeroAutorizacion ?? null),
+      (row.mensajesJson as { numeroAutorizacion?: string } | null)?.numeroAutorizacion ??
+      null,
     fechaAutorizacion: resp?.fechaAutorizacion ?? null,
     mensajes: resp?.mensajes ?? [],
     invoice: toInvoiceDetailWire(row),
   };
 }
 
-export function buildOrchestratorHandlers(
-  deps: OrchestratorDeps,
-): OrchestratorHandlers {
+export function buildOrchestratorHandlers(deps: OrchestratorDeps): OrchestratorHandlers {
   const { prisma, logger } = deps;
 
   const emit: RequestHandler = async (req, res, next) => {
@@ -454,19 +438,13 @@ export function buildOrchestratorHandlers(
       // Pre-emit validations (only when the invoice is still a draft).
       if (existing.estado === "BORRADOR") {
         if (existing.lines.length === 0) {
-          throw new BusinessError(
-            "Invoice has no lines",
-            "invoice.lines_required",
-          );
+          throw new BusinessError("Invoice has no lines", "invoice.lines_required");
         }
         // Defensive payment-sum check (orchestrator-side guard). The PATCH
         // / create paths already enforce this, but we re-check here so
         // emit-on-stale-draft surfaces clean errors.
         const importeTotal = numFromDecimal(existing.importeTotal);
-        const paymentsSum = existing.payments.reduce(
-          (acc, p) => acc + numFromDecimal(p.total),
-          0,
-        );
+        const paymentsSum = existing.payments.reduce((acc, p) => acc + numFromDecimal(p.total), 0);
         const delta = Math.abs(round2(paymentsSum - importeTotal));
         if (delta > 0.01) {
           throw new BusinessError(
@@ -475,10 +453,7 @@ export function buildOrchestratorHandlers(
           );
         }
         if (!existing.customerId) {
-          throw new BusinessError(
-            "Invoice has no customer",
-            "invoice.customer_required",
-          );
+          throw new BusinessError("Invoice has no customer", "invoice.customer_required");
         }
       }
 
@@ -533,9 +508,7 @@ export function buildOrchestratorHandlers(
         sriResp = await callSriCoreEmit({
           reserved,
           requestId: req.id ?? newId(),
-          ...(deps.sriCoreBaseUrl === undefined
-            ? {}
-            : { baseUrl: deps.sriCoreBaseUrl }),
+          ...(deps.sriCoreBaseUrl === undefined ? {} : { baseUrl: deps.sriCoreBaseUrl }),
           ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
           ...(deps.serviceJwtSecret === undefined
             ? {}
@@ -568,11 +541,9 @@ export function buildOrchestratorHandlers(
           },
         );
         // Surface a 502 ProblemDetail — UpstreamError maps there.
-        throw new UpstreamError(
-          "sri-core unreachable; invoice flagged ERROR_RED",
-          "sri.network",
-          { cause: err },
-        );
+        throw new UpstreamError("sri-core unreachable; invoice flagged ERROR_RED", "sri.network", {
+          cause: err,
+        });
       }
 
       // 3) Mirror update. Returns the (possibly synthesised) mensajes so
@@ -608,11 +579,7 @@ export function buildOrchestratorHandlers(
         },
       );
 
-      res
-        .status(200)
-        .json(
-          buildEmitResponseBody(fresh, { ...sriResp, mensajes: mensajesForBody }),
-        );
+      res.status(200).json(buildEmitResponseBody(fresh, { ...sriResp, mensajes: mensajesForBody }));
     } catch (err) {
       next(err);
     }
@@ -635,9 +602,7 @@ export function buildOrchestratorHandlers(
       const sriEstado = source.sriEstado;
       const reissueAllowed =
         source.estado === "EMITIDO" &&
-        (sriEstado === "DEVUELTA" ||
-          sriEstado === "NO_AUTORIZADO" ||
-          sriEstado === "ERROR_RED");
+        (sriEstado === "DEVUELTA" || sriEstado === "NO_AUTORIZADO" || sriEstado === "ERROR_RED");
       if (!reissueAllowed) {
         throw new BusinessError(
           `Reissue not allowed in estado=${source.estado}, sriEstado=${sriEstado ?? "null"}`,
@@ -811,12 +776,8 @@ export function buildOrchestratorHandlers(
             method: "GET",
             companyId,
             requestId: req.id ?? newId(),
-            ...(deps.sriCoreBaseUrl === undefined
-              ? {}
-              : { baseUrl: deps.sriCoreBaseUrl }),
-            ...(deps.fetchImpl === undefined
-              ? {}
-              : { fetchImpl: deps.fetchImpl }),
+            ...(deps.sriCoreBaseUrl === undefined ? {} : { baseUrl: deps.sriCoreBaseUrl }),
+            ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
             ...(deps.serviceJwtSecret === undefined
               ? {}
               : { serviceJwtSecret: deps.serviceJwtSecret }),
@@ -838,11 +799,9 @@ export function buildOrchestratorHandlers(
             payloadJson: { claveAcceso: existing.claveAcceso, reason: "sri.network" },
           },
         );
-        throw new UpstreamError(
-          "sri-core unreachable during refresh",
-          "sri.network",
-          { cause: err },
-        );
+        throw new UpstreamError("sri-core unreachable during refresh", "sri.network", {
+          cause: err,
+        });
       }
 
       // Mirror back. The fechaAutorizacion arrives as ISO; we coerce to
@@ -855,9 +814,7 @@ export function buildOrchestratorHandlers(
         sriEstado: status.document.estado,
         numeroAutorizacion: status.document.numeroAutorizacion ?? null,
         fechaAutorizacion:
-          fechaAuth === null || fechaAuth === undefined
-            ? null
-            : new Date(fechaAuth),
+          fechaAuth === null || fechaAuth === undefined ? null : new Date(fechaAuth),
         sriDocumentId: status.document.id,
         mensajesJson: status.events.flatMap((e) => e.mensajes),
       });
@@ -931,9 +888,7 @@ function round2(n: number): number {
 
 function startOfTodayUtc(): Date {
   const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 function formatDdMmYyyy(d: Date): string {

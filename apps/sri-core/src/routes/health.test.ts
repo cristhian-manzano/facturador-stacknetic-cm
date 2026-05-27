@@ -10,10 +10,7 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import {
-  createPollingHealth,
-  POLLING_STALENESS_THRESHOLD_MS,
-} from "../jobs/polling-health.js";
+import { createPollingHealth, POLLING_STALENESS_THRESHOLD_MS } from "../jobs/polling-health.js";
 
 import { buildHealthRouter } from "./health.js";
 

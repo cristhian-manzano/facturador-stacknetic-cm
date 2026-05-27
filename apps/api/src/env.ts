@@ -80,29 +80,32 @@ const EnvSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   /**
+   * RBAC override: if `true`, ACCOUNTANT regains the legacy write-capable
+   * permissions on customers (create/update) and invoices (create/emit/
+   * reissue). Default (unset / `false`) keeps ACCOUNTANT view-only per
+   * SPEC-0011 §FR-5 row 3 (REVIEW-0044 HIGH-1).
+   *
+   * Documented escape hatch for stakeholders who built workflows around
+   * the pre-REVIEW-0044 matrix; new installs should leave this unset.
+   */
+  RBAC_ACCOUNTANT_CAN_WRITE: z
+    .union([z.literal("true"), z.literal("false")])
+    .default("false")
+    .transform((v) => v === "true"),
+  /**
    * Maximum number of retries on `reserveSecuencial` (Serializable txn
    * retry budget). Default `3` mirrors the existing in-code default —
    * exposed as an env knob so operators can dial it down for noisy
    * environments without redeploying. Documented in `apps/api/README.md`.
    */
-  SECUENCIAL_RESERVE_MAX_RETRIES: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .max(20)
-    .default(3),
+  SECUENCIAL_RESERVE_MAX_RETRIES: z.coerce.number().int().min(0).max(20).default(3),
   /**
    * Per-session rate limit for tenant CRUD writes (POST /api/v1/tenants
    * and member writes). Default 30/min. The integration test suite sets
    * a high ceiling via env so it can exercise dozens of writes per
    * session. Documented in `apps/api/README.md`.
    */
-  TENANT_WRITE_RATE_PER_MIN: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(10_000)
-    .default(30),
+  TENANT_WRITE_RATE_PER_MIN: z.coerce.number().int().positive().max(10_000).default(30),
 });
 
 export type ApiEnv = z.infer<typeof EnvSchema>;

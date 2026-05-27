@@ -28,7 +28,6 @@ import { __resetActiveCertificateCache } from "../src/certificates/active.js";
 import { createTestApp } from "./factory.js";
 import { generateSyntheticP12 } from "./fixtures/synthetic-cert.js";
 
-
 /**
  * Create a Company row with the given id so the AuditLog FK is satisfied.
  * Tests scope every interaction through a per-schema Prisma client, so

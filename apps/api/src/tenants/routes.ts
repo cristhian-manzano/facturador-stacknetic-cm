@@ -84,13 +84,7 @@ export function buildTenantRouter(deps: TenantRouterDeps): Router {
   // freshly-onboarded user with no tenant must be able to make one.
   router.get("/tenants", requireSession, handlers.listTenants);
 
-  router.post(
-    "/tenants",
-    requireSession,
-    assertCsrf,
-    tenantWriteLimiter,
-    handlers.createTenant,
-  );
+  router.post("/tenants", requireSession, assertCsrf, tenantWriteLimiter, handlers.createTenant);
 
   // -- Tenant switch ---------------------------------------------------------
   // Requires an authenticated session + CSRF (this is a state-changing verb).

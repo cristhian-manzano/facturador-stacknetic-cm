@@ -23,14 +23,7 @@ async function main(): Promise<void> {
 
   const secuencial = String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, "0");
   const base48 =
-    "21052026" +
-    "01" +
-    "1790012345001" +
-    "1" +
-    "001001" +
-    secuencial +
-    "12345678" +
-    "1";
+    "21052026" + "01" + "1790012345001" + "1" + "001001" + secuencial + "12345678" + "1";
   const claveAcceso = base48 + computeClaveAccesoCheckDigit(base48);
 
   const emitRes = await fetch(`${BASE_URL}/v1/documents/emit`, {
@@ -56,20 +49,12 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console -- smoke
   console.log("emit", emitRes.status, JSON.stringify(emitBody));
 
-  const statusRes = await fetch(
-    `${BASE_URL}/v1/documents/${claveAcceso}/status`,
-    {
-      headers: { authorization: `Bearer ${token}` },
-    },
-  );
+  const statusRes = await fetch(`${BASE_URL}/v1/documents/${claveAcceso}/status`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
   const statusBody = (await statusRes.json()) as { events?: unknown[] };
   // eslint-disable-next-line no-console -- smoke
-  console.log(
-    "status",
-    statusRes.status,
-    "events:",
-    statusBody.events?.length ?? 0,
-  );
+  console.log("status", statusRes.status, "events:", statusBody.events?.length ?? 0);
 }
 
 main().catch((err: unknown) => {

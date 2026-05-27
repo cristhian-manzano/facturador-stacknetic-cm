@@ -161,9 +161,7 @@ describe("sriCoreFetch", () => {
 
   it("throws UpstreamError when schema parse fails on a 2xx body", async () => {
     mswServer.use(
-      http.get(`${BASE}/v1/_diag/schema`, () =>
-        HttpResponse.json({ unexpected: true }),
-      ),
+      http.get(`${BASE}/v1/_diag/schema`, () => HttpResponse.json({ unexpected: true })),
     );
     const schema = z.object({ ok: z.boolean() });
     await expect(
@@ -179,21 +177,16 @@ describe("sriCoreFetch", () => {
 
   it("returns the parsed body when schema.parse succeeds", async () => {
     mswServer.use(
-      http.get(`${BASE}/v1/_diag/schema-ok`, () =>
-        HttpResponse.json({ ok: true, n: 42 }),
-      ),
+      http.get(`${BASE}/v1/_diag/schema-ok`, () => HttpResponse.json({ ok: true, n: 42 })),
     );
     const schema = z.object({ ok: z.boolean(), n: z.number() });
-    const res = await sriCoreFetch<z.infer<typeof schema>>(
-      "/v1/_diag/schema-ok",
-      {
-        companyId: COMPANY_ID,
-        serviceJwtSecret: SECRET,
-        baseUrl: BASE,
-        schema,
-        retryBackoffMs: [],
-      },
-    );
+    const res = await sriCoreFetch<z.infer<typeof schema>>("/v1/_diag/schema-ok", {
+      companyId: COMPANY_ID,
+      serviceJwtSecret: SECRET,
+      baseUrl: BASE,
+      schema,
+      retryBackoffMs: [],
+    });
     expect(res.body).toEqual({ ok: true, n: 42 });
   });
 });

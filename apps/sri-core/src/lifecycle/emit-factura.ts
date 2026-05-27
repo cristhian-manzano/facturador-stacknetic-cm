@@ -80,7 +80,6 @@ import { recordEvent } from "./events.js";
 import { runSignStep } from "./sign-step.js";
 import { isTerminal } from "./transitions.js";
 
-
 /* -------------------------------------------------------------------------- */
 /*                                 Public API                                 */
 /* -------------------------------------------------------------------------- */
@@ -420,11 +419,21 @@ export async function emitFactura(
       // Both transient and non-transient SOAP errors transition to
       // ERROR_RED. The resend endpoint distinguishes them by inspecting
       // the document and asking the operator to reissue when needed.
+      //
+      // `allowSelfLoop: true` is required because the document may
+      // already be in ERROR_RED from a prior failed retry (FIRMADO →
+      // ERROR_RED → ENVIADO → ... → ERROR_RED is a legitimate retry
+      // path; ERROR_RED → ERROR_RED is the self-loop). Without it,
+      // `recordEvent` rejects the second failure with
+      // `ConflictError("sri.invalid_transition")` and the orchestrator
+      // surfaces a 500 instead of returning ERROR_RED. See
+      // REVIEW-0044 §CB-6.
       await recordEvent(prisma, {
         documentId: current.id,
         etapa: "SEND",
         estado: "ERROR_RED",
         durationMs,
+        allowSelfLoop: true,
       });
       await safeAudit(deps, {
         action: "sri.recepcion.network_error",
@@ -561,6 +570,13 @@ export async function emitFactura(
       } else if (result.estado === "EN_PROCESO") {
         // First polling deadline = now + 30s. The polling job re-bumps
         // it on each attempt via the exponential backoff schedule.
+        //
+        // `allowSelfLoop: true`: when the orchestrator re-enters with
+        // a document already in EN_PROCESO (e.g. the polling job set it
+        // to EN_PROCESO and a manual `/resend` re-runs the sync
+        // autorización), `recordEvent` would otherwise reject the
+        // EN_PROCESO → EN_PROCESO transition with `sri.invalid_transition`.
+        // See REVIEW-0044 §CB-6.
         await recordEvent(prisma, {
           documentId: current.id,
           etapa: "AUTHORIZE",
@@ -568,6 +584,7 @@ export async function emitFactura(
           durationMs,
           mensajes,
           patch: {},
+          allowSelfLoop: true,
         });
         await prisma.sriDocument.update({
           where: { id: current.id },

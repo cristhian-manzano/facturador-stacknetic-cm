@@ -179,9 +179,7 @@ function bucketKey(codigo: string, codigoPorcentaje: string): string {
 function computeLine(line: ComputeLineInput): ComputeLineResult {
   const cantidad = new Decimal(line.cantidad);
   const precioUnit = new Decimal(line.precioUnitario);
-  const descuento = new Decimal(
-    (line.descuento) ?? 0,
-  );
+  const descuento = new Decimal(line.descuento ?? 0);
   const rawSubtotal = cantidad.mul(precioUnit).minus(descuento);
   const precioTotalSinImpuesto = round2(rawSubtotal);
 
@@ -214,9 +212,7 @@ export function computeInvoice(input: ComputeInvoiceInput): ComputeInvoiceResult
   const lineComputations = input.lines.map(computeLine);
 
   // 2. Σ line.precioTotalSinImpuesto.
-  const totalSinImpuestos = round2(
-    sum(lineComputations.map((l) => l.precioTotalSinImpuesto)),
-  );
+  const totalSinImpuestos = round2(sum(lineComputations.map((l) => l.precioTotalSinImpuesto)));
 
   // 3. Aggregate per (codigo, codigoPorcentaje). Round after each addition.
   const buckets = new Map<string, { tarifa: number; base: Decimal; valor: Decimal }>();

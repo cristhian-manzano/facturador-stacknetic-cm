@@ -23,7 +23,6 @@ import { newId } from "@facturador/db";
 import { useTestSchema } from "@facturador/db/test-harness";
 import { createLogger } from "@facturador/logger";
 
-
 import { runExpiryCheck } from "../src/certificates/expiry-job.js";
 import { encryptP12 } from "../src/crypto/envelope.js";
 
